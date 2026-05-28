@@ -618,7 +618,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  width: (MediaQuery.of(context).size.width - 72) * progress,
+                  width: ((MediaQuery.of(context).size.width - 72) * progress).clamp(0.0, double.infinity),
                   height: 8,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
