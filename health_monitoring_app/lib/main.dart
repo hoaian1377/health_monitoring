@@ -31,13 +31,18 @@ class HealthApp extends StatelessWidget {
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
 
+  // ignore: library_private_types_in_public_api
+  static _MainNavigatorState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_MainNavigatorState>();
+  }
+
   @override
   State<MainNavigator> createState() => _MainNavigatorState();
 }
 
 class _MainNavigatorState extends State<MainNavigator> {
-  // Mặc định mở tab Dashboard (index 3) hoặc bạn có thể đổi thành 0
-  int _currentIndex = 3; 
+  // Mặc định mở tab Home (index 0) để trải nghiệm giao diện mới đầu tiên
+  int _currentIndex = 0; 
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -46,6 +51,12 @@ class _MainNavigatorState extends State<MainNavigator> {
     DashboardScreen(),
     ProfileScreen(),
   ];
+
+  void setTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
