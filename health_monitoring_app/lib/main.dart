@@ -42,7 +42,7 @@ class MainNavigator extends StatefulWidget {
 
 class _MainNavigatorState extends State<MainNavigator> {
   // Mặc định mở tab Home (index 0) để trải nghiệm giao diện mới đầu tiên
-  int _currentIndex = 0; 
+  int _currentIndex = 4; 
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -65,6 +65,21 @@ class _MainNavigatorState extends State<MainNavigator> {
         index: _currentIndex,
         children: _screens,
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Implement SOS call action here
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.red,
+              content: Text('Đang gọi khẩn cấp...'),
+            ),
+          );
+        },
+        backgroundColor: Colors.red.shade600,
+        elevation: 4,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.phone_in_talk_rounded, color: Colors.white),
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -81,7 +96,7 @@ class _MainNavigatorState extends State<MainNavigator> {
           onTap: (index) => setState(() => _currentIndex = index),
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF2563EB),
+          selectedItemColor: const Color(0xFF1A56DB),
           unselectedItemColor: const Color(0xFF94A3B8),
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'personal_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -28,6 +29,14 @@ class ProfileScreen extends StatelessWidget {
                       iconColor: const Color(0xFF2563EB),
                       title: 'Hồ sơ cá nhân',
                       subtitle: 'Tên, ngày sinh, địa chỉ, ảnh đại diện',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PersonalProfileScreen(),
+                          ),
+                        );
+                      },
                     ),
                     _MenuItemData(
                       icon: Icons.medical_services_outlined,
@@ -99,8 +108,26 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildHeader() {
     return Container(
-      color: const Color(0xFF2563EB),
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x332563EB),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -202,7 +229,6 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 const Icon(Icons.phone_in_talk_rounded, color: Color(0xFF2563EB), size: 28),
                 const SizedBox(width: 14),
-                // ✅ FIX: Expanded để tránh overflow
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +294,7 @@ class ProfileScreen extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: item.onTap ?? () {},
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
@@ -329,6 +355,7 @@ class ProfileScreen extends StatelessWidget {
                 Container(
                   width: 40,
                   height: 40,
+                  alignment: Alignment.center,
                   child: const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 22),
                 ),
                 const SizedBox(width: 14),
@@ -364,6 +391,7 @@ class _MenuItemData {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   const _MenuItemData({
     required this.icon,
@@ -371,5 +399,6 @@ class _MenuItemData {
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 }
