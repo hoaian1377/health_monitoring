@@ -4,6 +4,7 @@ import 'screens/checklist_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(const HealthApp());
@@ -23,7 +24,7 @@ class HealthApp extends StatelessWidget {
         fontFamily: 'Roboto',
         scaffoldBackgroundColor: const Color(0xFFF0F4FB),
       ),
-      home: const MainNavigator(),
+      home: const LoginScreen(),
     );
   }
 }

@@ -6,6 +6,7 @@ import 'family_links_screen.dart';
 import 'emergency_contacts_screen.dart';
 import 'notification_settings_screen.dart';
 import 'health_thresholds_screen.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -83,7 +84,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC81E1E),
                         padding: const EdgeInsets.symmetric(vertical: 14),

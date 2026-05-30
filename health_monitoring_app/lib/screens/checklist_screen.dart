@@ -431,21 +431,32 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddTaskSheet,
-        backgroundColor: const Color(0xFF2563EB),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: const Text(
-          'Nhiệm vụ',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-      ),
       body: Column(
         children: [
           // ── Beautiful Progress Summary Card ──
           _buildSummaryProgressCard(completedCount, totalCount, completionRate),
+
+          // ── Inline Add Task Button ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: ElevatedButton.icon(
+              onPressed: _showAddTaskSheet,
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: const Text(
+                'Thêm nhiệm vụ mới',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
 
           // ── Category Filters Row ──
           _buildCategoryFilters(),
@@ -472,7 +483,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   Widget _buildSummaryProgressCard(int completed, int total, double rate) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
