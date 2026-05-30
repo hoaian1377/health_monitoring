@@ -1,17 +1,53 @@
 import 'package:flutter/material.dart';
 
-class PersonalProfileScreen extends StatelessWidget {
+class PersonalProfileScreen extends StatefulWidget {
   const PersonalProfileScreen({super.key});
 
-  final Color primaryColor = const Color(0xFF1A56DB);
+  @override
+  State<PersonalProfileScreen> createState() => _PersonalProfileScreenState();
+}
+
+class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
+  // ─── Tính tuổi từ ngày sinh ──────────────────────────────────────────────
+  int get _age {
+    final birth = DateTime(1955, 3, 15);
+    final now = DateTime.now();
+    int age = now.year - birth.year;
+    if (now.month < birth.month ||
+        (now.month == birth.month && now.day < birth.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  void _showSaveToast() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF16A34A),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            SizedBox(width: 10),
+            Text('Đã lưu thành công ✓',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF0F4FB),
       body: Column(
         children: [
-          // Header + Avatar Block (Liền nhau)
+          // ── Header / Avatar block ─────────────────────────────────────────
           Container(
             width: double.infinity,
             decoration: const BoxDecoration(
@@ -20,422 +56,342 @@ class PersonalProfileScreen extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x332563EB),
-                  blurRadius: 16,
-                  offset: Offset(0, 8),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),
+            child: Column(
+              children: [
+                // Back button row
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('Hồ sơ cá nhân',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Avatar circle
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4))
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text('NV',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2563EB))),
+                ),
+                const SizedBox(height: 12),
+                const Text('Nguyễn Văn An',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+                const SizedBox(height: 4),
+                const Text('Người lớn tuổi',
+                    style: TextStyle(fontSize: 13, color: Colors.white70)),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.verified_rounded,
+                          color: Colors.white, size: 14),
+                      SizedBox(width: 5),
+                      Text('Đã xác minh',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ),
               ],
             ),
-            padding: const EdgeInsets.only(top: 52, bottom: 24),
-            child: Column(
-              children: [
-                _buildHeader(context),
-                _buildAvatarBlock(),
-              ],
-            ),
           ),
-          
-          // Scrollable content
+
+          // ── Scrollable content ───────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'THÔNG TIN CƠ BẢN',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
+                  // Card: Thông tin cơ bản
+                  _buildCard(
+                    title: 'Thông tin cơ bản',
+                    icon: Icons.person_rounded,
+                    iconColor: const Color(0xFF2563EB),
+                    children: [
+                      _infoRow(Icons.badge_outlined, const Color(0xFFEBF3FF),
+                          const Color(0xFF2563EB), 'Họ và tên', 'Nguyễn Văn An'),
+                      _divider(),
+                      _infoRow(
+                          Icons.cake_outlined,
+                          const Color(0xFFFFF4E6),
+                          const Color(0xFFEA580C),
+                          'Ngày sinh',
+                          '15/03/1955 · $_age tuổi'),
+                      _divider(),
+                      _infoRow(
+                          Icons.wc_rounded,
+                          const Color(0xFFE6FBF3),
+                          const Color(0xFF16A34A),
+                          'Giới tính',
+                          'Nam'),
+                      _divider(),
+                      _infoRow(
+                          Icons.location_on_outlined,
+                          const Color(0xFFF3EEFF),
+                          const Color(0xFF7C3AED),
+                          'Địa chỉ',
+                          '123 Lê Lợi, Q.1, TP.HCM'),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildBasicInfoCard(),
-                  
-                  const SizedBox(height: 24),
-                  const Text(
-                    'LIÊN HỆ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
-                    ),
+
+                  const SizedBox(height: 16),
+
+                  // Card: Liên hệ
+                  _buildCard(
+                    title: 'Liên hệ',
+                    icon: Icons.contact_mail_rounded,
+                    iconColor: const Color(0xFF16A34A),
+                    children: [
+                      _infoRow(
+                          Icons.phone_outlined,
+                          const Color(0xFFE6FBF3),
+                          const Color(0xFF16A34A),
+                          'Số điện thoại',
+                          '0909 123 456'),
+                      _divider(),
+                      _infoRow(
+                          Icons.email_outlined,
+                          const Color(0xFFEBF3FF),
+                          const Color(0xFF2563EB),
+                          'Email',
+                          'nguyenvan.an@gmail.com'),
+                      _divider(),
+                      _infoRow(
+                          Icons.credit_card_rounded,
+                          const Color(0xFFFFF4E6),
+                          const Color(0xFFEA580C),
+                          'CCCD/CMND',
+                          '079 205 023 561'),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildContactCard(),
+
+                  const SizedBox(height: 16),
+
+                  // Card: Vai trò & liên kết gia đình
+                  _buildCard(
+                    title: 'Vai trò & liên kết gia đình',
+                    icon: Icons.people_rounded,
+                    iconColor: const Color(0xFFEA580C),
+                    children: [
+                      _roleRow(
+                          color: const Color(0xFF2563EB),
+                          name: 'Nguyễn Văn An',
+                          role: 'Người lớn tuổi',
+                          badgeText: 'Đang dùng',
+                          badgeColor: const Color(0xFF16A34A)),
+                      _divider(),
+                      _roleRow(
+                          color: const Color(0xFF0D9488),
+                          name: 'Nguyễn Thị Bình',
+                          role: 'Con gái',
+                          badgeText: 'Đã kết nối',
+                          badgeColor: const Color(0xFF2563EB)),
+                      _divider(),
+                      _roleRow(
+                          color: const Color(0xFFD97706),
+                          name: 'Trần Văn C',
+                          role: 'Người chăm sóc',
+                          badgeText: 'Chờ xác nhận',
+                          badgeColor: const Color(0xFFD97706)),
+                    ],
+                  ),
 
                   const SizedBox(height: 24),
-                  const Text(
-                    'VAI TRÒ & LIÊN KẾT GIA ĐÌNH',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF64748B),
+
+                  // Save button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _showSaveToast,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Lưu thay đổi',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildFamilyRolesCard(),
-
-                  const SizedBox(height: 32),
-                  _buildSaveButton(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+  Widget _buildCard({
+    required String title,
+    required IconData icon,
+    required Color iconColor,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 3))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            child: Row(
               children: [
-                Text(
-                  'Hồ sơ cá nhân',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  'Thông tin tài khoản',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
+                Icon(icon, color: iconColor, size: 18),
+                const SizedBox(width: 8),
+                Text(title,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: iconColor)),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: const [
-                Icon(Icons.edit_rounded, color: Colors.white, size: 14),
-                SizedBox(width: 4),
-                Text(
-                  'Chỉnh sửa',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          ...children,
         ],
       ),
     );
   }
 
-  Widget _buildAvatarBlock() {
+  Widget _infoRow(IconData icon, Color bg, Color iconColor, String label,
+      String value) {
     return Padding(
-      padding: const EdgeInsets.only(top: 24),
-      child: Column(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'NV',
-              style: TextStyle(
-                color: primaryColor,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Nguyễn Văn An',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Người lớn tuổi · Nhóm gia đình Nguyễn',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.shield_rounded, color: Colors.white, size: 14),
-                SizedBox(width: 4),
-                Text(
-                  'Đã xác minh',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBasicInfoCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Column(
-        children: [
-          _buildInfoRow(Icons.person_outline_rounded, 'Họ và tên', 'Nguyễn Văn An'),
-          const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.cake_outlined, 'Ngày sinh', '15/03/1955 · 70 tuổi'),
-          const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.male_rounded, 'Giới tính', 'Nam'),
-          const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.location_on_outlined, 'Địa chỉ', '123 Lê Lợi, Q.1, TP.HCM'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Column(
-        children: [
-          _buildInfoRow(Icons.phone_outlined, 'Số điện thoại', '0909 123 456'),
-          const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.email_outlined, 'Email', 'nguyenvan.an@gmail.com'),
-          const Divider(height: 1, indent: 56, color: Color(0xFFF1F5F9)),
-          _buildInfoRow(Icons.badge_outlined, 'CCCD/CMND', '079 205 023 561'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: primaryColor, size: 20),
+            width: 34,
+            height: 34,
+            decoration:
+                BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+            child: Icon(icon, color: iconColor, size: 17),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF94A3B8),
-                  ),
-                ),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: Color(0xFF94A3B8))),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B))),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1), size: 20),
+          const Icon(Icons.chevron_right_rounded,
+              color: Color(0xFFCBD5E1), size: 18),
         ],
       ),
     );
   }
 
-  Widget _buildFamilyRolesCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: [
-          _buildRoleRow(
-            dotColor: const Color(0xFF10B981),
-            name: 'Người lớn tuổi',
-            badgeText: 'Đang dùng',
-            badgeColor: const Color(0xFF10B981),
-          ),
-          _buildRoleRow(
-            dotColor: const Color(0xFF14B8A6),
-            name: 'Nguyễn Thị Bình (con)',
-            badgeText: 'Đã kết nối',
-            badgeColor: const Color(0xFF14B8A6),
-          ),
-          _buildRoleRow(
-            dotColor: const Color(0xFFF59E0B),
-            name: 'Trần Văn C (chăm sóc)',
-            badgeText: 'Chờ xác nhận',
-            badgeColor: const Color(0xFFF59E0B),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRoleRow({
-    required Color dotColor,
+  Widget _roleRow({
+    required Color color,
     required String name,
+    required String role,
     required String badgeText,
     required Color badgeColor,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: dotColor,
-              shape: BoxShape.circle,
-            ),
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              name,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B))),
+                Text(role,
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF94A3B8))),
+              ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: badgeColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
+              color: badgeColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(
-              badgeText,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: badgeColor,
-              ),
-            ),
+            child: Text(badgeText,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: badgeColor)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.save_rounded, color: Colors.white, size: 20),
-        label: const Text(
-          'Lưu thay đổi',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 2,
-        ),
-      ),
-    );
-  }
+  Widget _divider() =>
+      const Divider(height: 1, indent: 62, color: Color(0xFFF1F5F9));
 }
