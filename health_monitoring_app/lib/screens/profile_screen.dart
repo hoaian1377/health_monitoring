@@ -7,6 +7,7 @@ import 'emergency_contacts_screen.dart';
 import 'notification_settings_screen.dart';
 import 'health_thresholds_screen.dart';
 import 'login_screen.dart';
+import 'appointment_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -142,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _MenuItem(
                       icon: Icons.person_outline_rounded,
                       iconBg: const Color(0xFFEBF3FF),
-                      iconColor: const Color(0xFF2563EB),
+                      iconColor: const Color(0xFF0EA5E9),
                       title: 'Hồ sơ cá nhân',
                       subtitle: 'Tên, ngày sinh, địa chỉ, ảnh đại diện',
                       onTap: () => _navigate(const PersonalProfileScreen()),
@@ -162,6 +163,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: 'Toa thuốc & xét nghiệm',
                       subtitle: 'Upload, xem lại toa thuốc & kết quả xét nghiệm',
                       onTap: () => _navigate(const MedicalDocumentsScreen()),
+                    ),
+                    _MenuItem(
+                      icon: Icons.calendar_month_outlined,
+                      iconBg: const Color(0xFFF0F9FF),
+                      iconColor: const Color(0xFF0EA5E9),
+                      title: 'Lịch khám bệnh',
+                      subtitle: 'Quản lý lịch tái khám và kết quả',
+                      onTap: () => _navigate(const AppointmentScreen()),
                     ),
                   ]),
 
@@ -227,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -617,7 +626,7 @@ class _SOSBottomSheet extends StatelessWidget {
               style: TextStyle(
                 fontSize: c.isEmergency ? 20 : 16,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF2563EB),
+                color: const Color(0xFF0EA5E9),
               ),
             ),
           ),

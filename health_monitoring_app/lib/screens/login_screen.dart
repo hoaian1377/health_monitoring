@@ -78,11 +78,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFEBF3FF),
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2), width: 3),
+                  border: Border.all(color: const Color(0xFF0EA5E9).withOpacity(0.2), width: 3),
                 ),
                 child: const Icon(
                   Icons.fingerprint_rounded,
-                  color: Color(0xFF2563EB),
+                  color: Color(0xFF0EA5E9),
                   size: 40,
                 ),
               ),
@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFF0EA5E9),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
@@ -240,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                      borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
                     ),
                   ),
                   validator: (value) {
@@ -262,14 +262,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            backgroundColor: const Color(0xFF2563EB),
+                            backgroundColor: const Color(0xFF0EA5E9),
                             content: Text('Mã OTP khôi phục đã được gửi tới ${phoneResetController.text}'),
                           ),
                         );
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF0EA5E9),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
@@ -303,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen> {
               height: 320,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF2563EB).withOpacity(0.12),
+                color: const Color(0xFF0EA5E9).withOpacity(0.12),
               ),
             ),
           ),
@@ -344,14 +344,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 80,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                                  colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(22),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF2563EB).withOpacity(0.3),
+                                    color: const Color(0xFF0EA5E9).withOpacity(0.3),
                                     blurRadius: 16,
                                     offset: const Offset(0, 8),
                                   )
@@ -383,7 +383,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E3A8A),
+                                color: Color(0xFF0284C7),
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -450,7 +450,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(14),
-                                      borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                                      borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
                                     ),
                                     errorBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(14),
@@ -501,7 +501,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(14),
-                                      borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                                      borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
                                     ),
                                     errorBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(14),
@@ -531,7 +531,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           height: 24,
                                           child: Checkbox(
                                             value: _rememberMe,
-                                            activeColor: const Color(0xFF2563EB),
+                                            activeColor: const Color(0xFF0EA5E9),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                             side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                                             onChanged: (val) {
@@ -562,7 +562,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       child: const Text(
                                         'Quên mật khẩu?',
                                         style: TextStyle(
-                                          color: Color(0xFF2563EB),
+                                          color: Color(0xFF0EA5E9),
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -579,7 +579,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : _login,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF2563EB),
+                                      backgroundColor: const Color(0xFF0EA5E9),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
                                       ),
@@ -647,7 +647,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: const [
-                                    Icon(Icons.fingerprint_rounded, color: Color(0xFF2563EB), size: 24),
+                                    Icon(Icons.fingerprint_rounded, color: Color(0xFF0EA5E9), size: 24),
                                     SizedBox(width: 8),
                                     Text(
                                       'Vân tay / Khuôn mặt',
@@ -685,7 +685,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: const Text(
                                     'Đăng ký ngay',
                                     style: TextStyle(
-                                      color: Color(0xFF2563EB),
+                                      color: Color(0xFF0EA5E9),
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),

@@ -15,7 +15,7 @@ class _NotificationSettingsScreenState
     _NotifItem(
         icon: Icons.medication_rounded,
         iconBg: const Color(0xFFEBF3FF),
-        iconColor: const Color(0xFF2563EB),
+        iconColor: const Color(0xFF0EA5E9),
         title: 'Nhắc uống thuốc',
         subtitle: 'Nhắc nhở theo lịch uống thuốc hàng ngày',
         enabled: true),
@@ -205,7 +205,7 @@ class _NotificationSettingsScreenState
                                     value: item.enabled,
                                     onChanged: (v) => setState(
                                         () => _items[i].enabled = v),
-                                    activeColor: const Color(0xFF2563EB),
+                                    activeColor: const Color(0xFF0EA5E9),
                                   ),
                                 ],
                               ),
@@ -399,7 +399,7 @@ class _NotificationSettingsScreenState
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(Icons.volume_up_rounded,
-                                    color: Color(0xFF2563EB), size: 20),
+                                    color: Color(0xFF0EA5E9), size: 20),
                               ),
                               const SizedBox(width: 12),
                               const Expanded(
@@ -413,7 +413,7 @@ class _NotificationSettingsScreenState
                                 value: _soundEnabled,
                                 onChanged: (v) =>
                                     setState(() => _soundEnabled = v),
-                                activeColor: const Color(0xFF2563EB),
+                                activeColor: const Color(0xFF0EA5E9),
                               ),
                             ],
                           ),
@@ -449,7 +449,7 @@ class _NotificationSettingsScreenState
                                 underline: const SizedBox(),
                                 style: const TextStyle(
                                     fontSize: 13,
-                                    color: Color(0xFF2563EB),
+                                    color: Color(0xFF0EA5E9),
                                     fontWeight: FontWeight.w600),
                                 items: [
                                   'Không rung',
@@ -478,7 +478,7 @@ class _NotificationSettingsScreenState
                     child: ElevatedButton(
                       onPressed: _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFF0EA5E9),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),

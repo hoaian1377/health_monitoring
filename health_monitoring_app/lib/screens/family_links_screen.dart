@@ -55,7 +55,7 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
                 decoration: InputDecoration(
                   hintText: 'Số điện thoại...',
                   prefixIcon: const Icon(Icons.phone_rounded,
-                      color: Color(0xFF2563EB)),
+                      color: Color(0xFF0EA5E9)),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide:
@@ -63,7 +63,7 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide:
-                          const BorderSide(color: Color(0xFF2563EB))),
+                          const BorderSide(color: Color(0xFF0EA5E9))),
                 ),
               ),
               const SizedBox(height: 16),
@@ -89,7 +89,7 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                    backgroundColor: const Color(0xFF0EA5E9),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -118,7 +118,7 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -169,8 +169,8 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
                         size: 20),
                     label: const Text('Thêm người thân'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2563EB),
-                      side: const BorderSide(color: Color(0xFF2563EB)),
+                      foregroundColor: const Color(0xFF0EA5E9),
+                      side: const BorderSide(color: Color(0xFF0EA5E9)),
                       minimumSize: const Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -210,7 +210,7 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
             height: 50,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                colors: [Color(0xFF0EA5E9), Color(0xFF0EA5E9)],
               ),
               borderRadius: BorderRadius.circular(14),
             ),
@@ -259,7 +259,7 @@ class _FamilyLinksScreenState extends State<FamilyLinksScreen> {
           ),
           Column(
             children: [
-              _smallBtn('Xem', const Color(0xFF2563EB), () {}),
+              _smallBtn('Xem', const Color(0xFF0EA5E9), () {}),
               const SizedBox(height: 6),
               _smallBtn('Hủy', const Color(0xFFDC2626), () {
                 setState(() => _members.remove(m));

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class TaskItem {
   final String id;
   final String title;
-  final String type; // 'medication' | 'measurement' | 'habit'
+  final String type; // 'medication' | 'measurement' | 'habit' | 'symptom'
   final String time;
   final String details;
   bool isCompleted;
@@ -75,9 +75,17 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       details: '1 viên uống trước khi đi ngủ',
       isCompleted: false,
     ),
+    TaskItem(
+      id: '7',
+      title: 'Ghi lại triệu chứng chóng mặt',
+      type: 'symptom',
+      time: 'Tùy lúc',
+      details: 'Ghi chú cho bác sĩ lần khám tới',
+      isCompleted: false,
+    ),
   ];
 
-  String _selectedCategory = 'all'; // 'all', 'medication', 'measurement', 'habit'
+  String _selectedCategory = 'all'; // 'all', 'medication', 'measurement', 'habit', 'symptom'
 
   // Form State for Adding Task
   final _titleController = TextEditingController();
@@ -191,7 +199,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
                         ),
                       ),
                     ),
@@ -211,7 +219,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             'medication',
                             Icons.medication_rounded,
                             'Uống thuốc',
-                            const Color(0xFF2563EB),
+                            const Color(0xFF0EA5E9),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -232,6 +240,16 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             Icons.directions_run_rounded,
                             'Thói quen',
                             const Color(0xFF10B981),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTypeCard(
+                            setModalState,
+                            'symptom',
+                            Icons.sick_rounded,
+                            'Triệu chứng',
+                            const Color(0xFF8B5CF6),
                           ),
                         ),
                       ],
@@ -276,7 +294,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                         '${_newTaskTime.hour.toString().padLeft(2, '0')}:${_newTaskTime.minute.toString().padLeft(2, '0')}',
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                       ),
-                                      const Icon(Icons.access_time_rounded, color: Color(0xFF2563EB), size: 20),
+                                      const Icon(Icons.access_time_rounded, color: Color(0xFF0EA5E9), size: 20),
                                     ],
                                   ),
                                 ),
@@ -307,7 +325,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
                         ),
                       ),
                     ),
@@ -319,7 +337,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       height: 52,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
+                          backgroundColor: const Color(0xFF0EA5E9),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -447,7 +465,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: const Color(0xFF0EA5E9),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(
@@ -487,14 +505,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+          colors: [Color(0xFF0EA5E9), Color(0xFF0EA5E9)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2563EB).withOpacity(0.2),
+            color: const Color(0xFF0EA5E9).withOpacity(0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           )
@@ -575,6 +593,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       {'key': 'medication', 'label': 'Uống thuốc', 'icon': Icons.medication_rounded},
       {'key': 'measurement', 'label': 'Đo chỉ số', 'icon': Icons.heart_broken_rounded},
       {'key': 'habit', 'label': 'Thói quen', 'icon': Icons.directions_run_rounded},
+      {'key': 'symptom', 'label': 'Triệu chứng', 'icon': Icons.sick_rounded},
     ];
 
     return Container(
@@ -589,11 +608,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           final isSelected = _selectedCategory == cat['key'];
           Color themeColor;
           if (cat['key'] == 'medication') {
-            themeColor = const Color(0xFF2563EB);
+            themeColor = const Color(0xFF0EA5E9);
           } else if (cat['key'] == 'measurement') {
             themeColor = const Color(0xFFEF4444);
           } else if (cat['key'] == 'habit') {
             themeColor = const Color(0xFF10B981);
+          } else if (cat['key'] == 'symptom') {
+            themeColor = const Color(0xFF8B5CF6);
           } else {
             themeColor = const Color(0xFF475569);
           }
@@ -686,7 +707,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
     switch (task.type) {
       case 'medication':
-        typeColor = const Color(0xFF2563EB); // Blue
+        typeColor = const Color(0xFF0EA5E9); // Blue
         typeIcon = Icons.medication_rounded;
         typeLabel = 'Uống thuốc';
         break;
@@ -696,10 +717,19 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         typeLabel = 'Đo chỉ số';
         break;
       case 'habit':
-      default:
         typeColor = const Color(0xFF10B981); // Green
         typeIcon = Icons.directions_run_rounded;
         typeLabel = 'Thói quen';
+        break;
+      case 'symptom':
+        typeColor = const Color(0xFF8B5CF6); // Purple
+        typeIcon = Icons.sick_rounded;
+        typeLabel = 'Triệu chứng';
+        break;
+      default:
+        typeColor = const Color(0xFF64748B); // Grey
+        typeIcon = Icons.check_circle_outline_rounded;
+        typeLabel = 'Khác';
         break;
     }
 
@@ -806,7 +836,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: task.isCompleted ? Colors.grey : const Color(0xFF2563EB),
+                                color: task.isCompleted ? Colors.grey : const Color(0xFF0EA5E9),
                               ),
                             ),
                           ],

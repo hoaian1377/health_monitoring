@@ -67,7 +67,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -147,7 +147,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: selected
-                                    ? const Color(0xFF2563EB)
+                                    ? const Color(0xFF0EA5E9)
                                     : Colors.white)),
                       ),
                     );
@@ -182,7 +182,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
             duration: Duration(seconds: 2),
           ));
         },
-        backgroundColor: const Color(0xFF2563EB),
+        backgroundColor: const Color(0xFF0EA5E9),
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
@@ -215,7 +215,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
             child: Icon(
               Icons.picture_as_pdf_rounded,
               color:
-                  isToa ? const Color(0xFF2563EB) : const Color(0xFF0D9488),
+                  isToa ? const Color(0xFF0EA5E9) : const Color(0xFF0D9488),
               size: 24,
             ),
           ),
@@ -257,7 +257,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: isToa
-                              ? const Color(0xFF2563EB)
+                              ? const Color(0xFF0EA5E9)
                               : const Color(0xFF0D9488))),
                 ),
               ],
@@ -265,7 +265,7 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
           ),
           Column(
             children: [
-              _iconBtn(Icons.visibility_outlined, const Color(0xFF2563EB),
+              _iconBtn(Icons.visibility_outlined, const Color(0xFF0EA5E9),
                   const Color(0xFFEBF3FF), () {}),
               const SizedBox(height: 8),
               _iconBtn(Icons.download_rounded, const Color(0xFF16A34A),

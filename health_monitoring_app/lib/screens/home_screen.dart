@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: _buildActionTile(
                       icon: Icons.camera_alt_rounded,
-                      color: const Color(0xFF2563EB),
+                      color: const Color(0xFF0EA5E9),
                       label: 'Chụp ảnh mới',
                       onTap: () {
                         Navigator.pop(context);
@@ -259,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -399,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: const Color(0xFFEEF2FF),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB), size: 20),
+                      child: const Icon(Icons.photo_library_rounded, color: Color(0xFF0EA5E9), size: 20),
                     ),
                     const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 12),
                   ],
@@ -421,18 +421,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB).withOpacity(0.1),
+                    color: const Color(0xFF0EA5E9).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_a_photo_rounded, color: Color(0xFF2563EB), size: 14),
+                      Icon(Icons.add_a_photo_rounded, color: Color(0xFF0EA5E9), size: 14),
                       SizedBox(width: 4),
                       Text(
                         'Chụp ảnh',
-                        style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 12),
+                        style: TextStyle(color: Color(0xFF0EA5E9), fontWeight: FontWeight.bold, fontSize: 12),
                       )
                     ],
                   ),
@@ -624,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     gradient: LinearGradient(
                       colors: progress == 1.0
                           ? [const Color(0xFF10B981), const Color(0xFF059669)]
-                          : [const Color(0xFF2563EB), const Color(0xFF3B82F6)],
+                          : [const Color(0xFF0EA5E9), const Color(0xFF0EA5E9)],
                     ),
                     borderRadius: BorderRadius.circular(4),
                   ),
@@ -697,13 +697,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: _isMedsTakenToday ? const Color(0xFFDCFCE7) : const Color(0xFF2563EB),
+                        color: _isMedsTakenToday ? const Color(0xFFDCFCE7) : const Color(0xFF0EA5E9),
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: _isMedsTakenToday
                             ? null
                             : [
                                 BoxShadow(
-                                  color: const Color(0xFF2563EB).withOpacity(0.3),
+                                  color: const Color(0xFF0EA5E9).withOpacity(0.3),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 )
@@ -746,13 +746,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     'Xem toàn bộ lịch uống thuốc & checklist hôm nay',
                     style: TextStyle(
-                      color: Color(0xFF2563EB),
+                      color: Color(0xFF0EA5E9),
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_rounded, color: Color(0xFF2563EB), size: 14),
+                  Icon(Icons.arrow_forward_rounded, color: Color(0xFF0EA5E9), size: 14),
                 ],
               ),
             ),
@@ -858,7 +858,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: const Color(0xFF0EA5E9),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),

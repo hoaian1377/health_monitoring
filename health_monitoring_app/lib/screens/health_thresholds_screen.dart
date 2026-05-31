@@ -37,7 +37,7 @@ class _HealthThresholdsScreenState
     ),
     _HealthMetric(
       icon: Icons.water_drop_rounded,
-      iconColor: const Color(0xFF2563EB),
+      iconColor: const Color(0xFF0EA5E9),
       iconBg: const Color(0xFFEBF3FF),
       title: 'Đường huyết',
       unit: 'mmol/L',
@@ -153,7 +153,7 @@ class _HealthThresholdsScreenState
                     child: ElevatedButton(
                       onPressed: _save,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFF0EA5E9),
                         padding:
                             const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -415,7 +415,7 @@ class _HealthThresholdsScreenState
                   Navigator.pop(ctx);
                 },
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB)),
+                    backgroundColor: const Color(0xFF0EA5E9)),
                 child: const Text('Lưu',
                     style: TextStyle(color: Colors.white)),
               ),

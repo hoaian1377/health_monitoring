@@ -7,36 +7,42 @@ class HistoryScreen extends StatefulWidget {
   State<HistoryScreen> createState() => _HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
-  final Color primaryColor = const Color(0xFF1A56DB);
-  final Color warningColor = const Color(0xFFEF9F27);
-  final Color dangerColor = const Color(0xFFE24B4A);
-  final Color inactiveColor = const Color(0xFFD3D1C7);
+class _HistoryScreenState extends State<HistoryScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final Color primaryColor = const Color(0xFF0EA5E9);
+  final Color warningColor = const Color(0xFFF59E0B);
+  final Color dangerColor = const Color(0xFFEF4444);
 
   String selectedFilter = 'Tuần này';
-  int selectedDayIndex = 3; // Chọn ngày thứ 5 (index 3)
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF0F9FF),
       body: Column(
         children: [
           _buildHeader(),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildQuickStats(),
-                  const SizedBox(height: 24),
-                  _buildWeekBar(),
-                  const SizedBox(height: 24),
-                  _buildHistoryList(),
-                  const SizedBox(height: 32),
-                ],
-              ),
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMedicineTab(),
+                _buildMetricsTab(),
+                _buildAppointmentsTab(),
+              ],
             ),
           ),
         ],
@@ -49,7 +55,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -59,24 +65,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x332563EB),
+            color: Color(0x330EA5E9),
             blurRadius: 16,
             offset: Offset(0, 8),
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
+              const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
-                    'Lịch sử dùng thuốc',
+                    'Lịch Sử Theo Dõi',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -85,7 +91,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Theo dõi hằng ngày',
+                    'Xem lại toàn bộ hoạt động',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white70,
@@ -93,7 +99,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ],
               ),
-              // Nút gọi khẩn cấp (SOS) giống trang home
               InkWell(
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -116,12 +121,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       )
                     ],
                   ),
-                  child: const Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.phone_in_talk_rounded,
+                      color: Colors.white, size: 20),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.white,
+            indicatorWeight: 3,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white60,
+            labelStyle:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            indicatorSize: TabBarIndicatorSize.label,
+            tabs: const [
+              Tab(text: 'Dùng Thuốc'),
+              Tab(text: 'Chỉ Số'),
+              Tab(text: 'Khám Bệnh'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 1: Thuốc ──
+  Widget _buildMedicineTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
               Expanded(child: _buildFilterChip('Tuần này')),
@@ -131,6 +164,128 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Expanded(child: _buildFilterChip('Tất cả')),
             ],
           ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildMetricCard('Đã uống', '18 lần', const Color(0xFF16A34A)),
+                    const SizedBox(height: 12),
+                    _buildMetricCard('Bỏ lỡ', '4 lần', dangerColor),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildMetricCard('Tỉ lệ', '82%', primaryColor),
+                    const SizedBox(height: 12),
+                    _buildMetricCard(
+                        'Trung bình', '3/ngày', const Color(0xFF6B7280)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _sectionLabel('LỊCH SỬ DÙNG THUỐC HÔM NAY'),
+          const SizedBox(height: 12),
+          _buildHistoryItem(
+              time: '08:00',
+              name: 'Amlodipine 5mg',
+              status: 'Đã uống',
+              isCompleted: true),
+          _buildHistoryItem(
+              time: '08:00',
+              name: 'Aspirin 81mg',
+              status: 'Đã uống',
+              isCompleted: true),
+          _buildHistoryItem(
+              time: '13:00',
+              name: 'Vitamin D3',
+              status: 'Bỏ lỡ',
+              isCompleted: false),
+          _buildHistoryItem(
+              time: '20:00',
+              name: 'Metformin 500mg',
+              status: 'Sắp tới',
+              isUpcoming: true),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 2: Chỉ Số ──
+  Widget _buildMetricsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel('LỊCH SỬ HUYẾT ÁP'),
+          const SizedBox(height: 12),
+          _buildMetricHistoryItem(
+            date: 'Hôm nay, 07:30',
+            value: '128/82 mmHg',
+            icon: Icons.monitor_heart_rounded,
+            iconColor: const Color(0xFFD97706),
+            bgColor: const Color(0xFFFEF3C7),
+          ),
+          _buildMetricHistoryItem(
+            date: 'Hôm qua, 07:45',
+            value: '120/80 mmHg',
+            icon: Icons.monitor_heart_rounded,
+            iconColor: const Color(0xFF16A34A),
+            bgColor: const Color(0xFFDCFCE7),
+          ),
+          const SizedBox(height: 24),
+          _sectionLabel('LỊCH SỬ ĐƯỜNG HUYẾT'),
+          const SizedBox(height: 12),
+          _buildMetricHistoryItem(
+            date: '15/05/2026, 06:30',
+            value: '5.8 mmol/L',
+            icon: Icons.water_drop_rounded,
+            iconColor: const Color(0xFF16A34A),
+            bgColor: const Color(0xFFDCFCE7),
+          ),
+          _buildMetricHistoryItem(
+            date: '10/05/2026, 06:15',
+            value: '7.2 mmol/L',
+            icon: Icons.water_drop_rounded,
+            iconColor: const Color(0xFFD97706),
+            bgColor: const Color(0xFFFEF3C7),
+          ),
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 3: Khám Bệnh ──
+  Widget _buildAppointmentsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel('CÁC LẦN KHÁM GẦN NHẤT'),
+          const SizedBox(height: 12),
+          _buildAppointmentHistoryItem(
+            date: '01/03/2026',
+            hospital: 'Bệnh viện Chợ Rẫy',
+            doctor: 'BS. Nguyễn Thị Lan',
+            result: 'Huyết áp ổn định 125/80. Tiếp tục uống thuốc.',
+          ),
+          _buildAppointmentHistoryItem(
+            date: '15/11/2025',
+            hospital: 'Phòng khám Đa khoa Thành Đô',
+            doctor: 'BS. Trần Văn Minh',
+            result: 'Đường huyết 5.8 mmol/L - bình thường.',
+          ),
+          const SizedBox(height: 100),
         ],
       ),
     );
@@ -147,46 +302,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1D4ED8) : Colors.transparent,
-          border: Border.all(color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.3)),
+          color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
+          border: Border.all(
+              color: isSelected ? Colors.transparent : const Color(0xFFBAE6FD)),
           borderRadius: BorderRadius.circular(8),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            color: Colors.white,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 14,
+            color: isSelected ? Colors.white : const Color(0xFF0EA5E9),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            fontSize: 13,
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildQuickStats() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              _buildMetricCard('Đã uống', '18 lần', primaryColor),
-              const SizedBox(height: 12),
-              _buildMetricCard('Bỏ lỡ', '4 lần', dangerColor),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            children: [
-              _buildMetricCard('Tỉ lệ', '82%', primaryColor),
-              const SizedBox(height: 12),
-              _buildMetricCard('Trung bình', '3/ngày', const Color(0xFF6B7280)),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -195,27 +325,155 @@ class _HistoryScreenState extends State<HistoryScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FB),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0F2FE)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF64748B),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B))),
+          const SizedBox(height: 4),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold, color: valueColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF475569),
+          letterSpacing: 0.5),
+    );
+  }
+
+  Widget _buildHistoryItem({
+    required String time,
+    required String name,
+    required String status,
+    bool isCompleted = false,
+    bool isUpcoming = false,
+  }) {
+    Color statusColor;
+    Color iconBg;
+    IconData icon;
+
+    if (isUpcoming) {
+      statusColor = const Color(0xFF94A3B8);
+      iconBg = const Color(0xFFF1F5F9);
+      icon = Icons.access_time_rounded;
+    } else if (isCompleted) {
+      statusColor = const Color(0xFF16A34A);
+      iconBg = const Color(0xFFDCFCE7);
+      icon = Icons.check_circle_rounded;
+    } else {
+      statusColor = const Color(0xFFDC2626);
+      iconBg = const Color(0xFFFFEBEB);
+      icon = Icons.cancel_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: statusColor, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B))),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time_rounded,
+                        size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Text(time,
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF64748B))),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
+          Text(status,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: statusColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricHistoryItem({
+    required String date,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B))),
+                const SizedBox(height: 4),
+                Text(date,
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF64748B))),
+              ],
             ),
           ),
         ],
@@ -223,257 +481,64 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildWeekBar() {
-    List<Map<String, dynamic>> weekDays = [
-      {'day': 'T2', 'date': '26', 'status': 1}, // 1: Đủ (xanh)
-      {'day': 'T3', 'date': '27', 'status': 1}, 
-      {'day': 'T4', 'date': '28', 'status': 2}, // 2: Thiếu (vàng)
-      {'day': 'T5', 'date': '29', 'status': 1}, // Today (selected)
-      {'day': 'T6', 'date': '30', 'status': 0}, // 0: Chưa có (xám)
-      {'day': 'T7', 'date': '31', 'status': 0}, 
-      {'day': 'CN', 'date': '01', 'status': 0}, 
-    ];
-
-    return SizedBox(
-      height: 72,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(weekDays.length, (index) {
-          final item = weekDays[index];
-          bool isSelected = index == selectedDayIndex;
-          bool isToday = index == 3; // T5 là hôm nay
-
-          Color dotColor;
-          if (item['status'] == 1) dotColor = primaryColor;
-          else if (item['status'] == 2) dotColor = warningColor;
-          else if (item['status'] == 3) dotColor = dangerColor;
-          else dotColor = inactiveColor;
-
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                selectedDayIndex = index;
-              });
-            },
-            child: Container(
-              width: 42,
-              decoration: BoxDecoration(
-                color: isSelected ? primaryColor : Colors.transparent,
-                borderRadius: BorderRadius.circular(24),
-                border: (!isSelected && isToday) ? Border.all(color: primaryColor, width: 1.5) : null,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    item['day'],
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isSelected ? Colors.white70 : const Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item['date'],
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : dotColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildHistoryList() {
-    return Column(
-      children: [
-        _buildDayGroup(
-          dayLabel: 'Thứ Năm, 29/05',
-          adherence: '100%',
-          adherenceLevel: 1, // 1=xanh, 2=vàng, 3=đỏ
-          meds: [
-            _buildMedItem('Amlodipine 5mg', '7:00', 'Đúng giờ', 1),
-            _buildMedItem('Metformin 500mg', '12:00', 'Đúng giờ', 1),
-            _buildMedItem('Atorvastatin 20mg', '20:00', 'Đúng giờ', 1),
-          ],
-        ),
-        const SizedBox(height: 24),
-        _buildDayGroup(
-          dayLabel: 'Thứ Tư, 28/05',
-          adherence: '67%',
-          adherenceLevel: 2,
-          meds: [
-            _buildMedItem('Amlodipine 5mg', '7:00', 'Đúng giờ', 1),
-            _buildMedItem('Metformin 500mg', '12:35', 'Trễ 35p', 2),
-            _buildMedItem('Atorvastatin 20mg', '—', 'Bỏ', 3),
-          ],
-        ),
-        const SizedBox(height: 24),
-        _buildDayGroup(
-          dayLabel: 'Thứ Ba, 27/05',
-          adherence: '100%',
-          adherenceLevel: 1,
-          meds: [
-            _buildMedItem('Amlodipine 5mg', '7:02', 'Đúng giờ', 1),
-            _buildMedItem('Metformin 500mg', '11:58', 'Đúng giờ', 1),
-            _buildMedItem('Atorvastatin 20mg', '20:05', 'Đúng giờ', 1),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDayGroup({
-    required String dayLabel,
-    required String adherence,
-    required int adherenceLevel,
-    required List<Widget> meds,
+  Widget _buildAppointmentHistoryItem({
+    required String date,
+    required String hospital,
+    required String doctor,
+    required String result,
   }) {
-    Color badgeBgColor;
-    Color badgeTextColor;
-
-    if (adherenceLevel == 1) { // 100%
-      badgeBgColor = const Color(0xFFEAF3DE);
-      badgeTextColor = const Color(0xFF27500A);
-    } else if (adherenceLevel == 2) { // 67%
-      badgeBgColor = const Color(0xFFFAEEDA);
-      badgeTextColor = const Color(0xFF633806);
-    } else { // 0%
-      badgeBgColor = const Color(0xFFFCEBEB);
-      badgeTextColor = const Color(0xFF791F1F);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              dayLabel,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: badgeBgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                adherence,
-                style: TextStyle(
-                  color: badgeTextColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              )
-            ],
-            border: Border.all(color: const Color(0xFFF1F5F9)),
-          ),
-          child: Column(
-            children: meds,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // statusLevel: 1 = Đúng giờ, 2 = Trễ, 3 = Bỏ
-  Widget _buildMedItem(String name, String time, String statusText, int statusLevel) {
-    Color iconColor;
-    Color tagBgColor;
-    Color tagTextColor;
-
-    if (statusLevel == 1) { // Đúng giờ
-      iconColor = primaryColor;
-      tagBgColor = const Color(0xFFE0E7FF);
-      tagTextColor = primaryColor;
-    } else if (statusLevel == 2) { // Trễ
-      iconColor = warningColor;
-      tagBgColor = const Color(0xFFFEF3C7);
-      tagTextColor = warningColor;
-    } else { // Bỏ
-      iconColor = dangerColor;
-      tagBgColor = const Color(0xFFFEE2E2);
-      tagTextColor = dangerColor;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE0F2FE)),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: iconColor,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  time,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: tagBgColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              statusText,
-              style: TextStyle(
-                color: tagTextColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
+                child: const Icon(Icons.check_circle_rounded,
+                    color: Color(0xFF16A34A), size: 18),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(hospital,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B))),
+                    Text('$doctor · $date',
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF64748B))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
             ),
-          )
+            child: Text(result,
+                style: const TextStyle(
+                    fontSize: 13, color: Color(0xFF475569), height: 1.4)),
+          ),
         ],
       ),
     );

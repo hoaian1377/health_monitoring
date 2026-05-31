@@ -80,7 +80,7 @@ class _EmergencyContactsScreenState
                     Navigator.pop(ctx);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                    backgroundColor: const Color(0xFF0EA5E9),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -150,7 +150,7 @@ class _EmergencyContactsScreenState
                     Navigator.pop(ctx);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
+                    backgroundColor: const Color(0xFF0EA5E9),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -179,7 +179,7 @@ class _EmergencyContactsScreenState
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -332,8 +332,8 @@ class _EmergencyContactsScreenState
                         size: 20),
                     label: const Text('Thêm liên lạc'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF2563EB),
-                      side: const BorderSide(color: Color(0xFF2563EB)),
+                      foregroundColor: const Color(0xFF0EA5E9),
+                      side: const BorderSide(color: Color(0xFF0EA5E9)),
                       minimumSize: const Size(double.infinity, 50),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
@@ -423,7 +423,7 @@ class _EmergencyContactsScreenState
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.edit_rounded,
-                      color: Color(0xFF2563EB), size: 18),
+                      color: Color(0xFF0EA5E9), size: 18),
                 ),
               ),
               const SizedBox(width: 4),
@@ -455,7 +455,7 @@ class _EmergencyContactsScreenState
             borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2563EB))),
+            borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
       ),
     );
   }

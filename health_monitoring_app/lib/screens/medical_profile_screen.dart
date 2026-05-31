@@ -58,7 +58,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB)),
+                backgroundColor: const Color(0xFF0EA5E9)),
             child: const Text('Thêm',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -94,7 +94,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB)),
+                backgroundColor: const Color(0xFF0EA5E9)),
             child: const Text('Thêm',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -126,7 +126,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                             const Color(0xFFFFEBEB), const Color(0xFFC81E1E)),
                         _divider(),
                         _infoTile('📏', 'Chiều cao', '168 cm',
-                            const Color(0xFFEBF3FF), const Color(0xFF2563EB)),
+                            const Color(0xFFEBF3FF), const Color(0xFF0EA5E9)),
                         _divider(),
                         _infoTile('⚖️', 'Cân nặng', '62 kg',
                             const Color(0xFFFFF4E6), const Color(0xFFEA580C)),
@@ -206,7 +206,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                                   horizontal: 14, vertical: 7),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                    color: const Color(0xFF2563EB),
+                                    color: const Color(0xFF0EA5E9),
                                     style: BorderStyle.solid),
                                 borderRadius: BorderRadius.circular(20),
                               ),
@@ -214,12 +214,12 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.add_rounded,
-                                      color: Color(0xFF2563EB), size: 16),
+                                      color: Color(0xFF0EA5E9), size: 16),
                                   SizedBox(width: 4),
                                   Text('Thêm',
                                       style: TextStyle(
                                           fontSize: 13,
-                                          color: Color(0xFF2563EB),
+                                          color: Color(0xFF0EA5E9),
                                           fontWeight: FontWeight.w600)),
                                 ],
                               ),
@@ -304,7 +304,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                   _buildCard(
                     title: 'Tài liệu y tế',
                     icon: Icons.folder_open_rounded,
-                    iconColor: const Color(0xFF2563EB),
+                    iconColor: const Color(0xFF0EA5E9),
                     child: Column(
                       children: [
                         _fileItem('Toa thuốc 05/2025.pdf', '12/05/2025'),
@@ -319,9 +319,9 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                                 size: 18),
                             label: const Text('Upload tài liệu'),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF2563EB),
+                              foregroundColor: const Color(0xFF0EA5E9),
                               side: const BorderSide(
-                                  color: Color(0xFF2563EB)),
+                                  color: Color(0xFF0EA5E9)),
                               minimumSize:
                                   const Size(double.infinity, 44),
                               shape: RoundedRectangleBorder(
@@ -350,7 +350,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -557,7 +557,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.picture_as_pdf_rounded,
-                color: Color(0xFF2563EB), size: 20),
+                color: Color(0xFF0EA5E9), size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -576,7 +576,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
             ),
           ),
           const Icon(Icons.open_in_new_rounded,
-              color: Color(0xFF2563EB), size: 18),
+              color: Color(0xFF0EA5E9), size: 18),
         ],
       ),
     );

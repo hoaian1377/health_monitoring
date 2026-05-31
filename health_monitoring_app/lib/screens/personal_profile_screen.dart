@@ -52,7 +52,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -97,7 +97,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                       style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2563EB))),
+                          color: Color(0xFF0EA5E9))),
                 ),
                 const SizedBox(height: 12),
                 const Text('Nguyễn Văn An',
@@ -144,10 +144,10 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                   _buildCard(
                     title: 'Thông tin cơ bản',
                     icon: Icons.person_rounded,
-                    iconColor: const Color(0xFF2563EB),
+                    iconColor: const Color(0xFF0EA5E9),
                     children: [
                       _infoRow(Icons.badge_outlined, const Color(0xFFEBF3FF),
-                          const Color(0xFF2563EB), 'Họ và tên', 'Nguyễn Văn An'),
+                          const Color(0xFF0EA5E9), 'Họ và tên', 'Nguyễn Văn An'),
                       _divider(),
                       _infoRow(
                           Icons.cake_outlined,
@@ -190,7 +190,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                       _infoRow(
                           Icons.email_outlined,
                           const Color(0xFFEBF3FF),
-                          const Color(0xFF2563EB),
+                          const Color(0xFF0EA5E9),
                           'Email',
                           'nguyenvan.an@gmail.com'),
                       _divider(),
@@ -212,7 +212,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                     iconColor: const Color(0xFFEA580C),
                     children: [
                       _roleRow(
-                          color: const Color(0xFF2563EB),
+                          color: const Color(0xFF0EA5E9),
                           name: 'Nguyễn Văn An',
                           role: 'Người lớn tuổi',
                           badgeText: 'Đang dùng',
@@ -223,7 +223,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                           name: 'Nguyễn Thị Bình',
                           role: 'Con gái',
                           badgeText: 'Đã kết nối',
-                          badgeColor: const Color(0xFF2563EB)),
+                          badgeColor: const Color(0xFF0EA5E9)),
                       _divider(),
                       _roleRow(
                           color: const Color(0xFFD97706),
@@ -242,7 +242,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                     child: ElevatedButton(
                       onPressed: _showSaveToast,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFF0EA5E9),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),

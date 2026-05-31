@@ -101,7 +101,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           Navigator.pop(context); // Go back to login screen
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
+                          backgroundColor: const Color(0xFF0EA5E9),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
@@ -130,7 +130,7 @@ class _SignupScreenState extends State<SignupScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E3A8A)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0284C7)),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -145,7 +145,7 @@ class _SignupScreenState extends State<SignupScreen> {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF2563EB).withOpacity(0.06),
+                color: const Color(0xFF0EA5E9).withOpacity(0.06),
               ),
             ),
           ),
@@ -173,7 +173,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               style: TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E3A8A),
+                                color: Color(0xFF0284C7),
                               ),
                             ),
                             SizedBox(height: 6),
@@ -352,7 +352,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                       height: 24,
                                       child: Checkbox(
                                         value: _agreeTerms,
-                                        activeColor: const Color(0xFF2563EB),
+                                        activeColor: const Color(0xFF0EA5E9),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                                         side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
                                         onChanged: (val) {
@@ -384,7 +384,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : _signup,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF2563EB),
+                                      backgroundColor: const Color(0xFF0EA5E9),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
                                       ),
@@ -434,7 +434,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               child: const Text(
                                 'Đăng nhập ngay',
                                 style: TextStyle(
-                                  color: Color(0xFF2563EB),
+                                  color: Color(0xFF0EA5E9),
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
@@ -474,7 +474,7 @@ class _SignupScreenState extends State<SignupScreen> {
           color: isSelected ? const Color(0xFFEBF3FF) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
             width: isSelected ? 1.8 : 1,
           ),
         ),
@@ -482,7 +482,7 @@ class _SignupScreenState extends State<SignupScreen> {
           children: [
             Icon(
               icon,
-              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+              color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF64748B),
               size: 28,
             ),
             const SizedBox(height: 8),
@@ -491,7 +491,7 @@ class _SignupScreenState extends State<SignupScreen> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? const Color(0xFF1E3A8A) : const Color(0xFF64748B),
+                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
               ),
             ),
           ],
@@ -524,7 +524,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+        borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
