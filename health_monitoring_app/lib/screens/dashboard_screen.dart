@@ -7,20 +7,42 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  // Mock state cho các chỉ số
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
+  // ── Chỉ số sức khỏe ──────────────────────────────────────────────────────────
   String _bpSys = '120';
   String _bpDia = '80';
+  String _heartRate = '72';
   String _bloodSugar = '5.5';
   String _weight = '62.0';
-  String _sleep = '7.5';
+  String _temperature = '36.5';
 
-  void _showAddMetricsSheet() {
+  // Chart tab
+  late TabController _chartTabController;
+
+  // Cảnh báo bỏ lỡ thuốc
+  bool _showMissedAlert = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _chartTabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _chartTabController.dispose();
+    super.dispose();
+  }
+
+  // ── Bottom sheet nhập / sửa chỉ số ─────────────────────────────────────────
+  void _showMetricsSheet() {
     final bpSysCtrl = TextEditingController(text: _bpSys);
     final bpDiaCtrl = TextEditingController(text: _bpDia);
+    final heartCtrl = TextEditingController(text: _heartRate);
     final sugarCtrl = TextEditingController(text: _bloodSugar);
     final weightCtrl = TextEditingController(text: _weight);
-    final sleepCtrl = TextEditingController(text: _sleep);
+    final tempCtrl = TextEditingController(text: _temperature);
 
     showModalBottomSheet(
       context: context,
@@ -33,9 +55,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          top: 24,
-          left: 24,
-          right: 24,
+          top: 20,
+          left: 20,
+          right: 20,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -52,50 +74,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text('Nhập Chỉ Số Sức Khỏe',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B))),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
               Row(
                 children: [
-                  Expanded(
-                    child: _inputField('Huyết áp tâm thu', bpSysCtrl, 'mmHg',
-                        Icons.monitor_heart_rounded),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.edit_rounded,
+                        color: Color(0xFF0EA5E9), size: 18),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: _inputField('Huyết áp tâm trương', bpDiaCtrl, 'mmHg',
-                        Icons.favorite_rounded),
+                  const Text(
+                    'Nhập / Cập nhật Chỉ Số',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B)),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
+              const Text('Thời gian ghi nhận: Hôm nay, ngay bây giờ',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+              const SizedBox(height: 20),
+              _sheetSection('Huyết Áp', Icons.monitor_heart_rounded,
+                  const Color(0xFFDC2626)),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(
-                    child: _inputField('Đường huyết', sugarCtrl, 'mmol/L',
-                        Icons.water_drop_rounded),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: _inputField(
-                        'Cân nặng', weightCtrl, 'kg', Icons.scale_rounded),
+                        'Tâm thu', bpSysCtrl, 'mmHg', Icons.arrow_upward_rounded),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _inputField('Tâm trương', bpDiaCtrl, 'mmHg',
+                        Icons.arrow_downward_rounded),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              _inputField('Thời gian ngủ', sleepCtrl, 'giờ',
-                  Icons.nightlight_round_rounded),
+              _sheetSection(
+                  'Nhịp Tim', Icons.favorite_rounded, const Color(0xFFE11D48)),
+              const SizedBox(height: 10),
+              _inputField(
+                  'Nhịp tim', heartCtrl, 'lần/phút', Icons.favorite_border_rounded),
+              const SizedBox(height: 16),
+              _sheetSection('Đường Huyết', Icons.water_drop_rounded,
+                  const Color(0xFF0284C7)),
+              const SizedBox(height: 10),
+              _inputField(
+                  'Đường huyết', sugarCtrl, 'mmol/L', Icons.water_drop_outlined),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _sheetSection('Cân Nặng', Icons.scale_rounded,
+                            const Color(0xFF7C3AED)),
+                        const SizedBox(height: 10),
+                        _inputField(
+                            'Cân nặng', weightCtrl, 'kg', Icons.scale_outlined),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _sheetSection('Nhiệt Độ', Icons.thermostat_rounded,
+                            const Color(0xFFEA580C)),
+                        const SizedBox(height: 10),
+                        _inputField('Nhiệt độ', tempCtrl, '°C',
+                            Icons.thermostat_outlined),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0EA5E9), // Light blue
+                    backgroundColor: const Color(0xFF0EA5E9),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
@@ -103,29 +172,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   onPressed: () {
                     setState(() {
-                      _bpSys = bpSysCtrl.text;
-                      _bpDia = bpDiaCtrl.text;
-                      _bloodSugar = sugarCtrl.text;
-                      _weight = weightCtrl.text;
-                      _sleep = sleepCtrl.text;
+                      _bpSys = bpSysCtrl.text.isEmpty ? _bpSys : bpSysCtrl.text;
+                      _bpDia = bpDiaCtrl.text.isEmpty ? _bpDia : bpDiaCtrl.text;
+                      _heartRate =
+                          heartCtrl.text.isEmpty ? _heartRate : heartCtrl.text;
+                      _bloodSugar =
+                          sugarCtrl.text.isEmpty ? _bloodSugar : sugarCtrl.text;
+                      _weight =
+                          weightCtrl.text.isEmpty ? _weight : weightCtrl.text;
+                      _temperature =
+                          tempCtrl.text.isEmpty ? _temperature : tempCtrl.text;
                     });
                     Navigator.pop(ctx);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         backgroundColor: Color(0xFF10B981),
                         content: Text('✓ Đã cập nhật chỉ số thành công!'),
+                        duration: Duration(seconds: 2),
                       ),
                     );
                   },
                   child: const Text('Lưu Chỉ Số',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _sheetSection(String label, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(label,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+                letterSpacing: 0.3)),
+      ],
     );
   }
 
@@ -139,12 +228,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF64748B))),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         TextField(
           controller: ctrl,
-          keyboardType: TextInputType.number,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             suffixText: unit,
+            suffixStyle:
+                const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
             prefixIcon: Icon(icon, color: const Color(0xFF0EA5E9), size: 18),
             filled: true,
             fillColor: const Color(0xFFF0F9FF),
@@ -165,27 +256,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ── Build ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F9FF), // Sáng, đồng nhất blue theme
+      backgroundColor: const Color(0xFFF0F9FF),
       body: CustomScrollView(
         slivers: [
           _buildSliverHeader(),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Cảnh báo bỏ lỡ thuốc
+                  if (_showMissedAlert) ...[
+                    _buildMissedMedicineAlert(),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Lịch khám sắp tới
                   _buildNextAppointmentCard(),
                   const SizedBox(height: 24),
+
+                  // Section chỉ số
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSectionLabel('CHỈ SỐ HÔM NAY'),
+                      _buildSectionLabel('CHỈ SỐ SỨC KHỎE HÔM NAY'),
                       GestureDetector(
-                        onTap: _showAddMetricsSheet,
+                        onTap: _showMetricsSheet,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 6),
@@ -195,116 +296,176 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.add_rounded,
-                                  size: 16, color: Color(0xFF0EA5E9)),
+                              Icon(Icons.edit_rounded,
+                                  size: 14, color: Color(0xFF0EA5E9)),
                               SizedBox(width: 4),
-                              Text('Nhập chỉ số',
+                              Text('Nhập / Sửa',
                                   style: TextStyle(
                                       color: Color(0xFF0EA5E9),
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13)),
+                                      fontSize: 12)),
                             ],
                           ),
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Metrics Grid
+
+                  // Hàng 1: Huyết áp + Nhịp tim
                   Row(
                     children: [
                       Expanded(
                         child: _buildMetricCard(
                           title: 'Huyết áp',
+                          icon: Icons.monitor_heart_rounded,
                           value: _bpSys,
-                          unit: '/$_bpDia',
-                          statusText: int.parse(_bpSys) > 130
+                          unit: '/$_bpDia mmHg',
+                          statusText: int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
                               ? 'Hơi cao'
                               : 'Bình thường',
-                          statusColor: int.parse(_bpSys) > 130
+                          statusColor: int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
                               ? const Color(0xFFD97706)
                               : const Color(0xFF16A34A),
-                          statusBg: int.parse(_bpSys) > 130
+                          statusBg: int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
                               ? const Color(0xFFFEF3C7)
                               : const Color(0xFFDCFCE7),
-                          statusIcon: int.parse(_bpSys) > 130
+                          statusIcon: int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
                               ? Icons.warning_amber_rounded
                               : Icons.check_circle_rounded,
+                          accentColor: const Color(0xFFDC2626),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildMetricCard(
-                          title: 'Đường huyết',
-                          icon: Icons.water_drop_outlined,
-                          value: _bloodSugar,
-                          unit: ' mmol/L',
-                          statusText: double.parse(_bloodSugar) > 7.0
-                              ? 'Hơi cao'
-                              : 'Bình thường',
-                          statusColor: double.parse(_bloodSugar) > 7.0
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFF16A34A),
-                          statusBg: double.parse(_bloodSugar) > 7.0
-                              ? const Color(0xFFFEF3C7)
-                              : const Color(0xFFDCFCE7),
-                          statusIcon: double.parse(_bloodSugar) > 7.0
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_rounded,
+                          title: 'Nhịp tim',
+                          icon: Icons.favorite_rounded,
+                          value: _heartRate,
+                          unit: ' lần/phút',
+                          statusText: () {
+                            final v = int.tryParse(_heartRate) ?? 72;
+                            if (v < 60) return 'Chậm';
+                            if (v > 100) return 'Nhanh';
+                            return 'Bình thường';
+                          }(),
+                          statusColor: () {
+                            final v = int.tryParse(_heartRate) ?? 72;
+                            return (v < 60 || v > 100)
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFF16A34A);
+                          }(),
+                          statusBg: () {
+                            final v = int.tryParse(_heartRate) ?? 72;
+                            return (v < 60 || v > 100)
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFFDCFCE7);
+                          }(),
+                          statusIcon: () {
+                            final v = int.tryParse(_heartRate) ?? 72;
+                            return (v < 60 || v > 100)
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_rounded;
+                          }(),
+                          accentColor: const Color(0xFFE11D48),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // Hàng 2: Đường huyết + Nhiệt độ
                   Row(
                     children: [
                       Expanded(
                         child: _buildMetricCard(
-                          title: 'Cân nặng',
-                          icon: Icons.scale_outlined,
-                          value: _weight,
-                          unit: ' kg',
-                          statusText: 'Ổn định',
-                          statusColor: const Color(0xFF16A34A),
-                          statusBg: const Color(0xFFDCFCE7),
-                          statusIcon: Icons.check_circle_rounded,
+                          title: 'Đường huyết',
+                          icon: Icons.water_drop_rounded,
+                          value: _bloodSugar,
+                          unit: ' mmol/L',
+                          statusText:
+                              double.tryParse(_bloodSugar) != null &&
+                                      double.parse(_bloodSugar) > 7.0
+                                  ? 'Hơi cao'
+                                  : 'Bình thường',
+                          statusColor:
+                              double.tryParse(_bloodSugar) != null &&
+                                      double.parse(_bloodSugar) > 7.0
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF16A34A),
+                          statusBg: double.tryParse(_bloodSugar) != null &&
+                                  double.parse(_bloodSugar) > 7.0
+                              ? const Color(0xFFFEF3C7)
+                              : const Color(0xFFDCFCE7),
+                          statusIcon: double.tryParse(_bloodSugar) != null &&
+                                  double.parse(_bloodSugar) > 7.0
+                              ? Icons.warning_amber_rounded
+                              : Icons.check_circle_rounded,
+                          accentColor: const Color(0xFF0284C7),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildMetricCard(
-                          title: 'Giấc ngủ',
-                          icon: Icons.nightlight_round_outlined,
-                          value: _sleep,
-                          unit: ' giờ',
-                          statusText: double.parse(_sleep) < 7.0
-                              ? 'Thiếu ngủ'
-                              : 'Tốt',
-                          statusColor: double.parse(_sleep) < 7.0
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFF16A34A),
-                          statusBg: double.parse(_sleep) < 7.0
-                              ? const Color(0xFFFEF3C7)
-                              : const Color(0xFFDCFCE7),
-                          statusIcon: double.parse(_sleep) < 7.0
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_rounded,
+                          title: 'Nhiệt độ',
+                          icon: Icons.thermostat_rounded,
+                          value: _temperature,
+                          unit: ' °C',
+                          statusText: () {
+                            final v = double.tryParse(_temperature) ?? 36.5;
+                            if (v >= 38.0) return 'Sốt';
+                            if (v < 36.0) return 'Hạ thân nhiệt';
+                            return 'Bình thường';
+                          }(),
+                          statusColor: () {
+                            final v = double.tryParse(_temperature) ?? 36.5;
+                            if (v >= 38.0) return const Color(0xFFDC2626);
+                            if (v < 36.0) return const Color(0xFF0284C7);
+                            return const Color(0xFF16A34A);
+                          }(),
+                          statusBg: () {
+                            final v = double.tryParse(_temperature) ?? 36.5;
+                            if (v >= 38.0) return const Color(0xFFFFEBEB);
+                            if (v < 36.0) return const Color(0xFFE0F2FE);
+                            return const Color(0xFFDCFCE7);
+                          }(),
+                          statusIcon: () {
+                            final v = double.tryParse(_temperature) ?? 36.5;
+                            return (v >= 38.0 || v < 36.0)
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_rounded;
+                          }(),
+                          accentColor: const Color(0xFFEA580C),
                         ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 24),
-                  _buildSectionLabel('BIỂU ĐỒ HUYẾT ÁP (7 NGÀY)'),
                   const SizedBox(height: 12),
-                  _buildMockLineChart(),
+
+                  // Hàng 3: Cân nặng (full width hoặc có thể thêm BMI)
+                  _buildWeightCard(),
 
                   const SizedBox(height: 24),
+
+                  // Biểu đồ đa chỉ số
+                  _buildSectionLabel('BIỂU ĐỒ THEO DÕI (7 NGÀY)'),
+                  const SizedBox(height: 12),
+                  _buildMultiChart(),
+
+                  const SizedBox(height: 24),
+
+                  // Tuân thủ uống thuốc
                   _buildSectionLabel('UỐNG THUỐC 7 NGÀY QUA'),
                   const SizedBox(height: 12),
                   _buildAdherenceChart(),
 
                   const SizedBox(height: 24),
+
+                  // Cảnh báo gần đây
                   _buildSectionLabel('CẢNH BÁO GẦN ĐÂY'),
                   const SizedBox(height: 12),
                   _buildRecentAlerts(),
@@ -316,39 +477,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddMetricsSheet,
-        backgroundColor: const Color(0xFF0EA5E9),
-        child: const Icon(Icons.add_chart_rounded, color: Colors.white),
-      ),
     );
   }
 
+  // ── Sliver Header ──────────────────────────────────────────────────────────
   Widget _buildSliverHeader() {
     return SliverAppBar(
-      expandedHeight: 120.0,
+      expandedHeight: 130.0,
       floating: false,
       pinned: true,
-      backgroundColor: const Color(0xFF0EA5E9),
+      backgroundColor: const Color(0xFF0284C7),
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: const Text(
-          'Dashboard',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dashboard',
+              style: TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
             ),
-          ),
+            Text(
+              'Ngày ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ],
+        ),
+        background: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Container(
+                width: 130,
+                height: 130,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 40,
+              bottom: 10,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.06),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       shape: const ContinuousRectangleBorder(
@@ -360,6 +552,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ── Cảnh báo bỏ lỡ thuốc ──────────────────────────────────────────────────
+  Widget _buildMissedMedicineAlert() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.medication_rounded,
+                color: Color(0xFFDC2626), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Bỏ lỡ uống thuốc — Đã thông báo người thân',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFB91C1C))),
+                const SizedBox(height: 3),
+                const Text(
+                    'Vitamin D3 lúc 13:00 chưa xác nhận. Người thân đã được thông báo.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF991B1B))),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    setState(() => _showMissedAlert = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Color(0xFF16A34A),
+                        content: Text('✓ Đã xác nhận uống thuốc!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC2626),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text('Xác nhận đã uống',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _showMissedAlert = false),
+            child: const Icon(Icons.close_rounded,
+                size: 18, color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Lịch khám sắp tới ─────────────────────────────────────────────────────
   Widget _buildNextAppointmentCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -393,23 +664,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text('Lịch khám sắp tới',
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: Color(0xFF64748B),
                         fontWeight: FontWeight.w600)),
                 SizedBox(height: 4),
                 Text('Bệnh viện Chợ Rẫy',
                     style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B))),
                 SizedBox(height: 2),
-                Text('BS. Nguyễn Thị Lan - Tim mạch',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF475569))),
+                Text('BS. Nguyễn Thị Lan · Tim mạch',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF475569))),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(12),
@@ -418,17 +690,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text('Còn',
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Color(0xFFD97706),
                         fontWeight: FontWeight.bold)),
                 Text('3',
                     style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         color: Color(0xFFD97706),
                         fontWeight: FontWeight.w900)),
                 Text('ngày',
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Color(0xFFD97706),
                         fontWeight: FontWeight.bold)),
               ],
@@ -439,12 +711,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── Section Label ──
+  // ── Section Label ──────────────────────────────────────────────────────────
   Widget _buildSectionLabel(String label) {
     return Text(
       label,
       style: const TextStyle(
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: FontWeight.bold,
         color: Color(0xFF475569),
         letterSpacing: 0.5,
@@ -452,19 +724,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── Metric Card ──
+  // ── Metric Card ─────────────────────────────────────────────────────────────
   Widget _buildMetricCard({
     required String title,
-    IconData? icon,
+    required IconData icon,
     required String value,
     required String unit,
     required String statusText,
     required Color statusColor,
     required Color statusBg,
     required IconData statusIcon,
+    required Color accentColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -480,43 +753,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 16, color: const Color(0xFF64748B)),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                title,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569)),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 14, color: accentColor),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569)),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87),
-              ),
-              Text(
-                unit,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF64748B)),
-              ),
-            ],
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: accentColor.withOpacity(0.9)),
           ),
-          const SizedBox(height: 12),
+          Text(
+            unit,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+          ),
+          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: statusBg,
               borderRadius: BorderRadius.circular(20),
@@ -524,12 +796,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(statusIcon, size: 12, color: statusColor),
-                const SizedBox(width: 4),
+                Icon(statusIcon, size: 11, color: statusColor),
+                const SizedBox(width: 3),
                 Text(
                   statusText,
                   style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: statusColor),
                 ),
@@ -541,11 +813,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ── Mock Line Chart for BP ──
-  Widget _buildMockLineChart() {
+  // ── Cân nặng + BMI card ────────────────────────────────────────────────────
+  Widget _buildWeightCard() {
+    final w = double.tryParse(_weight) ?? 62.0;
+    // BMI giả định chiều cao 1.65m
+    final bmi = w / (1.65 * 1.65);
+    String bmiStatus;
+    Color bmiColor;
+    if (bmi < 18.5) {
+      bmiStatus = 'Thiếu cân';
+      bmiColor = const Color(0xFF0284C7);
+    } else if (bmi < 25) {
+      bmiStatus = 'Bình thường';
+      bmiColor = const Color(0xFF16A34A);
+    } else if (bmi < 30) {
+      bmiStatus = 'Thừa cân';
+      bmiColor = const Color(0xFFD97706);
+    } else {
+      bmiStatus = 'Béo phì';
+      bmiColor = const Color(0xFFDC2626);
+    }
+
     return Container(
-      height: 160,
       padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.scale_rounded,
+                color: Color(0xFF7C3AED), size: 22),
+          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Cân nặng',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w600)),
+              Text('${_weight} kg',
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B))),
+            ],
+          ),
+          const Spacer(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text('BMI (est.)',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+              Text(bmi.toStringAsFixed(1),
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: bmiColor)),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: bmiColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(bmiStatus,
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: bmiColor)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Biểu đồ đa chỉ số ─────────────────────────────────────────────────────
+  Widget _buildMultiChart() {
+    return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -556,40 +917,159 @@ class _DashboardScreenState extends State<DashboardScreen> {
               offset: const Offset(0, 4)),
         ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(7, (index) {
-          final heights = [60.0, 80.0, 75.0, 90.0, 65.0, 70.0, 85.0];
-          final days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-          final isToday = index == 6;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                width: 12,
-                height: heights[index],
-                decoration: BoxDecoration(
-                  color: isToday ? const Color(0xFF0EA5E9) : const Color(0xFFBAE6FD),
-                  borderRadius: BorderRadius.circular(6),
+      child: Column(
+        children: [
+          // Tab bar chọn chỉ số
+          Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: TabBar(
+              controller: _chartTabController,
+              isScrollable: true,
+              indicatorColor: const Color(0xFF0EA5E9),
+              indicatorWeight: 2.5,
+              labelColor: const Color(0xFF0EA5E9),
+              unselectedLabelColor: const Color(0xFF94A3B8),
+              labelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 12),
+              unselectedLabelStyle: const TextStyle(fontSize: 12),
+              tabs: const [
+                Tab(text: 'Huyết áp'),
+                Tab(text: 'Nhịp tim'),
+                Tab(text: 'Đường huyết'),
+                Tab(text: 'Cân nặng'),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 180,
+            child: TabBarView(
+              controller: _chartTabController,
+              children: [
+                _buildBarChart(
+                  data: [120.0, 128.0, 118.0, 135.0, 122.0, 119.0, double.tryParse(_bpSys) ?? 120.0],
+                  color: const Color(0xFFDC2626),
+                  unit: 'mmHg',
+                  threshold: 130,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(days[index],
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
-                      color: isToday
-                          ? const Color(0xFF0EA5E9)
-                          : const Color(0xFF94A3B8))),
-            ],
-          );
-        }),
+                _buildBarChart(
+                  data: [74.0, 78.0, 70.0, 88.0, 72.0, 76.0, double.tryParse(_heartRate) ?? 72.0],
+                  color: const Color(0xFFE11D48),
+                  unit: 'l/p',
+                  threshold: 100,
+                ),
+                _buildBarChart(
+                  data: [5.6, 6.1, 5.8, 7.3, 5.5, 5.9, double.tryParse(_bloodSugar) ?? 5.5],
+                  color: const Color(0xFF0284C7),
+                  unit: 'mmol',
+                  threshold: 7.0,
+                  isDecimal: true,
+                ),
+                _buildBarChart(
+                  data: [62.5, 62.3, 62.8, 62.1, 62.4, 62.2, double.tryParse(_weight) ?? 62.0],
+                  color: const Color(0xFF7C3AED),
+                  unit: 'kg',
+                  threshold: 70,
+                  isDecimal: true,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ── Adherence Chart (Mock UI) ──
+  Widget _buildBarChart({
+    required List<double> data,
+    required Color color,
+    required String unit,
+    required double threshold,
+    bool isDecimal = false,
+  }) {
+    final days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+    final maxVal = data.reduce((a, b) => a > b ? a : b);
+    final minVal = data.reduce((a, b) => a < b ? a : b);
+    final range = maxVal - minVal == 0 ? 1.0 : maxVal - minVal;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (i) {
+              final isToday = i == 6;
+              final isHigh = data[i] > threshold;
+              final barH = 70.0 * (data[i] - minVal) / range + 20;
+
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (isHigh)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 2),
+                      child: Icon(Icons.warning_rounded, size: 12, color: Color(0xFFDC2626)),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      isDecimal
+                          ? data[i].toStringAsFixed(1)
+                          : data[i].toInt().toString(),
+                      style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                          color: isHigh ? const Color(0xFFDC2626) : const Color(0xFF64748B)),
+                    ),
+                  ),
+                  Container(
+                    width: 28,
+                    height: barH,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    days[i],
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight:
+                            isToday ? FontWeight.bold : FontWeight.w500,
+                        color: isToday ? color : const Color(0xFF94A3B8)),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ),
+        // Ghi chú (Legend)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 4),
+              const Text('Bình thường', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+              const SizedBox(width: 12),
+              const Icon(Icons.warning_rounded, size: 10, color: Color(0xFFDC2626)),
+              const SizedBox(width: 4),
+              Text('Vượt ngưỡng (>$threshold)', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Adherence Chart ─────────────────────────────────────────────────────────
   Widget _buildAdherenceChart() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -611,9 +1091,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Tỉ lệ tuân thủ',
+                  Text('Tỉ lệ tuân thủ uống thuốc',
                       style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF475569))),
                   Text('Rất tốt',
@@ -623,24 +1103,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontWeight: FontWeight.bold)),
                 ],
               ),
-              Text('92%',
-                  style: const TextStyle(
-                      fontSize: 24,
+              const Text('92%',
+                  style: TextStyle(
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0EA5E9))),
             ],
+          ),
+          const SizedBox(height: 4),
+          // Progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: 0.92,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFE0F2FE),
+              valueColor:
+                  const AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
+            ),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-              final status = [1, 1, 0, 1, 1, 1, 2]; // 1: full, 0: missed, 2: today partial
+              final status = [1, 1, 0, 1, 1, 1, 2];
               return Column(
                 children: [
                   Container(
-                    width: 28,
-                    height: 28,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: status[index] == 1
                           ? const Color(0xFFDCFCE7)
@@ -663,11 +1155,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               : const Color(0xFFD97706),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     days[index],
                     style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: status[index] == 2
                             ? const Color(0xFF0EA5E9)
                             : const Color(0xFF94A3B8),
@@ -679,31 +1171,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
               );
             }),
           ),
+          const SizedBox(height: 12),
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _legendDot(const Color(0xFF16A34A), 'Đã uống'),
+              const SizedBox(width: 16),
+              _legendDot(const Color(0xFFDC2626), 'Bỏ lỡ'),
+              const SizedBox(width: 16),
+              _legendDot(const Color(0xFFD97706), 'Chờ xác nhận'),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ── Recent Alerts ──
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+            width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+      ],
+    );
+  }
+
+  // ── Recent Alerts ──────────────────────────────────────────────────────────
   Widget _buildRecentAlerts() {
     return Column(
       children: [
         _buildAlertItem(
-          icon: Icons.favorite_rounded,
+          icon: Icons.monitor_heart_rounded,
           color: const Color(0xFFDC2626),
           bg: const Color(0xFFFFEBEB),
           title: 'Huyết áp hơi cao',
           time: 'Hôm nay, 08:30',
-          desc: 'Huyết áp 145/90 đo lúc sáng. Hãy theo dõi thêm.',
+          desc: 'Huyết áp 145/90 mmHg. Hãy theo dõi thêm và nghỉ ngơi.',
+          sentToFamily: true,
         ),
         const SizedBox(height: 12),
         _buildAlertItem(
-          icon: Icons.nightlight_round_rounded,
+          icon: Icons.thermostat_rounded,
           color: const Color(0xFFD97706),
           bg: const Color(0xFFFEF3C7),
-          title: 'Ngủ ít hơn thường lệ',
-          time: 'Hôm qua',
-          desc: 'Bạn chỉ ngủ 5 tiếng đêm qua. Cần nghỉ ngơi thêm.',
+          title: 'Nhiệt độ cơ thể tăng nhẹ',
+          time: 'Hôm qua, 15:00',
+          desc: 'Nhiệt độ 37.8°C. Có thể là dấu hiệu sốt nhẹ.',
+          sentToFamily: true,
+        ),
+        const SizedBox(height: 12),
+        _buildAlertItem(
+          icon: Icons.cancel_rounded,
+          color: const Color(0xFF7C3AED),
+          bg: const Color(0xFFF3EEFF),
+          title: 'Bỏ lỡ uống thuốc',
+          time: 'Hôm qua, 13:00',
+          desc: 'Vitamin D3 buổi trưa chưa được xác nhận.',
+          sentToFamily: true,
         ),
       ],
     );
@@ -716,9 +1244,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String title,
     required String time,
     required String desc,
+    bool sentToFamily = false,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -730,9 +1259,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,20 +1269,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B))),
+                    Expanded(
+                      child: Text(title,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B))),
+                    ),
                     Text(time,
                         style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF94A3B8))),
+                            fontSize: 10, color: Color(0xFF94A3B8))),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(desc,
-                    style:
-                        const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF64748B))),
+                if (sentToFamily) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.notifications_active_rounded,
+                          size: 11, color: Color(0xFF0EA5E9)),
+                      const SizedBox(width: 4),
+                      const Text('Đã thông báo người thân',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF0EA5E9),
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
