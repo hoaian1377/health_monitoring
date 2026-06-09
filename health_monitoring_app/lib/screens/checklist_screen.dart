@@ -3,10 +3,17 @@ import 'package:flutter/material.dart';
 class TaskItem {
   final String id;
   final String title;
-  final String type; // 'medication' | 'measurement' | 'habit' | 'symptom'
+  final String type; // 'medication' | 'measurement' | 'habit' | 'symptom' | 'document'
   final String time;
   final String details;
   bool isCompleted;
+
+  // Thuộc tính chi tiết cho thuốc
+  final String? medCode;
+  final String? dosage;
+  final int? dosesPerDay;
+  final String? startDate;
+  final String? endDate;
 
   TaskItem({
     required this.id,
@@ -15,6 +22,11 @@ class TaskItem {
     required this.time,
     required this.details,
     this.isCompleted = false,
+    this.medCode,
+    this.dosage,
+    this.dosesPerDay,
+    this.startDate,
+    this.endDate,
   });
 }
 
@@ -34,6 +46,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       time: '07:00',
       details: '1 viên sau ăn sáng · Huyết áp',
       isCompleted: true,
+      medCode: 'AML-05',
+      dosage: '1 viên',
+      dosesPerDay: 1,
+      startDate: '01/06/2026',
+      endDate: '30/06/2026',
     ),
     TaskItem(
       id: '2',
@@ -58,6 +75,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       time: '12:00',
       details: '1 viên uống ngay trong bữa ăn trưa',
       isCompleted: false,
+      medCode: 'MET-500',
+      dosage: '1 viên',
+      dosesPerDay: 2,
+      startDate: '01/06/2026',
+      endDate: '30/06/2026',
     ),
     TaskItem(
       id: '5',
@@ -74,6 +96,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       time: '20:00',
       details: '1 viên uống trước khi đi ngủ',
       isCompleted: false,
+      medCode: 'ATO-20',
+      dosage: '1 viên',
+      dosesPerDay: 1,
+      startDate: '01/06/2026',
+      endDate: '15/06/2026',
     ),
     TaskItem(
       id: '7',
@@ -83,20 +110,70 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       details: 'Ghi chú cho bác sĩ lần khám tới',
       isCompleted: false,
     ),
+    // Checklist chuẩn bị giấy tờ đi khám (Yêu cầu F05)
+    TaskItem(
+      id: 'doc_1',
+      title: 'Chuẩn bị CCCD/CMND',
+      type: 'document',
+      time: 'Trước khám',
+      details: 'Cần thiết để làm thủ tục tại Bệnh viện Chợ Rẫy',
+      isCompleted: false,
+    ),
+    TaskItem(
+      id: 'doc_2',
+      title: 'Chuẩn bị Thẻ Bảo hiểm Y tế (BHYT)',
+      type: 'document',
+      time: 'Trước khám',
+      details: 'Để nhận hỗ trợ chi phí khám chữa bệnh',
+      isCompleted: false,
+    ),
+    TaskItem(
+      id: 'doc_3',
+      title: 'Chuẩn bị Sổ khám bệnh',
+      type: 'document',
+      time: 'Trước khám',
+      details: 'Sổ khám bệnh cũ ghi nhận lịch sử điều trị',
+      isCompleted: false,
+    ),
+    TaskItem(
+      id: 'doc_4',
+      title: 'Chuẩn bị Đơn thuốc đang sử dụng',
+      type: 'document',
+      time: 'Trước khám',
+      details: 'Mang theo các loại thuốc đang uống để bác sĩ đối chiếu',
+      isCompleted: false,
+    ),
+    TaskItem(
+      id: 'doc_5',
+      title: 'Chuẩn bị Kết quả xét nghiệm liên quan',
+      type: 'document',
+      time: 'Trước khám',
+      details: 'Phim X-quang, kết quả xét nghiệm máu gần đây',
+      isCompleted: false,
+    ),
   ];
 
-  String _selectedCategory = 'all'; // 'all', 'medication', 'measurement', 'habit', 'symptom'
+  String _selectedCategory = 'all'; // 'all', 'medication', 'measurement', 'habit', 'symptom', 'document'
 
   // Form State for Adding Task
   final _titleController = TextEditingController();
   final _detailsController = TextEditingController();
+  final _medCodeController = TextEditingController();
+  final _dosageController = TextEditingController();
+  final _dosesPerDayController = TextEditingController(text: '1');
+  
   String _newTaskType = 'medication';
   TimeOfDay _newTaskTime = const TimeOfDay(hour: 8, minute: 0);
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now().add(const Duration(days: 30));
 
   @override
   void dispose() {
     _titleController.dispose();
     _detailsController.dispose();
+    _medCodeController.dispose();
+    _dosageController.dispose();
+    _dosesPerDayController.dispose();
     super.dispose();
   }
 
@@ -104,6 +181,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     if (_titleController.text.trim().isEmpty) return;
 
     final formattedTime = '${_newTaskTime.hour.toString().padLeft(2, '0')}:${_newTaskTime.minute.toString().padLeft(2, '0')}';
+    final isMed = _newTaskType == 'medication';
 
     setState(() {
       _tasks.add(
@@ -111,21 +189,31 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text.trim(),
           type: _newTaskType,
-          time: formattedTime,
+          time: _newTaskType == 'document' ? 'Trước khám' : formattedTime,
           details: _detailsController.text.trim().isEmpty 
               ? 'Nhiệm vụ tự lên lịch' 
               : _detailsController.text.trim(),
           isCompleted: false,
+          medCode: isMed ? (_medCodeController.text.trim().isEmpty ? 'MED-${DateTime.now().millisecond}' : _medCodeController.text.trim()) : null,
+          dosage: isMed ? (_dosageController.text.trim().isEmpty ? '1 viên' : _dosageController.text.trim()) : null,
+          dosesPerDay: isMed ? (int.tryParse(_dosesPerDayController.text) ?? 1) : null,
+          startDate: isMed ? '${_startDate.day.toString().padLeft(2, '0')}/${_startDate.month.toString().padLeft(2, '0')}/${_startDate.year}' : null,
+          endDate: isMed ? '${_endDate.day.toString().padLeft(2, '0')}/${_endDate.month.toString().padLeft(2, '0')}/${_endDate.year}' : null,
         ),
       );
-      // Sort tasks by time after adding
+      // Sắp xếp nhiệm vụ theo thời gian (giấy tờ khám đưa lên đầu/hoặc cuối tùy ý, ở đây xếp theo alphabet thời gian)
       _tasks.sort((a, b) => a.time.compareTo(b.time));
     });
 
     _titleController.clear();
     _detailsController.clear();
+    _medCodeController.clear();
+    _dosageController.clear();
+    _dosesPerDayController.text = '1';
     _newTaskType = 'medication';
     _newTaskTime = const TimeOfDay(hour: 8, minute: 0);
+    _startDate = DateTime.now();
+    _endDate = DateTime.now().add(const Duration(days: 30));
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -242,7 +330,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             const Color(0xFF10B981),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
                         Expanded(
                           child: _buildTypeCard(
                             setModalState,
@@ -252,59 +344,257 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             const Color(0xFF8B5CF6),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTypeCard(
+                            setModalState,
+                            'document',
+                            Icons.assignment_rounded,
+                            'Giấy tờ khám',
+                            const Color(0xFFF59E0B),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Spacer(),
                       ],
                     ),
                     const SizedBox(height: 18),
 
-                    // Time Picker & Details Row
-                    Row(
-                      children: [
-                        // Time Selection Box
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Thời gian',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                              ),
-                              const SizedBox(height: 8),
-                              InkWell(
-                                onTap: () async {
-                                  final TimeOfDay? time = await showTimePicker(
-                                    context: context,
-                                    initialTime: _newTaskTime,
-                                  );
-                                  if (time != null) {
-                                    setModalState(() {
-                                      _newTaskTime = time;
-                                    });
-                                  }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        '${_newTaskTime.hour.toString().padLeft(2, '0')}:${_newTaskTime.minute.toString().padLeft(2, '0')}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                      ),
-                                      const Icon(Icons.access_time_rounded, color: Color(0xFF0EA5E9), size: 20),
-                                    ],
+                    // Additional Medication form fields (F03)
+                    if (_newTaskType == 'medication') ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Mã thuốc',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _medCodeController,
+                                  decoration: InputDecoration(
+                                    hintText: 'VD: AML-05',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide.none,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Liều lượng',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _dosageController,
+                                  decoration: InputDecoration(
+                                    hintText: 'VD: 1 viên, 10ml',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Số lần uống / ngày',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _dosesPerDayController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: 'VD: 1, 2, 3',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Ngày bắt đầu',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () async {
+                                    final DateTime? picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: _startDate,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030),
+                                    );
+                                    if (picked != null) {
+                                      setModalState(() {
+                                        _startDate = picked;
+                                      });
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          '${_startDate.day.toString().padLeft(2, '0')}/${_startDate.month.toString().padLeft(2, '0')}/${_startDate.year}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                        const Icon(Icons.calendar_today_rounded, color: Color(0xFF0EA5E9), size: 16),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Ngày kết thúc',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () async {
+                                    final DateTime? picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: _endDate,
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030),
+                                    );
+                                    if (picked != null) {
+                                      setModalState(() {
+                                        _endDate = picked;
+                                      });
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          '${_endDate.day.toString().padLeft(2, '0')}/${_endDate.month.toString().padLeft(2, '0')}/${_endDate.year}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                        const Icon(Icons.calendar_today_rounded, color: Color(0xFF0EA5E9), size: 16),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                    ],
+
+                    // Time Picker (Only show if not a medical document, since document prep doesn't have specific time)
+                    if (_newTaskType != 'document') ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Thời gian',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () async {
+                                    final TimeOfDay? time = await showTimePicker(
+                                      context: context,
+                                      initialTime: _newTaskTime,
+                                    );
+                                    if (time != null) {
+                                      setModalState(() {
+                                        _newTaskTime = time;
+                                      });
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          '${_newTaskTime.hour.toString().padLeft(2, '0')}:${_newTaskTime.minute.toString().padLeft(2, '0')}',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                        ),
+                                        const Icon(Icons.access_time_rounded, color: Color(0xFF0EA5E9), size: 20),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                    ],
 
                     // Instruction details
                     const Text(
@@ -315,7 +605,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     TextField(
                       controller: _detailsController,
                       decoration: InputDecoration(
-                        hintText: 'VD: Uống sau ăn, đo lúc nghỉ ngơi...',
+                        hintText: _newTaskType == 'document'
+                            ? 'VD: Mang theo bản gốc và photo...'
+                            : 'VD: Uống sau ăn, đo lúc nghỉ ngơi...',
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -594,6 +886,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       {'key': 'measurement', 'label': 'Đo chỉ số', 'icon': Icons.heart_broken_rounded},
       {'key': 'habit', 'label': 'Thói quen', 'icon': Icons.directions_run_rounded},
       {'key': 'symptom', 'label': 'Triệu chứng', 'icon': Icons.sick_rounded},
+      {'key': 'document', 'label': 'Giấy tờ khám', 'icon': Icons.assignment_rounded},
     ];
 
     return Container(
@@ -615,6 +908,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             themeColor = const Color(0xFF10B981);
           } else if (cat['key'] == 'symptom') {
             themeColor = const Color(0xFF8B5CF6);
+          } else if (cat['key'] == 'document') {
+            themeColor = const Color(0xFFF59E0B);
           } else {
             themeColor = const Color(0xFF475569);
           }
@@ -725,6 +1020,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         typeColor = const Color(0xFF8B5CF6); // Purple
         typeIcon = Icons.sick_rounded;
         typeLabel = 'Triệu chứng';
+        break;
+      case 'document':
+        typeColor = const Color(0xFFF59E0B); // Amber
+        typeIcon = Icons.assignment_rounded;
+        typeLabel = 'Giấy tờ khám';
         break;
       default:
         typeColor = const Color(0xFF64748B); // Grey
@@ -859,6 +1159,27 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             color: task.isCompleted ? Colors.grey.shade300 : const Color(0xFF64748B),
                           ),
                         ),
+                        if (task.type == 'medication' && task.medCode != null) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: task.isCompleted ? const Color(0xFFF1F5F9) : const Color(0xFFE0F2FE),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                _buildMedInfoTag('Mã: ${task.medCode}', task.isCompleted),
+                                _buildMedInfoTag('Liều: ${task.dosage}', task.isCompleted),
+                                _buildMedInfoTag('Uống: ${task.dosesPerDay} lần/ngày', task.isCompleted),
+                                if (task.startDate != null)
+                                  _buildMedInfoTag('${task.startDate} - ${task.endDate}', task.isCompleted),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -884,6 +1205,17 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMedInfoTag(String text, bool isCompleted) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: isCompleted ? Colors.grey : const Color(0xFF0369A1),
       ),
     );
   }

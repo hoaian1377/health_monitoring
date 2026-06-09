@@ -11,6 +11,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isMedsTakenToday = false; // Trạng thái uống thuốc tối (Atorvastatin)
   int _imageCount = 3; // Số lượng hình ảnh mô phỏng trong nhật ký
+  
+  // Trạng thái chuẩn bị giấy tờ đi khám (F05)
+  bool _isCCCDPrepared = false;
+  bool _isBHYTPrepared = false;
+  bool _isSoKhamPrepared = false;
+  bool _isDonThuocPrepared = false;
+  bool _isXetNghiemPrepared = false;
+  
+  // Trạng thái hiển thị cảnh báo bỏ lỡ uống thuốc (F03)
+  bool _showMissedMedsAlert = true;
   final List<String> _simulatedImages = [
     'Toa_thuoc_BvChoRay.jpg',
     'X_Quang_Phoi.png',
@@ -222,6 +232,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Cảnh báo bỏ lỡ thuốc buổi sáng (F03/F08)
+                  if (_showMissedMedsAlert) ...[
+                    _buildMissedMedsAlert(),
+                    const SizedBox(height: 16),
+                  ],
+
                   // 1. Grid of Image Diary and Personal Profile
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,6 +257,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // 2. Medication Reminder Card
                   _buildMedicationReminderCard(takenCount, medsProgress),
+                  const SizedBox(height: 16),
+
+                  // 2B. Lịch khám tiếp theo & Chuẩn bị giấy tờ (F04/F05)
+                  _buildUpcomingAppointmentCard(),
                   const SizedBox(height: 16),
 
                   // 3. Dashboard Preview Card
@@ -655,9 +675,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               color: _isMedsTakenToday ? const Color(0xFF10B981) : const Color(0xFF64748B),
                             ),
                             const SizedBox(width: 6),
-                            const Text(
-                              'Liều kế tiếp: Buổi tối (20:00)',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF475569)),
+                            const Expanded(
+                              child: Text(
+                                'Liều kế tiếp: Buổi tối (20:00)',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF475569)),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -946,6 +969,326 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Cảnh báo bỏ lỡ thuốc buổi sáng (F03/F08)
+  Widget _buildMissedMedsAlert() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFECACA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC2626).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bỏ lỡ giờ uống thuốc — Đã báo người thân',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C)),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Thuốc huyết áp Amlodipine lúc 07:00 chưa được xác nhận. Hệ thống đã tự động gửi tin nhắn báo cho con gái (Nguyễn Thị Bình).',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF991B1B), height: 1.4),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _showMissedMedsAlert = false;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFF10B981),
+                            content: Text('✓ Đã cập nhật trạng thái uống thuốc và gửi tin báo đến người thân!'),
+                          ),
+                        );
+                      },
+                      child: const Text('Bác đã uống', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _showMissedMedsAlert = false;
+                        });
+                      },
+                      child: const Text('Bỏ qua', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Thẻ Lịch khám bệnh sắp tới & Chuẩn bị giấy tờ (F04/F05)
+  Widget _buildUpcomingAppointmentCard() {
+    int preparedCount = (_isCCCDPrepared ? 1 : 0) +
+                        (_isBHYTPrepared ? 1 : 0) +
+                        (_isSoKhamPrepared ? 1 : 0) +
+                        (_isDonThuocPrepared ? 1 : 0) +
+                        (_isXetNghiemPrepared ? 1 : 0);
+    double progress = preparedCount / 5.0;
+    bool isAllPrepared = preparedCount == 5;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Appointment Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.calendar_month_rounded, color: Color(0xFFD97706), size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'LỊCH KHÁM TIẾP THEO',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8), letterSpacing: 0.5),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Bệnh viện Chợ Rẫy',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'BS. Nguyễn Thị Lan · Tim mạch · 08:30 ngày 12/06',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 16),
+
+          // Checklist section title
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Chuẩn bị giấy tờ đi khám (F05)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isAllPrepared ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isAllPrepared ? 'Hoàn tất' : '$preparedCount/5 giấy tờ',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    color: isAllPrepared ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFF1F5F9),
+              color: isAllPrepared ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Checkbox list
+          _buildDocCheckItem(
+            label: 'Căn cước công dân (CCCD/CMND)',
+            subtitle: 'Giấy tờ tùy thân để làm thủ tục khám',
+            value: _isCCCDPrepared,
+            onChanged: (val) {
+              setState(() {
+                _isCCCDPrepared = val ?? false;
+              });
+            },
+          ),
+          _buildDocCheckItem(
+            label: 'Thẻ Bảo hiểm Y tế (BHYT)',
+            subtitle: 'Thẻ BHYT giấy hoặc ứng dụng VssID',
+            value: _isBHYTPrepared,
+            onChanged: (val) {
+              setState(() {
+                _isBHYTPrepared = val ?? false;
+              });
+            },
+          ),
+          _buildDocCheckItem(
+            label: 'Sổ khám bệnh cũ',
+            subtitle: 'Lịch sử khám bệnh trước đây để bác sĩ tham khảo',
+            value: _isSoKhamPrepared,
+            onChanged: (val) {
+              setState(() {
+                _isSoKhamPrepared = val ?? false;
+              });
+            },
+          ),
+          _buildDocCheckItem(
+            label: 'Đơn thuốc đang sử dụng',
+            subtitle: 'Các loại thuốc cũ hoặc thực phẩm chức năng đang uống',
+            value: _isDonThuocPrepared,
+            onChanged: (val) {
+              setState(() {
+                _isDonThuocPrepared = val ?? false;
+              });
+            },
+          ),
+          _buildDocCheckItem(
+            label: 'Các kết quả xét nghiệm liên quan',
+            subtitle: 'Phiếu chụp X-Quang, siêu âm, xét nghiệm máu gần nhất',
+            value: _isXetNghiemPrepared,
+            onChanged: (val) {
+              setState(() {
+                _isXetNghiemPrepared = val ?? false;
+              });
+            },
+          ),
+
+          if (isAllPrepared) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tuyệt vời! Bác đã chuẩn bị đầy đủ giấy tờ cần thiết cho lịch khám sắp tới.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocCheckItem({
+    required String label,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+                activeColor: const Color(0xFFF59E0B),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.bold,
+                      color: value ? Colors.grey : const Color(0xFF1E293B),
+                      decoration: value ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: value ? Colors.grey.shade300 : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
