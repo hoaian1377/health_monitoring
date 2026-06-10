@@ -8,6 +8,9 @@ import 'notification_settings_screen.dart';
 import 'health_thresholds_screen.dart';
 import 'login_screen.dart';
 import 'appointment_screen.dart';
+import 'change_password_screen.dart';
+import 'manage_profiles_screen.dart';
+import '../utils/global_state.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -116,8 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _navigate(Widget screen) {
-    Navigator.push(
-        context, MaterialPageRoute(builder: (_) => screen));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -172,6 +174,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       subtitle: 'Quản lý lịch tái khám và kết quả',
                       onTap: () => _navigate(const AppointmentScreen()),
                     ),
+                    _MenuItem(
+                      icon: Icons.switch_account_rounded,
+                      iconBg: const Color(0xFFE0F2FE),
+                      iconColor: const Color(0xFF0284C7),
+                      title: 'Quản lý hồ sơ người cao tuổi',
+                      subtitle: 'Thêm, xóa, chuyển đổi hồ sơ (F02)',
+                      onTap: () => _navigate(const ManageProfilesScreen()),
+                    ),
                   ]),
 
                   const SizedBox(height: 24),
@@ -215,6 +225,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: 'Ngưỡng cảnh báo sức khỏe',
                       subtitle: 'Huyết áp, đường huyết, cân nặng bất thường',
                       onTap: () => _navigate(const HealthThresholdsScreen()),
+                    ),
+                    _MenuItem(
+                      icon: Icons.lock_outline_rounded,
+                      iconBg: const Color(0xFFF3EEFF),
+                      iconColor: const Color(0xFF7C3AED),
+                      title: 'Đổi mật khẩu',
+                      subtitle: 'Bảo mật tài khoản của bạn',
+                      onTap: () => _navigate(const ChangePasswordScreen()),
                     ),
                   ]),
 
@@ -264,39 +282,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Text('Hệ thống theo dõi sức khỏe người cao tuổi',
               style: TextStyle(fontSize: 13, color: Colors.white70)),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text('NV',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
+          ValueListenableBuilder<List<ElderlyProfile>>(
+            valueListenable: globalState.profiles,
+            builder: (context, profiles, child) {
+              final activeProfile = globalState.activeProfile;
+              final avatar = activeProfile.name.isNotEmpty ? activeProfile.name.substring(0, 2).toUpperCase() : 'NV';
+              return Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Nguyễn Văn An',
-                          style: TextStyle(
-                              fontSize: 16,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(avatar,
+                          style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
-                      const SizedBox(height: 3),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(activeProfile.name,
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
+                          const SizedBox(height: 3),
                       const Text('079205023561 · Người lớn tuổi',
                           style:
                               TextStyle(fontSize: 12, color: Colors.white70),
@@ -326,10 +349,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ManageProfilesScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white),
+                  tooltip: 'Chuyển đổi hồ sơ',
+                ),
               ],
             ),
-          ),
-        ],
+          );
+        },
+      ),
+    ],
       ),
     );
   }

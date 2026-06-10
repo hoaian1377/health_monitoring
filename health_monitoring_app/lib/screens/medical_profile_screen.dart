@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/global_state.dart';
 
 class MedicalProfileScreen extends StatefulWidget {
   const MedicalProfileScreen({super.key});
@@ -366,17 +367,23 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                 color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Hồ sơ khám bệnh',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white)),
-              Text('Nguyễn Văn An',
-                  style: TextStyle(fontSize: 12, color: Colors.white70)),
-            ],
+          ValueListenableBuilder<List<ElderlyProfile>>(
+            valueListenable: globalState.profiles,
+            builder: (context, profiles, child) {
+              final activeProfile = globalState.activeProfile;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Hồ sơ khám bệnh',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                  Text(activeProfile.name,
+                      style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                ],
+              );
+            }
           ),
           const Spacer(),
           const Icon(Icons.medical_services_rounded,

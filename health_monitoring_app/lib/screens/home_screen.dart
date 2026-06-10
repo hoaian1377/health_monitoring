@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../utils/global_state.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -304,15 +305,20 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'Chào buổi sáng,',
                     style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Bác Nguyễn Văn An 👋',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  const SizedBox(height: 4),
+                  ValueListenableBuilder<List<ElderlyProfile>>(
+                      valueListenable: globalState.profiles,
+                      builder: (context, profiles, child) {
+                        return Text(
+                          'Bác ${globalState.activeProfile.name} 👋',
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        );
+                      }
                   ),
                 ],
               ),
@@ -510,10 +516,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const Spacer(),
-                const Text(
-                  'Bác An, 65 tuổi',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
+                ValueListenableBuilder<List<ElderlyProfile>>(
+                  valueListenable: globalState.profiles,
+                  builder: (context, profiles, child) {
+                    final profile = globalState.activeProfile;
+                    final nameSplit = profile.name.split(' ');
+                    final shortName = nameSplit.isNotEmpty ? nameSplit.last : profile.name;
+                    return Text(
+                      'Bác $shortName',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  }
                 ),
                 const SizedBox(height: 6),
                 // Health Quick Specs

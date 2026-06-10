@@ -20,6 +20,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Chart tab
   late TabController _chartTabController;
 
+  // Bộ lọc thời gian (F09)
+  String _selectedPeriod = 'Tuần';
+  final List<String> _periods = ['Ngày', 'Tuần', 'Tháng', 'Quý', 'Năm'];
+
   // Cảnh báo bỏ lỡ thuốc
   bool _showMissedAlert = true;
 
@@ -449,6 +453,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                   // Hàng 3: Cân nặng (full width hoặc có thể thêm BMI)
                   _buildWeightCard(),
 
+                  const SizedBox(height: 24),
+
+                  // Bộ lọc thời gian + Xuất báo cáo
+                  _buildSectionLabel('BỘ LỌC THỜI GIAN BÁO CÁO'),
+                  const SizedBox(height: 10),
+                  _buildPeriodFilterRow(),
+                  const SizedBox(height: 12),
+                  _buildExportButton(),
                   const SizedBox(height: 24),
 
                   // Biểu đồ đa chỉ số
@@ -1304,6 +1316,147 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Bộ lọc thời gian (F09) ─────────────────────────────────────────────────
+  Widget _buildPeriodFilterRow() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _periods.map((period) {
+          final isSelected = _selectedPeriod == period;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedPeriod = period),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFBAE6FD),
+                ),
+                boxShadow: isSelected
+                    ? [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 2))]
+                    : [],
+              ),
+              child: Text(period,
+                  style: TextStyle(
+                      color: isSelected ? Colors.white : const Color(0xFF0EA5E9),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13)),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ── Xuất báo cáo (F09) ──────────────────────────────────────────────────────
+  Widget _buildExportButton() {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (_) => Container(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 20),
+                const Row(
+                  children: [
+                    Icon(Icons.download_rounded, color: Color(0xFF0EA5E9)),
+                    SizedBox(width: 10),
+                    Text('Xuất báo cáo sức khỏe',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('Khoảng thời gian: $_selectedPeriod này',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                const SizedBox(height: 20),
+                _exportOption(Icons.picture_as_pdf_rounded, 'Xuất file PDF', 'Báo cáo đầy đủ dạng PDF', const Color(0xFFDC2626)),
+                const SizedBox(height: 10),
+                _exportOption(Icons.table_chart_rounded, 'Xuất file Excel', 'Dữ liệu chỉ số dạng bảng', const Color(0xFF16A34A)),
+                const SizedBox(height: 10),
+                _exportOption(Icons.share_rounded, 'Chia sẻ với bác sĩ', 'Gửi link báo cáo qua Zalo/Email', const Color(0xFF7C3AED)),
+              ],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+          ),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Text('Xuất báo cáo $_selectedPeriod này',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _exportOption(IconData icon, String title, String subtitle, Color color) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: color,
+            content: Text('✓ Đang xuất báo cáo... ($title)'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              ],
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded, color: color, size: 20),
+          ],
+        ),
       ),
     );
   }
