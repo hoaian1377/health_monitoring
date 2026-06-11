@@ -8,8 +8,10 @@ class AppointmentItem {
   DateTime date;
   String time;
   bool isCompleted;
+  bool isCancelled;
   String notes;
   String result;
+  String cancelReason;
 
   AppointmentItem({
     required this.id,
@@ -19,8 +21,10 @@ class AppointmentItem {
     required this.date,
     required this.time,
     this.isCompleted = false,
+    this.isCancelled = false,
     this.notes = '',
     this.result = '',
+    this.cancelReason = '',
   });
 }
 
@@ -90,7 +94,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -104,12 +108,17 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   List<AppointmentItem> get _upcoming => _appointments
-      .where((a) => !a.isCompleted)
+      .where((a) => !a.isCompleted && !a.isCancelled)
       .toList()
     ..sort((a, b) => a.date.compareTo(b.date));
 
   List<AppointmentItem> get _completed => _appointments
-      .where((a) => a.isCompleted)
+      .where((a) => a.isCompleted && !a.isCancelled)
+      .toList()
+    ..sort((a, b) => b.date.compareTo(a.date));
+
+  List<AppointmentItem> get _cancelled => _appointments
+      .where((a) => a.isCancelled)
       .toList()
     ..sort((a, b) => b.date.compareTo(a.date));
 
@@ -366,6 +375,64 @@ class _AppointmentScreenState extends State<AppointmentScreen>
     );
   }
 
+  void _showCancelDialog(AppointmentItem item) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hủy lịch khám', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Bác có chắc muốn hủy lịch khám tại ${item.hospital}?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              decoration: InputDecoration(
+                hintText: 'Lý do hủy (không bắt buộc)',
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              setState(() {
+                item.isCancelled = true;
+                item.cancelReason = ctrl.text.trim();
+              });
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  backgroundColor: Color(0xFFEF4444),
+                  content: Text('Đã hủy lịch khám'),
+                ),
+              );
+            },
+            child: const Text('Xác nhận hủy', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showResultSheet(AppointmentItem item) {
     final ctrl = TextEditingController(text: item.result);
     showModalBottomSheet(
@@ -475,6 +542,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
               children: [
                 _upcomingTab(),
                 _completedTab(),
+                _cancelledTab(),
               ],
             ),
           ),
@@ -548,6 +616,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             tabs: [
               Tab(text: 'Sắp tới (${_upcoming.length})'),
               Tab(text: 'Đã khám (${_completed.length})'),
+              Tab(text: 'Đã hủy (${_cancelled.length})'),
             ],
           ),
         ],
@@ -577,6 +646,18 @@ class _AppointmentScreenState extends State<AppointmentScreen>
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       itemCount: _completed.length,
       itemBuilder: (_, i) => _completedCard(_completed[i]),
+    );
+  }
+
+  Widget _cancelledTab() {
+    if (_cancelled.isEmpty) {
+      return _emptyState('Chưa có lịch khám bị hủy',
+          'Các lịch khám đã hủy sẽ hiển thị ở đây', Icons.cancel_presentation_rounded);
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _cancelled.length,
+      itemBuilder: (_, i) => _cancelledCard(_cancelled[i]),
     );
   }
 
@@ -733,6 +814,22 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                         color: Color(0xFF475569))),
                 const Spacer(),
                 GestureDetector(
+                  onTap: () => _showCancelDialog(item),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text('Hủy',
+                        style: TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                GestureDetector(
                   onTap: () => _showResultSheet(item),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -752,6 +849,97 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _cancelledCard(AppointmentItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.block_rounded,
+                      color: Color(0xFFEF4444), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.hospital,
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B))),
+                      Text('${item.doctor} · ${_fmtDate(item.date)}',
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEE2E2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text('Đã hủy',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFEF4444))),
+                ),
+              ],
+            ),
+            if (item.cancelReason.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Lý do hủy:',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B))),
+                    const SizedBox(height: 4),
+                    Text(item.cancelReason,
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF475569))),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

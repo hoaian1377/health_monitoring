@@ -26,6 +26,38 @@ class ElderlyProfile {
   });
 }
 
+class MedicationLog {
+  final String id;
+  final String taskId;
+  final String taskTitle;
+  final DateTime takenAt;
+  final String status; // 'taken', 'missed'
+
+  MedicationLog({
+    required this.id,
+    required this.taskId,
+    required this.taskTitle,
+    required this.takenAt,
+    required this.status,
+  });
+}
+
+class HealthThresholds {
+  double sysBpMin, sysBpMax;
+  double diaBpMin, diaBpMax;
+  double bloodSugarMin, bloodSugarMax;
+  double heartRateMin, heartRateMax;
+  double weightMin, weightMax;
+
+  HealthThresholds({
+    this.sysBpMin = 90, this.sysBpMax = 140,
+    this.diaBpMin = 60, this.diaBpMax = 90,
+    this.bloodSugarMin = 3.9, this.bloodSugarMax = 7.8,
+    this.heartRateMin = 60, this.heartRateMax = 100,
+    this.weightMin = 50, this.weightMax = 80,
+  });
+}
+
 class GlobalState {
   static final GlobalState _instance = GlobalState._internal();
   factory GlobalState() => _instance;
@@ -83,6 +115,31 @@ class GlobalState {
     final newList = List<ElderlyProfile>.from(profiles.value);
     newList.removeAt(index);
     profiles.value = newList;
+  }
+
+  final ValueNotifier<List<MedicationLog>> medicationLogs = ValueNotifier([]);
+  final ValueNotifier<HealthThresholds> thresholds = ValueNotifier(HealthThresholds());
+
+  bool isOutOfRange(String metric, double value) {
+    final t = thresholds.value;
+    switch (metric) {
+      case 'sysBp': return value < t.sysBpMin || value > t.sysBpMax;
+      case 'diaBp': return value < t.diaBpMin || value > t.diaBpMax;
+      case 'bloodSugar': return value < t.bloodSugarMin || value > t.bloodSugarMax;
+      case 'heartRate': return value < t.heartRateMin || value > t.heartRateMax;
+      case 'weight': return value < t.weightMin || value > t.weightMax;
+      default: return false;
+    }
+  }
+
+  void addMedicationLog(MedicationLog log) {
+    final newList = List<MedicationLog>.from(medicationLogs.value);
+    newList.add(log);
+    medicationLogs.value = newList;
+  }
+  
+  void updateThresholds(HealthThresholds newThresholds) {
+    thresholds.value = newThresholds;
   }
 }
 

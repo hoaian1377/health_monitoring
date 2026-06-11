@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import '../utils/global_state.dart';
 
 class TaskItem {
   final String id;
-  final String title;
-  final String type; // 'medication' | 'measurement' | 'habit' | 'symptom' | 'document'
-  final String time;
-  final String details;
+  String title;
+  String type; // 'medication' | 'measurement' | 'habit' | 'symptom' | 'document'
+  String time;
+  String details;
   bool isCompleted;
 
   // Thuộc tính chi tiết cho thuốc
-  final String? medCode;
-  final String? dosage;
-  final int? dosesPerDay;
-  final String? startDate;
-  final String? endDate;
+  String? medCode;
+  String? dosage;
+  int? dosesPerDay;
+  String? startDate;
+  String? endDate;
 
   TaskItem({
     required this.id,
@@ -223,7 +224,42 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
+  void _showEditTaskSheet(TaskItem task) {
+    _titleController.text = task.title;
+    _detailsController.text = task.details;
+    _newTaskType = task.type;
+    if (task.time != 'Trước khám') {
+      try {
+        final parts = task.time.split(':');
+        _newTaskTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      } catch (_) {}
+    }
+    if (task.type == 'medication') {
+      _medCodeController.text = task.medCode ?? '';
+      _dosageController.text = task.dosage ?? '';
+      _dosesPerDayController.text = task.dosesPerDay?.toString() ?? '1';
+    } else {
+      _medCodeController.clear();
+      _dosageController.clear();
+      _dosesPerDayController.clear();
+    }
+
+    _showTaskSheet(isEdit: true, taskToEdit: task);
+  }
+
   void _showAddTaskSheet() {
+    _titleController.clear();
+    _detailsController.clear();
+    _medCodeController.clear();
+    _dosageController.clear();
+    _dosesPerDayController.text = '1';
+    _newTaskType = 'medication';
+    _newTaskTime = const TimeOfDay(hour: 8, minute: 0);
+
+    _showTaskSheet(isEdit: false);
+  }
+
+  void _showTaskSheet({required bool isEdit, TaskItem? taskToEdit}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -262,9 +298,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'Thêm Nhiệm Vụ Mới',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    Text(
+                      isEdit ? 'Cập nhật nhiệm vụ' : 'Thêm nhiệm vụ mới',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 20),
 
@@ -623,7 +659,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     ),
                     const SizedBox(height: 28),
 
-                    // Add Button
+                    // Add/Edit Button
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -637,12 +673,29 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                           elevation: 0,
                         ),
                         onPressed: () {
-                          _addNewTask();
-                          Navigator.pop(context);
+                          if (isEdit && taskToEdit != null) {
+                            setState(() {
+                              taskToEdit.title = _titleController.text.trim();
+                              taskToEdit.details = _detailsController.text.trim();
+                              taskToEdit.type = _newTaskType;
+                              taskToEdit.time = _newTaskType == 'document' 
+                                  ? 'Trước khám' 
+                                  : '${_newTaskTime.hour.toString().padLeft(2, '0')}:${_newTaskTime.minute.toString().padLeft(2, '0')}';
+                              if (_newTaskType == 'medication') {
+                                taskToEdit.medCode = _medCodeController.text.trim();
+                                taskToEdit.dosage = _dosageController.text.trim();
+                                taskToEdit.dosesPerDay = int.tryParse(_dosesPerDayController.text);
+                              }
+                            });
+                            Navigator.pop(context);
+                          } else {
+                            _addNewTask();
+                            Navigator.pop(context);
+                          }
                         },
-                        child: const Text(
-                          'Tạo nhiệm vụ',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        child: Text(
+                          isEdit ? 'Cập nhật nhiệm vụ' : 'Tạo nhiệm vụ',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                       ),
                     ),
@@ -1059,6 +1112,17 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
               setState(() {
                 task.isCompleted = !task.isCompleted;
               });
+              
+              if (task.isCompleted && task.type == 'medication') {
+                globalState.addMedicationLog(MedicationLog(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  taskId: task.id,
+                  taskTitle: task.title,
+                  takenAt: DateTime.now(),
+                  status: 'taken',
+                ));
+              }
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   duration: const Duration(milliseconds: 800),
@@ -1184,6 +1248,12 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  
+                  // Edit Button
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined, color: Colors.blue.shade400, size: 20),
+                    onPressed: () => _showEditTaskSheet(task),
+                  ),
                   
                   // Delete Button
                   IconButton(

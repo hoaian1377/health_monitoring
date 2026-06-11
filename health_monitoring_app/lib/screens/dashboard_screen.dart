@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
+import '../utils/global_state.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -326,19 +328,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                           value: _bpSys,
                           unit: '/$_bpDia mmHg',
                           statusText: int.tryParse(_bpSys) != null &&
-                                  int.parse(_bpSys) > 130
-                              ? 'Hơi cao'
+                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
+                              ? 'Bất thường'
                               : 'Bình thường',
                           statusColor: int.tryParse(_bpSys) != null &&
-                                  int.parse(_bpSys) > 130
+                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
                               ? const Color(0xFFD97706)
                               : const Color(0xFF16A34A),
                           statusBg: int.tryParse(_bpSys) != null &&
-                                  int.parse(_bpSys) > 130
+                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
                               ? const Color(0xFFFEF3C7)
                               : const Color(0xFFDCFCE7),
                           statusIcon: int.tryParse(_bpSys) != null &&
-                                  int.parse(_bpSys) > 130
+                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
                               ? Icons.warning_amber_rounded
                               : Icons.check_circle_rounded,
                           accentColor: const Color(0xFFDC2626),
@@ -351,30 +353,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                           icon: Icons.favorite_rounded,
                           value: _heartRate,
                           unit: ' lần/phút',
-                          statusText: () {
-                            final v = int.tryParse(_heartRate) ?? 72;
-                            if (v < 60) return 'Chậm';
-                            if (v > 100) return 'Nhanh';
-                            return 'Bình thường';
-                          }(),
-                          statusColor: () {
-                            final v = int.tryParse(_heartRate) ?? 72;
-                            return (v < 60 || v > 100)
-                                ? const Color(0xFFD97706)
-                                : const Color(0xFF16A34A);
-                          }(),
-                          statusBg: () {
-                            final v = int.tryParse(_heartRate) ?? 72;
-                            return (v < 60 || v > 100)
-                                ? const Color(0xFFFEF3C7)
-                                : const Color(0xFFDCFCE7);
-                          }(),
-                          statusIcon: () {
-                            final v = int.tryParse(_heartRate) ?? 72;
-                            return (v < 60 || v > 100)
-                                ? Icons.warning_amber_rounded
-                                : Icons.check_circle_rounded;
-                          }(),
+                          statusText: int.tryParse(_heartRate) != null &&
+                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
+                              ? 'Bất thường'
+                              : 'Bình thường',
+                          statusColor: int.tryParse(_heartRate) != null &&
+                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF16A34A),
+                          statusBg: int.tryParse(_heartRate) != null &&
+                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
+                              ? const Color(0xFFFEF3C7)
+                              : const Color(0xFFDCFCE7),
+                          statusIcon: int.tryParse(_heartRate) != null &&
+                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
+                              ? Icons.warning_amber_rounded
+                              : Icons.check_circle_rounded,
                           accentColor: const Color(0xFFE11D48),
                         ),
                       ),
@@ -391,22 +385,20 @@ class _DashboardScreenState extends State<DashboardScreen>
                           icon: Icons.water_drop_rounded,
                           value: _bloodSugar,
                           unit: ' mmol/L',
-                          statusText:
-                              double.tryParse(_bloodSugar) != null &&
-                                      double.parse(_bloodSugar) > 7.0
-                                  ? 'Hơi cao'
-                                  : 'Bình thường',
-                          statusColor:
-                              double.tryParse(_bloodSugar) != null &&
-                                      double.parse(_bloodSugar) > 7.0
-                                  ? const Color(0xFFD97706)
-                                  : const Color(0xFF16A34A),
+                          statusText: double.tryParse(_bloodSugar) != null &&
+                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
+                              ? 'Bất thường'
+                              : 'Bình thường',
+                          statusColor: double.tryParse(_bloodSugar) != null &&
+                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF16A34A),
                           statusBg: double.tryParse(_bloodSugar) != null &&
-                                  double.parse(_bloodSugar) > 7.0
+                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
                               ? const Color(0xFFFEF3C7)
                               : const Color(0xFFDCFCE7),
                           statusIcon: double.tryParse(_bloodSugar) != null &&
-                                  double.parse(_bloodSugar) > 7.0
+                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
                               ? Icons.warning_amber_rounded
                               : Icons.check_circle_rounded,
                           accentColor: const Color(0xFF0284C7),
@@ -918,6 +910,26 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Biểu đồ đa chỉ số ─────────────────────────────────────────────────────
   Widget _buildMultiChart() {
+    int points = _selectedPeriod == 'Tuần' ? 7 : (_selectedPeriod == 'Tháng' ? 30 : 12);
+    if (_selectedPeriod == 'Ngày') points = 6;
+    
+    List<String> days = [];
+    if (_selectedPeriod == 'Tuần') {
+      days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+    } else if (_selectedPeriod == 'Tháng') {
+      days = List.generate(points, (i) => '${i+1}');
+    } else if (_selectedPeriod == 'Ngày') {
+      days = ['8h', '10h', '12h', '14h', '16h', '18h'];
+    } else {
+      days = List.generate(points, (i) => 'T${i+1}');
+    }
+
+    List<double> generateData(double base, double variance) {
+      final rand = Random(42); // Fixed seed for stable UI
+      return List.generate(points - 1, (i) => base + (rand.nextDouble() * 2 - 1) * variance)
+          ..add(base); // last point is current
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -961,29 +973,33 @@ class _DashboardScreenState extends State<DashboardScreen>
               controller: _chartTabController,
               children: [
                 _buildBarChart(
-                  data: [120.0, 128.0, 118.0, 135.0, 122.0, 119.0, double.tryParse(_bpSys) ?? 120.0],
+                  data: generateData(double.tryParse(_bpSys) ?? 120.0, 15.0),
+                  days: days,
                   color: const Color(0xFFDC2626),
                   unit: 'mmHg',
-                  threshold: 130,
+                  threshold: globalState.thresholds.value.sysBpMax,
                 ),
                 _buildBarChart(
-                  data: [74.0, 78.0, 70.0, 88.0, 72.0, 76.0, double.tryParse(_heartRate) ?? 72.0],
+                  data: generateData(double.tryParse(_heartRate) ?? 72.0, 10.0),
+                  days: days,
                   color: const Color(0xFFE11D48),
                   unit: 'l/p',
-                  threshold: 100,
+                  threshold: globalState.thresholds.value.heartRateMax,
                 ),
                 _buildBarChart(
-                  data: [5.6, 6.1, 5.8, 7.3, 5.5, 5.9, double.tryParse(_bloodSugar) ?? 5.5],
+                  data: generateData(double.tryParse(_bloodSugar) ?? 5.5, 1.5),
+                  days: days,
                   color: const Color(0xFF0284C7),
                   unit: 'mmol',
-                  threshold: 7.0,
+                  threshold: globalState.thresholds.value.bloodSugarMax,
                   isDecimal: true,
                 ),
                 _buildBarChart(
-                  data: [62.5, 62.3, 62.8, 62.1, 62.4, 62.2, double.tryParse(_weight) ?? 62.0],
+                  data: generateData(double.tryParse(_weight) ?? 62.0, 1.0),
+                  days: days,
                   color: const Color(0xFF7C3AED),
                   unit: 'kg',
-                  threshold: 70,
+                  threshold: globalState.thresholds.value.weightMax,
                   isDecimal: true,
                 ),
               ],
@@ -996,12 +1012,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildBarChart({
     required List<double> data,
+    required List<String> days,
     required Color color,
     required String unit,
     required double threshold,
     bool isDecimal = false,
   }) {
-    final days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     final maxVal = data.reduce((a, b) => a > b ? a : b);
     final minVal = data.reduce((a, b) => a < b ? a : b);
     final range = maxVal - minVal == 0 ? 1.0 : maxVal - minVal;
@@ -1011,15 +1027,18 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (i) {
-              final isToday = i == 6;
-              final isHigh = data[i] > threshold;
-              final barH = 70.0 * (data[i] - minVal) / range + 20;
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(data.length, (i) {
+                final isToday = i == data.length - 1;
+                final isHigh = data[i] > threshold;
+                final barH = 70.0 * (data[i] - minVal) / range + 20;
 
-              return Column(
+                return Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   if (isHigh)
@@ -1057,8 +1076,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                         color: isToday ? color : const Color(0xFF94A3B8)),
                   ),
                 ],
-              );
-            }),
+              ),
+            );
+          }),
+            ),
           ),
         ),
         // Ghi chú (Legend)

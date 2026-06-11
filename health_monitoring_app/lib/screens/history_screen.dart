@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../utils/global_state.dart';
+import 'package:intl/intl.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -18,6 +20,9 @@ class _HistoryScreenState extends State<HistoryScreen>
   String selectedFilter = 'Tuần này';
   String _selectedChartMetric = 'Huyết áp';
   final List<String> _chartMetrics = ['Huyết áp', 'Nhịp tim', 'Đường huyết', 'Cân nặng', 'Nhiệt độ'];
+  
+  // Biến tìm kiếm
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -148,6 +153,30 @@ class _HistoryScreenState extends State<HistoryScreen>
               Tab(text: 'Thông Báo'),
             ],
           ),
+          const SizedBox(height: 12),
+          // Search bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              style: const TextStyle(color: Colors.white),
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.toLowerCase();
+                });
+              },
+              decoration: const InputDecoration(
+                hintText: 'Tìm kiếm lịch sử...',
+                hintStyle: TextStyle(color: Colors.white70),
+                border: InputBorder.none,
+                icon: Icon(Icons.search, color: Colors.white70),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -195,28 +224,37 @@ class _HistoryScreenState extends State<HistoryScreen>
             ],
           ),
           const SizedBox(height: 24),
-          _sectionLabel('LỊCH SỬ DÙNG THUỐC HÔM NAY'),
+          _sectionLabel('LỊCH SỬ DÙNG THUỐC'),
           const SizedBox(height: 12),
-          _buildHistoryItem(
-              time: '08:00',
-              name: 'Amlodipine 5mg',
-              status: 'Đã uống',
-              isCompleted: true),
-          _buildHistoryItem(
-              time: '08:00',
-              name: 'Aspirin 81mg',
-              status: 'Đã uống',
-              isCompleted: true),
-          _buildHistoryItem(
-              time: '13:00',
-              name: 'Vitamin D3',
-              status: 'Bỏ lỡ',
-              isCompleted: false),
-          _buildHistoryItem(
-              time: '20:00',
-              name: 'Metformin 500mg',
-              status: 'Sắp tới',
-              isUpcoming: true),
+          ValueListenableBuilder<List<MedicationLog>>(
+            valueListenable: globalState.medicationLogs,
+            builder: (context, logs, child) {
+              final filteredLogs = logs.where((log) => log.taskTitle.toLowerCase().contains(_searchQuery)).toList();
+              
+              if (filteredLogs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Center(
+                    child: Text('Chưa có lịch sử hoặc không tìm thấy.', style: TextStyle(color: Colors.black54)),
+                  ),
+                );
+              }
+              
+              // Sort logs descending by time
+              filteredLogs.sort((a, b) => b.takenAt.compareTo(a.takenAt));
+              
+              return Column(
+                children: filteredLogs.map((log) {
+                  return _buildHistoryItem(
+                    time: DateFormat('dd/MM HH:mm').format(log.takenAt),
+                    name: log.taskTitle,
+                    status: log.status == 'taken' ? 'Đã uống' : 'Bỏ lỡ',
+                    isCompleted: log.status == 'taken',
+                  );
+                }).toList(),
+              );
+            },
+          ),
           const SizedBox(height: 100),
         ],
       ),
