@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../utils/api_service.dart';
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -9,12 +9,14 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
   final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  String _selectedRole = 'elderly'; // 'elderly' or 'caregiver'
+  String _selectedRole = 'caregiver'; // Only caregiver is allowed now
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeTerms = false;
@@ -22,14 +24,16 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _nameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _signup() {
+  void _signup() async {
     if (_formKey.currentState!.validate()) {
       if (!_agreeTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,13 +49,21 @@ class _SignupScreenState extends State<SignupScreen> {
         _isLoading = true;
       });
 
-      // Simulate API call
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+      bool success = await ApiService.register(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        fullname: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        role: _selectedRole,
+      );
 
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (success) {
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -85,12 +97,10 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'Tài khoản của bác với vai trò là ${
-                        _selectedRole == 'elderly' ? 'Người cao tuổi' : 'Người chăm sóc'
-                      } đã được khởi tạo thành công.',
+                    const Text(
+                      'Tài khoản Người chăm sóc của bạn đã được khởi tạo thành công.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -117,8 +127,15 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             ),
           );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Color(0xFFDC2626),
+              content: Text('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.'),
+            ),
+          );
         }
-      });
+      }
     }
   }
 
@@ -207,38 +224,23 @@ class _SignupScreenState extends State<SignupScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Role selector label
-                                const Text(
-                                  'Tôi muốn đăng ký làm:',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF475569),
+                                // Username Input
+                                TextFormField(
+                                  controller: _usernameController,
+                                  keyboardType: TextInputType.text,
+                                  decoration: _buildInputDecoration(
+                                    labelText: 'Tên đăng nhập',
+                                    hintText: 'Nhập tên đăng nhập',
+                                    icon: Icons.account_circle_outlined,
                                   ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Vui lòng nhập tên đăng nhập';
+                                    }
+                                    return null;
+                                  },
                                 ),
-                                const SizedBox(height: 12),
-                                
-                                // Customized Role Selection Cards
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: _buildRoleCard(
-                                        role: 'elderly',
-                                        icon: Icons.elderly_rounded,
-                                        label: 'Người lớn tuổi',
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _buildRoleCard(
-                                        role: 'caregiver',
-                                        icon: Icons.badge_rounded,
-                                        label: 'Người chăm sóc',
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 16),
 
                                 // Name Input
                                 TextFormField(
@@ -252,6 +254,24 @@ class _SignupScreenState extends State<SignupScreen> {
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Vui lòng nhập họ và tên';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Email Input
+                                TextFormField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: _buildInputDecoration(
+                                    labelText: 'Email',
+                                    hintText: 'Nhập địa chỉ email',
+                                    icon: Icons.email_outlined,
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Vui lòng nhập email';
                                     }
                                     return null;
                                   },
@@ -455,50 +475,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildRoleCard({
-    required String role,
-    required IconData icon,
-    required String label,
-  }) {
-    final isSelected = _selectedRole == role;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedRole = role;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEBF3FF) : const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
-            width: isSelected ? 1.8 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF64748B),
-              size: 28,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   InputDecoration _buildInputDecoration({
     required String labelText,

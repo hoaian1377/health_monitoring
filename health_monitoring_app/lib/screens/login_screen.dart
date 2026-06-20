@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import 'signup_screen.dart';
+import '../utils/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,7 +12,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   
   bool _obscurePassword = true;
@@ -20,24 +21,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _login() {
+  void _login() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // Simulate API response
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          
+      final res = await ApiService.login(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (res["success"]) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFF16A34A),
@@ -45,20 +50,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Icon(Icons.check_circle_rounded, color: Colors.white),
                   SizedBox(width: 12),
-                  Text('Đăng nhập thành công! Chào mừng bác trở lại.'),
+                  Text('Đăng nhập thành công! Chào mừng bạn trở lại.'),
                 ],
               ),
             ),
           );
 
-          // Navigate to Home screen and clear navigation stack
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (_) => const MainNavigator()),
             (route) => false,
           );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFFDC2626),
+              content: Text(res["error"] ?? 'Đăng nhập thất bại. Vui lòng thử lại.'),
+            ),
+          );
         }
-      });
+      }
     }
   }
 
@@ -429,14 +440,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 const SizedBox(height: 20),
 
-                                // Phone Input
+                                // Username Input
                                 TextFormField(
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
+                                  controller: _usernameController,
+                                  keyboardType: TextInputType.text,
                                   decoration: InputDecoration(
-                                    labelText: 'Số điện thoại',
-                                    hintText: 'Nhập số điện thoại',
-                                    prefixIcon: const Icon(Icons.phone_iphone_rounded, color: Color(0xFF94A3B8)),
+                                    labelText: 'Tên đăng nhập',
+                                    hintText: 'Nhập tên đăng nhập',
+                                    prefixIcon: const Icon(Icons.account_circle_outlined, color: Color(0xFF94A3B8)),
                                     filled: true,
                                     fillColor: const Color(0xFFF8FAFC),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -459,10 +470,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Vui lòng nhập số điện thoại';
-                                    }
-                                    if (value.length < 9) {
-                                      return 'Số điện thoại phải từ 9-11 số';
+                                      return 'Vui lòng nhập tên đăng nhập';
                                     }
                                     return null;
                                   },
