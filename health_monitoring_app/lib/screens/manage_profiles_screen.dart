@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../utils/global_state.dart';
+import '../utils/api_service.dart';
 
 class ManageProfilesScreen extends StatefulWidget {
   const ManageProfilesScreen({super.key});
@@ -188,7 +190,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             elevation: 0,
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             if (nameCtrl.text.isEmpty || dobCtrl.text.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -198,6 +200,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                               );
                               return;
                             }
+
                             final profile = ElderlyProfile(
                               name: nameCtrl.text,
                               dob: dobCtrl.text,
@@ -209,20 +212,70 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                               allergies: allergiesCtrl.text,
                               emergencyContact: emergencyCtrl.text,
                             );
-                            Navigator.pop(ctx);
+
                             if (editIndex != null) {
                               globalState.updateProfile(editIndex, profile);
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: Color(0xFF16A34A),
+                                  content: Text('Đã cập nhật hồ sơ thành công!'),
+                                ),
+                              );
                             } else {
-                              globalState.addProfile(profile);
+                              // Call backend API
+                              final res = await ApiService.createElderly(
+                                fullname: profile.name,
+                                dob: profile.dob,
+                                gender: profile.gender,
+                                medicalNote: "${profile.diseases} - ${profile.allergies}",
+                              );
+
+                              if (res['success'] == true) {
+                                globalState.addProfile(profile);
+                                Navigator.pop(ctx);
+                                
+                                // Show QR Code dialog
+                                showDialog(
+                                  context: context,
+                                  builder: (c) => AlertDialog(
+                                    title: const Text("Mã QR Đăng Nhập", textAlign: TextAlign.center),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text("Dùng mã QR này để người cao tuổi quét và đăng nhập vào ứng dụng.", textAlign: TextAlign.center),
+                                        const SizedBox(height: 20),
+                                        QrImageView(
+                                          data: res['qr_token'],
+                                          version: QrVersions.auto,
+                                          size: 200.0,
+                                        ),
+                                      ],
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(c),
+                                        child: const Text("Đóng"),
+                                      )
+                                    ],
+                                  ),
+                                );
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    backgroundColor: Color(0xFF16A34A),
+                                    content: Text('Đã thêm hồ sơ mới thành công!'),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFFDC2626),
+                                    content: Text(res['error'] ?? 'Lỗi tạo hồ sơ'),
+                                  ),
+                                );
+                              }
                             }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: const Color(0xFF16A34A),
-                                content: Text(editIndex != null
-                                    ? 'Đã cập nhật hồ sơ thành công!'
-                                    : 'Đã thêm hồ sơ mới thành công!'),
-                              ),
-                            );
                           },
                           child: Text(existing == null ? 'Thêm hồ sơ' : 'Lưu thay đổi',
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:image_picker/image_picker.dart';
 import '../main.dart';
 import 'signup_screen.dart';
 import '../utils/api_service.dart';
@@ -641,33 +643,63 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             const SizedBox(height: 16),
                             
-                            // Biometric button
-                            InkWell(
-                              onTap: _simulatedBiometricLogin,
-                              borderRadius: BorderRadius.circular(14),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.fingerprint_rounded, color: Color(0xFF0EA5E9), size: 24),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Vân tay / Khuôn mặt',
-                                      style: TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF475569),
+                            // Quick login buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Biometric
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: _simulatedBiometricLogin,
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
                                       ),
-                                    )
-                                  ],
+                                      child: const Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.fingerprint_rounded, color: Color(0xFF0EA5E9), size: 28),
+                                          SizedBox(height: 4),
+                                          Text('Vân tay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                // QR Code scan
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const QrScanLoginScreen()),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      ),
+                                      child: const Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF10B981), size: 28),
+                                          SizedBox(height: 4),
+                                          Text('Quét QR', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             
                             const SizedBox(height: 32),
@@ -711,6 +743,208 @@ class _LoginScreenState extends State<LoginScreen> {
               },
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// QR Scan Login Screen for Elderly
+// ============================================================
+class QrScanLoginScreen extends StatefulWidget {
+  const QrScanLoginScreen({super.key});
+
+  @override
+  State<QrScanLoginScreen> createState() => _QrScanLoginScreenState();
+}
+
+class _QrScanLoginScreenState extends State<QrScanLoginScreen> {
+  final MobileScannerController _controller = MobileScannerController();
+  bool _isProcessing = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleQrToken(String qrToken) async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+
+    final res = await ApiService.loginByQr(qrToken: qrToken);
+    if (!mounted) return;
+
+    if (res['success'] == true) {
+      final elderly = res['data']['elderly'];
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF16A34A),
+          content: Text('Chào mừng ${elderly['fullname']}!'),
+        ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainNavigator()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFDC2626),
+          content: Text(res['error'] ?? 'Mã QR không hợp lệ.'),
+        ),
+      );
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    final barcode = capture.barcodes.firstOrNull;
+    if (barcode?.rawValue != null) {
+      _handleQrToken(barcode!.rawValue!);
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    final picked = await _controller.analyzeImage(pickedFile.path);
+    if (picked != null) {
+      final barcode = picked.barcodes.firstOrNull;
+      if (barcode?.rawValue != null) {
+        _handleQrToken(barcode!.rawValue!);
+        return;
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFFDC2626),
+          content: Text('Không tìm thấy mã QR trong ảnh. Vui lòng thử ảnh khác.'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        title: const Text('Quét mã QR để đăng nhập',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: _isProcessing ? null : _pickImageFromGallery,
+              icon: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 20),
+              label: const Text('Ảnh', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          MobileScanner(controller: _controller, onDetect: _onDetect),
+          // Overlay frame + hint
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Animated scan frame
+                Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFF10B981), width: 3),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Corner accents
+                      for (final alignment in [
+                        Alignment.topLeft, Alignment.topRight,
+                        Alignment.bottomLeft, Alignment.bottomRight,
+                      ])
+                        Align(
+                          alignment: alignment,
+                          child: Container(
+                            width: 24, height: 24,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981),
+                              borderRadius: BorderRadius.only(
+                                topLeft: alignment == Alignment.topLeft ? const Radius.circular(4) : Radius.zero,
+                                topRight: alignment == Alignment.topRight ? const Radius.circular(4) : Radius.zero,
+                                bottomLeft: alignment == Alignment.bottomLeft ? const Radius.circular(4) : Radius.zero,
+                                bottomRight: alignment == Alignment.bottomRight ? const Radius.circular(4) : Radius.zero,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Hướng camera vào mã QR của người cao tuổi',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Upload from gallery button
+                GestureDetector(
+                  onTap: _isProcessing ? null : _pickImageFromGallery,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.photo_library_rounded, color: Colors.white, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Chọn ảnh QR từ thư viện',
+                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_isProcessing)
+            Container(
+              color: Colors.black54,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFF10B981)),
+                    SizedBox(height: 16),
+                    Text('Đang xác thực...', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

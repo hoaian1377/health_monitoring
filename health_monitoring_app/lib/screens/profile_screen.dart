@@ -11,6 +11,7 @@ import 'appointment_screen.dart';
 import 'change_password_screen.dart';
 import 'manage_profiles_screen.dart';
 import '../utils/global_state.dart';
+import '../utils/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -174,28 +175,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       subtitle: 'Quản lý lịch tái khám và kết quả',
                       onTap: () => _navigate(const AppointmentScreen()),
                     ),
-                    _MenuItem(
-                      icon: Icons.switch_account_rounded,
-                      iconBg: const Color(0xFFE0F2FE),
-                      iconColor: const Color(0xFF0284C7),
-                      title: 'Quản lý hồ sơ người cao tuổi',
-                      subtitle: 'Thêm, xóa, chuyển đổi hồ sơ (F02)',
-                      onTap: () => _navigate(const ManageProfilesScreen()),
-                    ),
+                    if (ApiService.currentRole != 'elderly')
+                      _MenuItem(
+                        icon: Icons.switch_account_rounded,
+                        iconBg: const Color(0xFFE0F2FE),
+                        iconColor: const Color(0xFF0284C7),
+                        title: 'Quản lý hồ sơ người cao tuổi',
+                        subtitle: 'Thêm, xóa, chuyển đổi hồ sơ (F02)',
+                        onTap: () => _navigate(const ManageProfilesScreen()),
+                      ),
                   ]),
 
                   const SizedBox(height: 24),
-                  _sectionLabel('LIÊN KẾT GIA ĐÌNH'),
+                  if (ApiService.currentRole != 'elderly')
+                    _sectionLabel('LIÊN KẾT GIA ĐÌNH')
+                  else
+                    _sectionLabel('LIÊN LẠC KHẨN CẤP'),
                   const SizedBox(height: 8),
                   _menuGroup([
-                    _MenuItem(
-                      icon: Icons.people_outline_rounded,
-                      iconBg: const Color(0xFFFFF4E6),
-                      iconColor: const Color(0xFFEA580C),
-                      title: 'Liên kết người thân',
-                      subtitle: 'Kết nối con cháu & người chăm sóc trong gia đình',
-                      onTap: () => _navigate(const FamilyLinksScreen()),
-                    ),
+                    if (ApiService.currentRole != 'elderly')
+                      _MenuItem(
+                        icon: Icons.people_outline_rounded,
+                        iconBg: const Color(0xFFFFF4E6),
+                        iconColor: const Color(0xFFEA580C),
+                        title: 'Liên kết người thân',
+                        subtitle: 'Kết nối con cháu & người chăm sóc trong gia đình',
+                        onTap: () => _navigate(const FamilyLinksScreen()),
+                      ),
                     _MenuItem(
                       icon: Icons.contact_phone_outlined,
                       iconBg: const Color(0xFFFFEBEB),
@@ -218,22 +224,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       subtitle: 'Nhắc uống thuốc, lịch khám, cảnh báo sức khỏe',
                       onTap: () => _navigate(const NotificationSettingsScreen()),
                     ),
-                    _MenuItem(
-                      icon: Icons.warning_amber_rounded,
-                      iconBg: const Color(0xFFFFF4E6),
-                      iconColor: const Color(0xFFEA580C),
-                      title: 'Ngưỡng cảnh báo sức khỏe',
-                      subtitle: 'Huyết áp, đường huyết, cân nặng bất thường',
-                      onTap: () => _navigate(const HealthThresholdsScreen()),
-                    ),
-                    _MenuItem(
-                      icon: Icons.lock_outline_rounded,
-                      iconBg: const Color(0xFFF3EEFF),
-                      iconColor: const Color(0xFF7C3AED),
-                      title: 'Đổi mật khẩu',
-                      subtitle: 'Bảo mật tài khoản của bạn',
-                      onTap: () => _navigate(const ChangePasswordScreen()),
-                    ),
+                    if (ApiService.currentRole != 'elderly') ...[
+                      _MenuItem(
+                        icon: Icons.warning_amber_rounded,
+                        iconBg: const Color(0xFFFFF4E6),
+                        iconColor: const Color(0xFFEA580C),
+                        title: 'Ngưỡng cảnh báo sức khỏe',
+                        subtitle: 'Huyết áp, đường huyết, cân nặng bất thường',
+                        onTap: () => _navigate(const HealthThresholdsScreen()),
+                      ),
+                      _MenuItem(
+                        icon: Icons.lock_outline_rounded,
+                        iconBg: const Color(0xFFF3EEFF),
+                        iconColor: const Color(0xFF7C3AED),
+                        title: 'Đổi mật khẩu',
+                        subtitle: 'Bảo mật tài khoản của bạn',
+                        onTap: () => _navigate(const ChangePasswordScreen()),
+                      ),
+                    ]
                   ]),
 
                   const SizedBox(height: 8),
@@ -250,6 +258,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ─── Header ─────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
+    final displayName = ApiService.currentFullname.isNotEmpty
+        ? ApiService.currentFullname
+        : ApiService.currentUsername;
+    final avatar = displayName.isNotEmpty ? displayName.substring(0, displayName.length >= 2 ? 2 : 1).toUpperCase() : 'ND';
+    final roleText = ApiService.currentRole == 'caregiver' ? 'Người chăm sóc' : 'Người lớn tuổi';
+    final phoneText = ApiService.currentPhone.isNotEmpty ? ApiService.currentPhone : ApiService.currentUsername;
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -273,8 +288,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Người dùng',
-              style: TextStyle(
+          Text(displayName,
+              style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
@@ -282,47 +297,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const Text('Hệ thống theo dõi sức khỏe người cao tuổi',
               style: TextStyle(fontSize: 13, color: Colors.white70)),
           const SizedBox(height: 16),
-          ValueListenableBuilder<List<ElderlyProfile>>(
-            valueListenable: globalState.profiles,
-            builder: (context, profiles, child) {
-              final activeProfile = globalState.activeProfile;
-              final avatar = activeProfile.name.isNotEmpty ? activeProfile.name.substring(0, 2).toUpperCase() : 'NV';
-              return Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(avatar,
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(avatar,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(displayName,
                           style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(activeProfile.name,
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                          const SizedBox(height: 3),
-                      const Text('079205023561 · Người lớn tuổi',
+                      const SizedBox(height: 3),
+                      Text('$phoneText · $roleText',
                           style:
-                              TextStyle(fontSize: 12, color: Colors.white70),
+                              const TextStyle(fontSize: 12, color: Colors.white70),
                           overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 6),
                       Container(
@@ -361,10 +371,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-          );
-        },
-      ),
-    ],
+          ),
+        ],
       ),
     );
   }

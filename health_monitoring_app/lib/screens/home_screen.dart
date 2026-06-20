@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../utils/global_state.dart';
+import '../utils/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -240,20 +241,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
 
                   // 1. Grid of Image Diary and Personal Profile
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left Card: "Hình ảnh" (Nhật ký ảnh)
-                      Expanded(
-                        child: _buildImageDiaryCard(),
-                      ),
-                      const SizedBox(width: 12),
-                      // Right Card: "Thông tin cá nhân"
-                      Expanded(
-                        child: _buildProfileCard(),
-                      ),
-                    ],
-                  ),
+                  if (ApiService.currentRole == 'elderly')
+                    _buildProfileCard()
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Left Card: "Hình ảnh" (Nhật ký ảnh)
+                        Expanded(
+                          child: _buildImageDiaryCard(),
+                        ),
+                        const SizedBox(width: 12),
+                        // Right Card: "Thông tin cá nhân"
+                        Expanded(
+                          child: _buildProfileCard(),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
 
                   // 2. Medication Reminder Card
@@ -264,8 +268,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildUpcomingAppointmentCard(),
                   const SizedBox(height: 16),
 
-                  // 3. Dashboard Preview Card
-                  _buildDashboardPreviewCard(),
+                  // 3. Dashboard Preview Card (Only for caregiver)
+                  if (ApiService.currentRole != 'elderly')
+                    _buildDashboardPreviewCard(),
                 ],
               ),
             ),
@@ -311,14 +316,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
-                  ValueListenableBuilder<List<ElderlyProfile>>(
-                      valueListenable: globalState.profiles,
-                      builder: (context, profiles, child) {
-                        return Text(
-                          'Bác ${globalState.activeProfile.name} 👋',
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                        );
-                      }
+                  Builder(
+                    builder: (context) {
+                      final name = ApiService.currentFullname.isNotEmpty
+                          ? ApiService.currentFullname
+                          : ApiService.currentUsername;
+                      return Text(
+                        'Chào $name 👋',
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -516,14 +523,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const Spacer(),
-                ValueListenableBuilder<List<ElderlyProfile>>(
-                  valueListenable: globalState.profiles,
-                  builder: (context, profiles, child) {
-                    final profile = globalState.activeProfile;
-                    final nameSplit = profile.name.split(' ');
-                    final shortName = nameSplit.isNotEmpty ? nameSplit.last : profile.name;
+                Builder(
+                  builder: (context) {
+                    final name = ApiService.currentFullname.isNotEmpty
+                        ? ApiService.currentFullname
+                        : ApiService.currentUsername;
+                    final nameSplit = name.split(' ');
+                    final shortName = nameSplit.isNotEmpty ? nameSplit.last : name;
                     return Text(
-                      'Bác $shortName',
+                      ApiService.currentRole == 'caregiver' ? shortName : 'Bác $shortName',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
                       overflow: TextOverflow.ellipsis,
                     );

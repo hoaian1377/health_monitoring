@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/global_state.dart';
+import '../utils/api_service.dart';
 
 class PersonalProfileScreen extends StatefulWidget {
   const PersonalProfileScreen({super.key});
@@ -80,11 +81,14 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                 ),
                 const SizedBox(height: 24),
                 // Avatar circle
-                ValueListenableBuilder<List<ElderlyProfile>>(
-                  valueListenable: globalState.profiles,
-                  builder: (context, profiles, child) {
-                    final activeProfile = globalState.activeProfile;
-                    final avatarText = activeProfile.name.isNotEmpty ? activeProfile.name.substring(0, 2).toUpperCase() : 'NV';
+                Builder(
+                  builder: (context) {
+                    final displayName = ApiService.currentFullname.isNotEmpty
+                        ? ApiService.currentFullname
+                        : ApiService.currentUsername;
+                    final avatarText = displayName.isNotEmpty ? displayName.substring(0, displayName.length >= 2 ? 2 : 1).toUpperCase() : 'ND';
+                    final roleText = ApiService.currentRole == 'caregiver' ? 'Người chăm sóc' : 'Người lớn tuổi';
+
                     return Column(
                       children: [
                         Container(
@@ -108,39 +112,39 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                                   color: Color(0xFF0EA5E9))),
                         ),
                         const SizedBox(height: 12),
-                        Text(activeProfile.name,
+                        Text(displayName,
                             style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
                         const SizedBox(height: 4),
+                        Text(roleText,
+                            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.verified_rounded,
+                                  color: Colors.white, size: 14),
+                              SizedBox(width: 5),
+                              Text('Đã xác minh',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
                       ],
                     );
                   }
-                ),
-                const Text('Người lớn tuổi',
-                    style: TextStyle(fontSize: 13, color: Colors.white70)),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified_rounded,
-                          color: Colors.white, size: 14),
-                      SizedBox(width: 5),
-                      Text('Đã xác minh',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -158,20 +162,24 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                     icon: Icons.person_rounded,
                     iconColor: const Color(0xFF0EA5E9),
                     children: [
-                      ValueListenableBuilder<List<ElderlyProfile>>(
-                        valueListenable: globalState.profiles,
-                        builder: (context, profiles, child) {
-                          final activeProfile = globalState.activeProfile;
+                      Builder(
+                        builder: (context) {
+                          final displayName = ApiService.currentFullname.isNotEmpty
+                              ? ApiService.currentFullname
+                              : ApiService.currentUsername;
+                          final dobText = ApiService.currentDob.isNotEmpty ? ApiService.currentDob : 'Chưa cập nhật';
+                          final genderText = ApiService.currentGender.isNotEmpty ? ApiService.currentGender : 'Chưa cập nhật';
+
                           return Column(
                             children: [
                               _infoRow(Icons.person_outline_rounded,
-                                  const Color(0xFFEBF3FF), const Color(0xFF0EA5E9), 'Họ và tên', activeProfile.name),
+                                  const Color(0xFFEBF3FF), const Color(0xFF0EA5E9), 'Họ và tên', displayName),
                               _divider(),
                               _infoRow(Icons.cake_outlined, const Color(0xFFFFF4E6),
-                                  const Color(0xFFEA580C), 'Ngày sinh', activeProfile.dob),
+                                  const Color(0xFFEA580C), 'Ngày sinh', dobText),
                               _divider(),
                               _infoRow(Icons.male_rounded, const Color(0xFFE6FBF3), const Color(0xFF16A34A),
-                                  'Giới tính', activeProfile.gender),
+                                  'Giới tính', genderText),
                             ],
                           );
                         }
@@ -192,21 +200,21 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                           const Color(0xFFE6FBF3),
                           const Color(0xFF16A34A),
                           'Số điện thoại',
-                          '0909 123 456'),
+                          ApiService.currentPhone.isNotEmpty ? ApiService.currentPhone : 'Chưa cập nhật'),
                       _divider(),
                       _infoRow(
                           Icons.email_outlined,
                           const Color(0xFFEBF3FF),
                           const Color(0xFF0EA5E9),
                           'Email',
-                          'nguyenvan.an@gmail.com'),
+                          ApiService.currentEmail.isNotEmpty ? ApiService.currentEmail : 'Chưa cập nhật'),
                       _divider(),
                       _infoRow(
                           Icons.credit_card_rounded,
                           const Color(0xFFFFF4E6),
                           const Color(0xFFEA580C),
-                          'CCCD/CMND',
-                          '079 205 023 561'),
+                          'Username',
+                          ApiService.currentUsername),
                     ],
                   ),
 
@@ -218,14 +226,17 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                     icon: Icons.people_rounded,
                     iconColor: const Color(0xFFEA580C),
                     children: [
-                      ValueListenableBuilder<List<ElderlyProfile>>(
-                          valueListenable: globalState.profiles,
-                          builder: (context, profiles, child) {
-                            final activeProfile = globalState.activeProfile;
+                      Builder(
+                          builder: (context) {
+                            final displayName = ApiService.currentFullname.isNotEmpty
+                                ? ApiService.currentFullname
+                                : ApiService.currentUsername;
+                            final roleText = ApiService.currentRole == 'caregiver' ? 'Người chăm sóc' : 'Người lớn tuổi';
+
                             return _roleRow(
                                 color: const Color(0xFF0EA5E9),
-                                name: activeProfile.name,
-                                role: 'Người lớn tuổi',
+                                name: displayName,
+                                role: roleText,
                                 badgeText: 'Đang dùng',
                                 badgeColor: const Color(0xFF16A34A));
                           }),

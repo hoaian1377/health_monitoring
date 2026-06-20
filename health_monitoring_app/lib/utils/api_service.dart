@@ -3,6 +3,14 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   static const String baseUrl = "http://192.168.123.5:8000";
+  static int? currentAccountId;
+  static String currentUsername = 'Người dùng';
+  static String currentRole = 'caregiver';
+  static String currentFullname = '';
+  static String currentEmail = '';
+  static String currentPhone = '';
+  static String currentDob = '';
+  static String currentGender = '';
 
   // ================= REGISTER =================
   static Future<bool> register({
@@ -20,25 +28,20 @@ class ApiService {
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "username": username,
+          "usename": username,
           "password": password,
           "fullname": fullname,
-          "email": email,
           "phone": phone,
-          "role": role
+          "email": email,
+          "role": role,
         }),
       );
 
-      print("STATUS: ${res.statusCode}");
-      print("BODY: ${res.body}");
-
       if (res.statusCode == 201) {
         return true;
-      } else {
-        return false;
       }
+      return false;
     } catch (e) {
-      print("ERROR: $e");
       return false;
     }
   }
@@ -55,7 +58,7 @@ class ApiService {
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "username": username,
+          "usename": username,
           "password": password,
         }),
       );
@@ -65,6 +68,16 @@ class ApiService {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        if (data["user"] != null && data["user"]["id"] != null) {
+          currentAccountId = data["user"]["id"];
+          currentUsername = data["user"]["username"] ?? 'Người dùng';
+          currentRole = data["user"]["role"] ?? 'caregiver';
+          currentFullname = data["user"]["fullname"] ?? '';
+          currentEmail = data["user"]["email"] ?? '';
+          currentPhone = data["user"]["phone"] ?? '';
+          currentDob = ''; // caregiver might not have this
+          currentGender = '';
+        }
         return {
           "success": true,
           "data": data,
@@ -81,6 +94,84 @@ class ApiService {
         "success": false,
         "error": "Lỗi kết nối máy chủ.",
       };
+    }
+  }
+
+  // ================= CREATE ELDERLY =================
+  static Future<Map<String, dynamic>> createElderly({
+    required String fullname,
+    required String dob,
+    required String gender,
+    required String medicalNote,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/users/elderly/");
+
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "caregiver_account_id": currentAccountId,
+          "fullname": fullname,
+          "date_of_birthday": dob,
+          "gender": gender,
+          "medical_note": medicalNote,
+        }),
+      );
+
+      print("STATUS: ${res.statusCode}");
+      print("BODY: ${res.body}");
+
+      if (res.statusCode == 201) {
+        final data = jsonDecode(res.body);
+        return {
+          "success": true,
+          "qr_token": data["qr_token"],
+        };
+      } else {
+        return {
+          "success": false,
+          "error": "Không thể tạo hồ sơ. Vui lòng thử lại.",
+        };
+      }
+    } catch (e) {
+      print("ERROR: $e");
+      return {
+        "success": false,
+        "error": "Lỗi kết nối máy chủ.",
+      };
+    }
+  }
+
+  // ================= LOGIN BY QR =================
+  static Future<Map<String, dynamic>> loginByQr({
+    required String qrToken,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/users/login-qr/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"qr_token": qrToken}),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data["elderly"] != null) {
+          currentAccountId = data["elderly"]["id"];
+          currentRole = 'elderly';
+          currentFullname = data["elderly"]["fullname"] ?? '';
+          currentDob = data["elderly"]["dob"] ?? '';
+          currentGender = data["elderly"]["gender"] ?? '';
+          currentUsername = 'Người cao tuổi';
+          currentEmail = '';
+          currentPhone = '';
+        }
+        return {"success": true, "data": data};
+      } else {
+        return {"success": false, "error": "Mã QR không hợp lệ."};
+      }
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
 }
