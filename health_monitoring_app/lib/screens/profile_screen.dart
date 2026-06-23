@@ -10,6 +10,7 @@ import 'login_screen.dart';
 import 'appointment_screen.dart';
 import 'change_password_screen.dart';
 import 'manage_profiles_screen.dart';
+import 'admin_backup_screen.dart';
 import '../utils/global_state.dart';
 import '../utils/api_service.dart';
 
@@ -176,14 +177,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'Quản lý lịch tái khám và kết quả',
                         onTap: () => _navigate(const AppointmentScreen()),
                       ),
-                      _MenuItem(
-                        icon: Icons.switch_account_rounded,
-                        iconBg: const Color(0xFFE0F2FE),
-                        iconColor: const Color(0xFF0284C7),
-                        title: 'Quản lý hồ sơ người cao tuổi',
-                        subtitle: 'Thêm, xóa, chuyển đổi hồ sơ (F02)',
-                        onTap: () => _navigate(const ManageProfilesScreen()),
-                      ),
                     ]),
                     const SizedBox(height: 24),
                   ],
@@ -212,11 +205,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ]),
 
-                  if (ApiService.currentRole != 'elderly') ...[
-                    const SizedBox(height: 24),
-                    _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
-                    const SizedBox(height: 8),
-                    _menuGroup([
+                  const SizedBox(height: 24),
+                  _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
+                  const SizedBox(height: 8),
+                  _menuGroup([
+                    if (ApiService.currentRole != 'elderly') ...[
                       _MenuItem(
                         icon: Icons.notifications_outlined,
                         iconBg: const Color(0xFFE6FBF3),
@@ -233,13 +226,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'Huyết áp, đường huyết, cân nặng bất thường',
                         onTap: () => _navigate(const HealthThresholdsScreen()),
                       ),
+                    ],
+                    _MenuItem(
+                      icon: Icons.lock_outline_rounded,
+                      iconBg: const Color(0xFFF3EEFF),
+                      iconColor: const Color(0xFF7C3AED),
+                      title: 'Đổi mật khẩu',
+                      subtitle: 'Bảo mật tài khoản của bạn',
+                      onTap: () => _navigate(const ChangePasswordScreen()),
+                    ),
+                  ]),
+
+                  if (ApiService.currentRole == 'admin') ...[
+                    const SizedBox(height: 24),
+                    _sectionLabel('QUẢN TRỊ HỆ THỐNG'),
+                    const SizedBox(height: 8),
+                    _menuGroup([
                       _MenuItem(
-                        icon: Icons.lock_outline_rounded,
+                        icon: Icons.switch_account_rounded,
+                        iconBg: const Color(0xFFE0F2FE),
+                        iconColor: const Color(0xFF0284C7),
+                        title: 'Quản lý người dùng',
+                        subtitle: 'Thêm, xóa, phân quyền (F02)',
+                        onTap: () => _navigate(const ManageProfilesScreen()),
+                      ),
+                      _MenuItem(
+                        icon: Icons.storage_rounded,
                         iconBg: const Color(0xFFF3EEFF),
                         iconColor: const Color(0xFF7C3AED),
-                        title: 'Đổi mật khẩu',
-                        subtitle: 'Bảo mật tài khoản của bạn',
-                        onTap: () => _navigate(const ChangePasswordScreen()),
+                        title: 'Sao lưu & Phục hồi CSDL',
+                        subtitle: 'Xuất / nhập dữ liệu toàn bộ hệ thống',
+                        onTap: () => _navigate(const AdminBackupScreen()),
                       ),
                     ]),
                   ],
