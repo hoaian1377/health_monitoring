@@ -5,6 +5,8 @@ import 'screens/history_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'utils/api_service.dart';
 
 void main() {
   runApp(const HealthApp());
@@ -42,16 +44,7 @@ class MainNavigator extends StatefulWidget {
 }
 
 class _MainNavigatorState extends State<MainNavigator> {
-  // Mặc định mở tab Home (index 0) để trải nghiệm giao diện mới đầu tiên
-  int _currentIndex = 4; 
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ChecklistScreen(),
-    HistoryScreen(),
-    DashboardScreen(),
-    ProfileScreen(),
-  ];
+  int _currentIndex = 0; 
 
   void setTab(int index) {
     setState(() {
@@ -59,16 +52,92 @@ class _MainNavigatorState extends State<MainNavigator> {
     });
   }
 
+  Widget _buildBody() {
+    if (ApiService.currentRole == 'elderly') {
+      return IndexedStack(
+        index: _currentIndex,
+        children: const [
+          HomeScreen(),
+          ChecklistScreen(),
+          NotificationsScreen(),
+          ProfileScreen(),
+        ],
+      );
+    } else {
+      return IndexedStack(
+        index: _currentIndex,
+        children: const [
+          HomeScreen(),
+          ChecklistScreen(),
+          HistoryScreen(),
+          DashboardScreen(),
+          ProfileScreen(),
+        ],
+      );
+    }
+  }
+
+  List<BottomNavigationBarItem> _buildNavItems() {
+    if (ApiService.currentRole == 'elderly') {
+      return const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Trang chủ',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.check_box_outlined),
+          activeIcon: Icon(Icons.check_box_rounded),
+          label: 'Việc làm',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.notifications_outlined),
+          activeIcon: Icon(Icons.notifications_rounded),
+          label: 'Thông báo',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Cá nhân',
+        ),
+      ];
+    } else {
+      return const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.check_box_outlined),
+          activeIcon: Icon(Icons.check_box_rounded),
+          label: 'Checklist',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.history_rounded),
+          activeIcon: Icon(Icons.history_rounded),
+          label: 'Lịch sử',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_outlined),
+          activeIcon: Icon(Icons.dashboard_rounded),
+          label: 'Dashboard',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline_rounded),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Người dùng',
+        ),
+      ];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      floatingActionButton: FloatingActionButton(
+      body: _buildBody(),
+      floatingActionButton: ApiService.currentRole == 'elderly' ? null : FloatingActionButton(
         onPressed: () {
-          // Implement SOS call action here
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Colors.red,
@@ -99,36 +168,17 @@ class _MainNavigatorState extends State<MainNavigator> {
           backgroundColor: Colors.white,
           selectedItemColor: const Color(0xFF1A56DB),
           unselectedItemColor: const Color(0xFF94A3B8),
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          selectedLabelStyle: TextStyle(
+            fontWeight: FontWeight.w700, 
+            fontSize: ApiService.currentRole == 'elderly' ? 14 : 11
+          ),
+          unselectedLabelStyle: TextStyle(
+            fontWeight: FontWeight.w500, 
+            fontSize: ApiService.currentRole == 'elderly' ? 14 : 11
+          ),
+          iconSize: ApiService.currentRole == 'elderly' ? 32 : 24,
           elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.check_box_outlined),
-              activeIcon: Icon(Icons.check_box_rounded),
-              label: 'Checklist',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.history_rounded),
-              activeIcon: Icon(Icons.history_rounded),
-              label: 'Lịch sử',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard_rounded),
-              label: 'Dashboard',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-              label: 'Người dùng',
-            ),
-          ],
+          items: _buildNavItems(),
         ),
       ),
     );

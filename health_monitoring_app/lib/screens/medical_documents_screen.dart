@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/api_service.dart';
 
 class MedicalDocumentsScreen extends StatefulWidget {
   const MedicalDocumentsScreen({super.key});
@@ -24,22 +25,41 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
         date: '22/03/2025',
         size: '3.8 MB',
         type: 'Xét nghiệm'),
-    _DocFile(
-        name: 'Toa thuốc 02/2025.pdf',
-        date: '08/02/2025',
-        size: '0.9 MB',
-        type: 'Toa thuốc'),
-    _DocFile(
-        name: 'Siêu âm tim 01/2025.pdf',
-        date: '15/01/2025',
-        size: '5.2 MB',
-        type: 'Xét nghiệm'),
-    _DocFile(
-        name: 'Toa thuốc 12/2024.pdf',
-        date: '20/12/2024',
-        size: '1.1 MB',
-        type: 'Toa thuốc'),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDocuments();
+  }
+
+  Future<void> _fetchDocuments() async {
+    final docs = await ApiService.getMedicalDocument();
+    if (docs.isNotEmpty) {
+      setState(() {
+        _allDocs.clear();
+        for (var doc in docs) {
+          String type = doc['document_type'] ?? 'Khác';
+          if (!['Toa thuốc', 'Xét nghiệm'].contains(type)) {
+             type = 'Toa thuốc'; 
+          }
+          String date = 'N/A';
+          if (doc['upload_at'] != null) {
+            try {
+               DateTime dt = DateTime.parse(doc['upload_at']);
+               date = '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
+            } catch (e) {}
+          }
+          _allDocs.add(_DocFile(
+            name: doc['file_url']?.split('/').last ?? 'Tai_lieu_${doc['medical_documentid']}.pdf',
+            date: date,
+            size: 'N/A',
+            type: type,
+          ));
+        }
+      });
+    }
+  }
 
   List<_DocFile> get _filtered {
     final q = _searchCtrl.text.toLowerCase();

@@ -28,7 +28,7 @@ class ApiService {
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "usename": username,
+          "username": username,
           "password": password,
           "fullname": fullname,
           "phone": phone,
@@ -58,7 +58,7 @@ class ApiService {
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "usename": username,
+          "username": username,
           "password": password,
         }),
       );
@@ -174,4 +174,49 @@ class ApiService {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
-}
+
+  // ================= GET MEDICATION =================
+  static Future<List<dynamic>> getMedication() async {
+    final url = Uri.parse("$baseUrl/api/medication/");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
+    }
+  }
+
+  // ================= GET MEDICATION SCHEDULE =================
+  static Future<List<dynamic>> getMedicationSchedule() async {
+    final url = Uri.parse("$baseUrl/api/medication/schedule/");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
+    }
+  }
+
+  // ================= GET MEDICAL DOCUMENT =================
+  static Future<List<dynamic>> getMedicalDocument() async {
+    final url = Uri.parse("$baseUrl/api/medication/document/");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
+    }
+  }
+}

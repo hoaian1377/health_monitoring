@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/api_service.dart';
 
 class AppointmentItem {
   final String id;
@@ -548,7 +549,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: ApiService.currentRole == 'elderly' ? null : FloatingActionButton.extended(
         onPressed: _showAddSheet,
         backgroundColor: const Color(0xFF0EA5E9),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
@@ -740,7 +741,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(Icons.local_hospital_rounded,
-                      color: urgentColor, size: 24),
+                      color: urgentColor, size: ApiService.currentRole == 'elderly' ? 36 : 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -748,14 +749,14 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.hospital,
-                          style: const TextStyle(
-                              fontSize: 15,
+                          style: TextStyle(
+                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 15,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B))),
+                              color: const Color(0xFF1E293B))),
                       const SizedBox(height: 4),
                       Text('${item.doctor} · ${item.specialty}',
-                          style: const TextStyle(
-                              fontSize: 13, color: Color(0xFF64748B))),
+                          style: TextStyle(
+                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 13, color: const Color(0xFF64748B))),
                       if (item.notes.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(item.notes,
@@ -776,7 +777,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   ),
                   child: Text(urgentLabel,
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: ApiService.currentRole == 'elderly' ? 14 : 11,
                           fontWeight: FontWeight.bold,
                           color: urgentColor)),
                 ),
@@ -799,52 +800,54 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 6),
                 Text(_fmtDate(item.date),
-                    style: const TextStyle(
-                        fontSize: 13,
+                    style: TextStyle(
+                        fontSize: ApiService.currentRole == 'elderly' ? 16 : 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569))),
+                        color: const Color(0xFF475569))),
                 const SizedBox(width: 16),
                 const Icon(Icons.access_time_rounded,
                     size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 6),
                 Text(item.time,
-                    style: const TextStyle(
-                        fontSize: 13,
+                    style: TextStyle(
+                        fontSize: ApiService.currentRole == 'elderly' ? 16 : 13,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569))),
+                        color: const Color(0xFF475569))),
                 const Spacer(),
-                GestureDetector(
-                  onTap: () => _showCancelDialog(item),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
-                      borderRadius: BorderRadius.circular(8),
+                if (ApiService.currentRole != 'elderly') ...[
+                  GestureDetector(
+                    onTap: () => _showCancelDialog(item),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('Hủy',
+                          style: TextStyle(
+                              color: Color(0xFFEF4444),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
                     ),
-                    child: const Text('Hủy',
-                        style: TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold)),
                   ),
-                ),
-                GestureDetector(
-                  onTap: () => _showResultSheet(item),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0EA5E9),
-                      borderRadius: BorderRadius.circular(8),
+                  GestureDetector(
+                    onTap: () => _showResultSheet(item),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0EA5E9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('Ghi kết quả',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
                     ),
-                    child: const Text('Ghi kết quả',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold)),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -880,8 +883,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.block_rounded,
-                      color: Color(0xFFEF4444), size: 22),
+                  child: Icon(Icons.block_rounded,
+                      color: const Color(0xFFEF4444), size: ApiService.currentRole == 'elderly' ? 32 : 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -889,13 +892,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.hospital,
-                          style: const TextStyle(
-                              fontSize: 14,
+                          style: TextStyle(
+                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 14,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B))),
+                              color: const Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B))),
+                          style: TextStyle(
+                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 12, color: const Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -905,11 +908,11 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text('Đã hủy',
+                  child: Text('Đã hủy',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: ApiService.currentRole == 'elderly' ? 14 : 11,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFEF4444))),
+                          color: const Color(0xFFEF4444))),
                 ),
               ],
             ),
@@ -971,8 +974,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.check_circle_rounded,
-                      color: Color(0xFF16A34A), size: 22),
+                  child: Icon(Icons.check_circle_rounded,
+                      color: const Color(0xFF16A34A), size: ApiService.currentRole == 'elderly' ? 32 : 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -980,13 +983,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.hospital,
-                          style: const TextStyle(
-                              fontSize: 14,
+                          style: TextStyle(
+                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 14,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B))),
+                              color: const Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF64748B))),
+                          style: TextStyle(
+                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 12, color: const Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -997,11 +1000,11 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text('Đã khám',
+                  child: Text('Đã khám',
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: ApiService.currentRole == 'elderly' ? 14 : 11,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF16A34A))),
+                          color: const Color(0xFF16A34A))),
                 ),
               ],
             ),
@@ -1033,21 +1036,23 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                 ),
               ),
             ],
-            const SizedBox(height: 10),
-            GestureDetector(
-              onTap: () => _showResultSheet(item),
-              child: const Row(
-                children: [
-                  Icon(Icons.edit_rounded, size: 14, color: Color(0xFF0EA5E9)),
-                  SizedBox(width: 6),
-                  Text('Chỉnh sửa kết quả',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF0EA5E9),
-                          fontWeight: FontWeight.w600)),
-                ],
+            if (ApiService.currentRole != 'elderly') ...[
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: () => _showResultSheet(item),
+                child: const Row(
+                  children: [
+                    Icon(Icons.edit_rounded, size: 14, color: Color(0xFF0EA5E9)),
+                    SizedBox(width: 6),
+                    Text('Chỉnh sửa kết quả',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF0EA5E9),
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

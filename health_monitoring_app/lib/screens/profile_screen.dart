@@ -140,42 +140,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildSOSButton(),
                   const SizedBox(height: 24),
 
-                  _sectionLabel('HỒ SƠ & THÔNG TIN CÁ NHÂN'),
-                  const SizedBox(height: 8),
-                  _menuGroup([
-                    _MenuItem(
-                      icon: Icons.person_outline_rounded,
-                      iconBg: const Color(0xFFEBF3FF),
-                      iconColor: const Color(0xFF0EA5E9),
-                      title: 'Hồ sơ cá nhân',
-                      subtitle: 'Tên, ngày sinh, địa chỉ, ảnh đại diện',
-                      onTap: () => _navigate(const PersonalProfileScreen()),
-                    ),
-                    _MenuItem(
-                      icon: Icons.medical_services_outlined,
-                      iconBg: const Color(0xFFE6FBF3),
-                      iconColor: const Color(0xFF16A34A),
-                      title: 'Hồ sơ khám bệnh',
-                      subtitle: 'Bệnh nền, dị ứng, nhóm máu, tiền sử bệnh',
-                      onTap: () => _navigate(const MedicalProfileScreen()),
-                    ),
-                    _MenuItem(
-                      icon: Icons.description_outlined,
-                      iconBg: const Color(0xFFF3EEFF),
-                      iconColor: const Color(0xFF7C3AED),
-                      title: 'Toa thuốc & xét nghiệm',
-                      subtitle: 'Upload, xem lại toa thuốc & kết quả xét nghiệm',
-                      onTap: () => _navigate(const MedicalDocumentsScreen()),
-                    ),
-                    _MenuItem(
-                      icon: Icons.calendar_month_outlined,
-                      iconBg: const Color(0xFFF0F9FF),
-                      iconColor: const Color(0xFF0EA5E9),
-                      title: 'Lịch khám bệnh',
-                      subtitle: 'Quản lý lịch tái khám và kết quả',
-                      onTap: () => _navigate(const AppointmentScreen()),
-                    ),
-                    if (ApiService.currentRole != 'elderly')
+                  if (ApiService.currentRole != 'elderly') ...[
+                    _sectionLabel('HỒ SƠ & THÔNG TIN CÁ NHÂN'),
+                    const SizedBox(height: 8),
+                    _menuGroup([
+                      _MenuItem(
+                        icon: Icons.person_outline_rounded,
+                        iconBg: const Color(0xFFEBF3FF),
+                        iconColor: const Color(0xFF0EA5E9),
+                        title: 'Hồ sơ cá nhân',
+                        subtitle: 'Tên, ngày sinh, địa chỉ, ảnh đại diện',
+                        onTap: () => _navigate(const PersonalProfileScreen()),
+                      ),
+                      _MenuItem(
+                        icon: Icons.medical_services_outlined,
+                        iconBg: const Color(0xFFE6FBF3),
+                        iconColor: const Color(0xFF16A34A),
+                        title: 'Hồ sơ khám bệnh',
+                        subtitle: 'Bệnh nền, dị ứng, nhóm máu, tiền sử bệnh',
+                        onTap: () => _navigate(const MedicalProfileScreen()),
+                      ),
+                      _MenuItem(
+                        icon: Icons.description_outlined,
+                        iconBg: const Color(0xFFF3EEFF),
+                        iconColor: const Color(0xFF7C3AED),
+                        title: 'Toa thuốc & xét nghiệm',
+                        subtitle: 'Upload, xem lại toa thuốc & kết quả xét nghiệm',
+                        onTap: () => _navigate(const MedicalDocumentsScreen()),
+                      ),
+                      _MenuItem(
+                        icon: Icons.calendar_month_outlined,
+                        iconBg: const Color(0xFFF0F9FF),
+                        iconColor: const Color(0xFF0EA5E9),
+                        title: 'Lịch khám bệnh',
+                        subtitle: 'Quản lý lịch tái khám và kết quả',
+                        onTap: () => _navigate(const AppointmentScreen()),
+                      ),
                       _MenuItem(
                         icon: Icons.switch_account_rounded,
                         iconBg: const Color(0xFFE0F2FE),
@@ -184,9 +184,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'Thêm, xóa, chuyển đổi hồ sơ (F02)',
                         onTap: () => _navigate(const ManageProfilesScreen()),
                       ),
-                  ]),
-
-                  const SizedBox(height: 24),
+                    ]),
+                    const SizedBox(height: 24),
+                  ],
                   if (ApiService.currentRole != 'elderly')
                     _sectionLabel('LIÊN KẾT GIA ĐÌNH')
                   else
@@ -212,19 +212,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ]),
 
-                  const SizedBox(height: 24),
-                  _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
-                  const SizedBox(height: 8),
-                  _menuGroup([
-                    _MenuItem(
-                      icon: Icons.notifications_outlined,
-                      iconBg: const Color(0xFFE6FBF3),
-                      iconColor: const Color(0xFF16A34A),
-                      title: 'Cài đặt thông báo',
-                      subtitle: 'Nhắc uống thuốc, lịch khám, cảnh báo sức khỏe',
-                      onTap: () => _navigate(const NotificationSettingsScreen()),
-                    ),
-                    if (ApiService.currentRole != 'elderly') ...[
+                  if (ApiService.currentRole != 'elderly') ...[
+                    const SizedBox(height: 24),
+                    _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
+                    const SizedBox(height: 8),
+                    _menuGroup([
+                      _MenuItem(
+                        icon: Icons.notifications_outlined,
+                        iconBg: const Color(0xFFE6FBF3),
+                        iconColor: const Color(0xFF16A34A),
+                        title: 'Cài đặt thông báo',
+                        subtitle: 'Nhắc uống thuốc, lịch khám, cảnh báo sức khỏe',
+                        onTap: () => _navigate(const NotificationSettingsScreen()),
+                      ),
                       _MenuItem(
                         icon: Icons.warning_amber_rounded,
                         iconBg: const Color(0xFFFFF4E6),
@@ -241,8 +241,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         subtitle: 'Bảo mật tài khoản của bạn',
                         onTap: () => _navigate(const ChangePasswordScreen()),
                       ),
-                    ]
-                  ]),
+                    ]),
+                  ],
 
                   const SizedBox(height: 8),
                   _buildLogoutButton(),
@@ -458,14 +458,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Row(
                       children: [
                         Container(
-                          width: 40,
-                          height: 40,
+                          width: ApiService.currentRole == 'elderly' ? 56 : 40,
+                          height: ApiService.currentRole == 'elderly' ? 56 : 40,
                           decoration: BoxDecoration(
                             color: item.iconBg,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(item.icon,
-                              color: item.iconColor, size: 20),
+                              color: item.iconColor, size: ApiService.currentRole == 'elderly' ? 32 : 20),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -473,15 +473,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(item.title,
-                                  style: const TextStyle(
-                                      fontSize: 14.5,
+                                  style: TextStyle(
+                                      fontSize: ApiService.currentRole == 'elderly' ? 20 : 14.5,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1E293B))),
+                                      color: const Color(0xFF1E293B))),
                               const SizedBox(height: 2),
                               Text(item.subtitle,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF94A3B8))),
+                                  style: TextStyle(
+                                      fontSize: ApiService.currentRole == 'elderly' ? 16 : 12,
+                                      color: const Color(0xFF94A3B8))),
                             ],
                           ),
                         ),
@@ -527,30 +527,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: ApiService.currentRole == 'elderly' ? 56 : 40,
+                  height: ApiService.currentRole == 'elderly' ? 56 : 40,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFEBEB),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.logout_rounded,
-                      color: Color(0xFFC81E1E), size: 22),
+                  child: Icon(Icons.logout_rounded,
+                      color: const Color(0xFFC81E1E), size: ApiService.currentRole == 'elderly' ? 32 : 22),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Đăng xuất',
                           style: TextStyle(
-                              fontSize: 14.5,
+                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 14.5,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFC81E1E))),
+                              color: const Color(0xFFC81E1E))),
                       SizedBox(height: 2),
                       Text('Thoát khỏi tài khoản hiện tại',
                           style: TextStyle(
-                              fontSize: 12, color: Color(0xFF94A3B8))),
+                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 12, color: const Color(0xFF94A3B8))),
                     ],
                   ),
                 ),

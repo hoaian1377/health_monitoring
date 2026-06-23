@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/global_state.dart';
+import '../utils/api_service.dart';
 
 class TaskItem {
   final String id;
@@ -167,6 +168,33 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   TimeOfDay _newTaskTime = const TimeOfDay(hour: 8, minute: 0);
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 30));
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMedications();
+  }
+
+  Future<void> _fetchMedications() async {
+    final meds = await ApiService.getMedication();
+    if (meds.isNotEmpty) {
+      setState(() {
+        _tasks.removeWhere((t) => t.type == 'medication');
+        for (var med in meds) {
+          _tasks.add(TaskItem(
+            id: med['medicationid'].toString(),
+            title: med['name'] ?? 'Thuốc',
+            type: 'medication',
+            time: '08:00',
+            details: '${med['dosage'] ?? ''} - ${med['instruction'] ?? ''}',
+            isCompleted: false,
+            medCode: 'MED-${med['medicationid']}',
+            dosage: med['dosage'],
+          ));
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -800,7 +828,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           _buildSummaryProgressCard(completedCount, totalCount, completionRate),
 
           // ── Inline Add Task Button ──
-          Padding(
+          if (ApiService.currentRole != 'elderly')
+            Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: ElevatedButton.icon(
               onPressed: _showAddTaskSheet,
@@ -1142,8 +1171,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   // Animated Check Circle Icon
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: 24,
-                    height: 24,
+                    width: ApiService.currentRole == 'elderly' ? 40 : 24,
+                    height: ApiService.currentRole == 'elderly' ? 40 : 24,
                     decoration: BoxDecoration(
                       color: task.isCompleted ? typeColor : Colors.transparent,
                       shape: BoxShape.circle,
@@ -1153,7 +1182,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       ),
                     ),
                     child: task.isCompleted
-                        ? const Icon(Icons.done_rounded, color: Colors.white, size: 16)
+                        ? Icon(Icons.done_rounded, color: Colors.white, size: ApiService.currentRole == 'elderly' ? 24 : 16)
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -1185,7 +1214,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                   Text(
                                     typeLabel,
                                     style: TextStyle(
-                                      fontSize: 9,
+                                      fontSize: ApiService.currentRole == 'elderly' ? 12 : 9,
                                       fontWeight: FontWeight.bold,
                                       color: task.isCompleted ? Colors.grey : typeColor,
                                     ),
@@ -1198,7 +1227,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             Text(
                               task.time,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: ApiService.currentRole == 'elderly' ? 16 : 12,
                                 fontWeight: FontWeight.bold,
                                 color: task.isCompleted ? Colors.grey : const Color(0xFF0EA5E9),
                               ),
@@ -1209,7 +1238,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         Text(
                           task.title,
                           style: TextStyle(
-                            fontSize: 14.5,
+                            fontSize: ApiService.currentRole == 'elderly' ? 20 : 14.5,
                             fontWeight: FontWeight.bold,
                             decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                             color: task.isCompleted ? Colors.grey.shade400 : Colors.black87,
@@ -1219,7 +1248,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         Text(
                           task.details,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: ApiService.currentRole == 'elderly' ? 16 : 12,
                             color: task.isCompleted ? Colors.grey.shade300 : const Color(0xFF64748B),
                           ),
                         ),
@@ -1250,26 +1279,28 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   const SizedBox(width: 8),
                   
                   // Edit Button
-                  IconButton(
-                    icon: Icon(Icons.edit_outlined, color: Colors.blue.shade400, size: 20),
-                    onPressed: () => _showEditTaskSheet(task),
-                  ),
+                  if (ApiService.currentRole != 'elderly')
+                    IconButton(
+                      icon: Icon(Icons.edit_outlined, color: Colors.blue.shade400, size: 20),
+                      onPressed: () => _showEditTaskSheet(task),
+                    ),
                   
                   // Delete Button
-                  IconButton(
-                    icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        _tasks.removeWhere((t) => t.id == task.id);
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: Colors.red.shade600,
-                          content: Text('Đã xóa nhiệm vụ: ${task.title}'),
-                        ),
-                      );
-                    },
-                  ),
+                  if (ApiService.currentRole != 'elderly')
+                    IconButton(
+                      icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _tasks.removeWhere((t) => t.id == task.id);
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: Colors.red.shade600,
+                            content: Text('Đã xóa nhiệm vụ: ${task.title}'),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -1283,7 +1314,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 10,
+        fontSize: ApiService.currentRole == 'elderly' ? 14 : 10,
         fontWeight: FontWeight.bold,
         color: isCompleted ? Colors.grey : const Color(0xFF0369A1),
       ),
