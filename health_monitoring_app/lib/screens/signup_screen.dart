@@ -171,11 +171,11 @@ class _SignupScreenState extends State<SignupScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - 24,
+                      minHeight: constraints.maxHeight - 16,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -185,37 +185,38 @@ class _SignupScreenState extends State<SignupScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: const [
+                            SizedBox(height: 12),
                             Text(
                               'Đăng ký tài khoản',
                               style: TextStyle(
-                                fontSize: 26,
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0284C7),
                               ),
                             ),
-                            SizedBox(height: 6),
+                            SizedBox(height: 4),
                             Text(
                               'Hãy điền các thông tin để kết nối chăm sóc sức khỏe',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12.5,
                                 color: Color(0xFF64748B),
                               ),
                             ),
-                            SizedBox(height: 24),
+                            SizedBox(height: 12),
                           ],
                         ),
 
                         // Signup Form
                         Container(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.04),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               )
                             ],
                           ),
@@ -240,7 +241,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
 
                                 // Name Input
                                 TextFormField(
@@ -258,7 +259,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
 
                                 // Email Input
                                 TextFormField(
@@ -276,7 +277,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
 
                                 // Phone Input
                                 TextFormField(
@@ -297,7 +298,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
 
                                 // Password Input
                                 TextFormField(
@@ -329,7 +330,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
 
                                 // Confirm Password Input
                                 TextFormField(
@@ -361,7 +362,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     return null;
                                   },
                                 ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 10),
 
                                 // Agree to terms
                                 Row(
@@ -382,40 +383,40 @@ class _SignupScreenState extends State<SignupScreen> {
                                         },
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
                                     const Expanded(
                                       child: Text(
                                         'Tôi đồng ý với các Điều khoản dịch vụ và Chính sách bảo mật thông tin y tế của CareLink.',
                                         style: TextStyle(
                                           color: Color(0xFF475569),
-                                          fontSize: 12,
-                                          height: 1.4,
+                                          fontSize: 11.5,
+                                          height: 1.3,
                                         ),
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 16),
 
                                 // Signup submit button
                                 SizedBox(
                                   width: double.infinity,
-                                  height: 52,
+                                  height: 46,
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : _signup,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF0EA5E9),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       elevation: 0,
                                     ),
                                     child: _isLoading
                                         ? const SizedBox(
-                                            width: 24,
-                                            height: 24,
+                                            width: 20,
+                                            height: 20,
                                             child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
+                                              strokeWidth: 2.0,
                                               color: Colors.white,
                                             ),
                                           )
@@ -423,7 +424,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                             'Đăng ký',
                                             style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 16,
+                                              fontSize: 15,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
@@ -434,7 +435,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
 
                         // Back to login
                         Row(
@@ -444,7 +445,7 @@ class _SignupScreenState extends State<SignupScreen> {
                               'Bác đã có tài khoản? ',
                               style: TextStyle(
                                 color: Color(0xFF64748B),
-                                fontSize: 14,
+                                fontSize: 13,
                               ),
                             ),
                             GestureDetector(
@@ -456,7 +457,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 style: TextStyle(
                                   color: Color(0xFF0EA5E9),
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -489,21 +490,21 @@ class _SignupScreenState extends State<SignupScreen> {
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Colors.redAccent),
       ),
     );

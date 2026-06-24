@@ -145,7 +145,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
             top: 24,
             left: 24,
             right: 24,
@@ -446,7 +446,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
           top: 24,
           left: 24,
           right: 24,
@@ -534,20 +534,22 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F9FF),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _upcomingTab(),
-                _completedTab(),
-                _cancelledTab(),
-              ],
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(
+              child: _buildHeader(),
             ),
-          ),
-        ],
+          ];
+        },
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _upcomingTab(),
+            _completedTab(),
+            _cancelledTab(),
+          ],
+        ),
       ),
       floatingActionButton: ApiService.currentRole == 'elderly' ? null : FloatingActionButton.extended(
         onPressed: _showAddSheet,
@@ -741,7 +743,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(Icons.local_hospital_rounded,
-                      color: urgentColor, size: ApiService.currentRole == 'elderly' ? 36 : 24),
+                      color: urgentColor, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -749,14 +751,14 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.hospital,
-                          style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 15,
+                          style: const TextStyle(
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1E293B))),
+                              color: Color(0xFF1E293B))),
                       const SizedBox(height: 4),
                       Text('${item.doctor} · ${item.specialty}',
-                          style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 13, color: const Color(0xFF64748B))),
+                          style: const TextStyle(
+                              fontSize: 13, color: Color(0xFF64748B))),
                       if (item.notes.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(item.notes,
@@ -777,7 +779,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   ),
                   child: Text(urgentLabel,
                       style: TextStyle(
-                          fontSize: ApiService.currentRole == 'elderly' ? 14 : 11,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: urgentColor)),
                 ),
@@ -800,19 +802,19 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 6),
                 Text(_fmtDate(item.date),
-                    style: TextStyle(
-                        fontSize: ApiService.currentRole == 'elderly' ? 16 : 13,
+                    style: const TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF475569))),
+                        color: Color(0xFF475569))),
                 const SizedBox(width: 16),
                 const Icon(Icons.access_time_rounded,
                     size: 14, color: Color(0xFF64748B)),
                 const SizedBox(width: 6),
                 Text(item.time,
-                    style: TextStyle(
-                        fontSize: ApiService.currentRole == 'elderly' ? 16 : 13,
+                    style: const TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF475569))),
+                        color: Color(0xFF475569))),
                 const Spacer(),
                 if (ApiService.currentRole != 'elderly') ...[
                   GestureDetector(
@@ -883,8 +885,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.block_rounded,
-                      color: const Color(0xFFEF4444), size: ApiService.currentRole == 'elderly' ? 32 : 22),
+                  child: const Icon(Icons.block_rounded,
+                      color: Color(0xFFEF4444), size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -892,13 +894,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.hospital,
-                          style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 14,
+                          style: const TextStyle(
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1E293B))),
+                              color: Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
-                          style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 12, color: const Color(0xFF64748B))),
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -908,11 +910,11 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('Đã hủy',
+                  child: const Text('Đã hủy',
                       style: TextStyle(
-                          fontSize: ApiService.currentRole == 'elderly' ? 14 : 11,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFFEF4444))),
+                          color: Color(0xFFEF4444))),
                 ),
               ],
             ),
@@ -974,8 +976,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.check_circle_rounded,
-                      color: const Color(0xFF16A34A), size: ApiService.currentRole == 'elderly' ? 32 : 22),
+                  child: const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF16A34A), size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -983,13 +985,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(item.hospital,
-                          style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 14,
+                          style: const TextStyle(
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1E293B))),
+                              color: Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
-                          style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 12, color: const Color(0xFF64748B))),
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -1000,11 +1002,11 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('Đã khám',
+                  child: const Text('Đã khám',
                       style: TextStyle(
-                          fontSize: ApiService.currentRole == 'elderly' ? 14 : 11,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF16A34A))),
+                          color: Color(0xFF16A34A))),
                 ),
               ],
             ),

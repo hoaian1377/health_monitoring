@@ -23,11 +23,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,8 +53,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -774,42 +774,45 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         expand: false,
         initialChildSize: 0.55,
         maxChildSize: 0.85,
-        builder: (_, scrollCtrl) => Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Row(children: [
-                Icon(Icons.notifications_rounded, color: Color(0xFF0284C7), size: 24),
-                SizedBox(width: 10),
-                Text('Thông báo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-              ]),
-            ),
-            const SizedBox(height: 12),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                controller: scrollCtrl,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                children: [
-                  _buildNotifItem(icon: Icons.calendar_today_rounded, iconBg: const Color(0xFFFEF3C7), iconColor: const Color(0xFFD97706),
-                      title: 'Lịch tái khám sắp tới',
-                      body: 'Ngày 12/06 lúc 08:30 — BV Chợ Rẫy, BS. Nguyễn Thị Lan (Tim mạch). Còn 3 ngày nữa.',
-                      time: '2 giờ trước'),
-                  _buildNotifItem(icon: Icons.medication_rounded, iconBg: const Color(0xFFDCFCE7), iconColor: const Color(0xFF16A34A),
-                      title: 'Đã uống thuốc buổi sáng',
-                      body: 'Bác đã xác nhận uống Amlodipine 5mg và Atorvastatin 20mg lúc 07:15.',
-                      time: '5 giờ trước'),
-                  _buildNotifItem(icon: Icons.warning_amber_rounded, iconBg: const Color(0xFFFFE4E6), iconColor: const Color(0xFFDC2626),
-                      title: 'Bỏ lỡ thuốc buổi trưa',
-                      body: 'Bác chưa xác nhận uống Metformin 500mg lúc 12:00. Hệ thống đã gửi nhắc nhở.',
-                      time: 'Hôm qua'),
-                ],
+        builder: (_, scrollCtrl) => SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Row(children: [
+                  Icon(Icons.notifications_rounded, color: Color(0xFF0284C7), size: 24),
+                  SizedBox(width: 10),
+                  Text('Thông báo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                ]),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  children: [
+                    _buildNotifItem(icon: Icons.calendar_today_rounded, iconBg: const Color(0xFFFEF3C7), iconColor: const Color(0xFFD97706),
+                        title: 'Lịch tái khám sắp tới',
+                        body: 'Ngày 12/06 lúc 08:30 — BV Chợ Rẫy, BS. Nguyễn Thị Lan (Tim mạch). Còn 3 ngày nữa.',
+                        time: '2 giờ trước'),
+                    _buildNotifItem(icon: Icons.medication_rounded, iconBg: const Color(0xFFDCFCE7), iconColor: const Color(0xFF16A34A),
+                        title: 'Đã uống thuốc buổi sáng',
+                        body: 'Bác đã xác nhận uống Amlodipine 5mg và Atorvastatin 20mg lúc 07:15.',
+                        time: '5 giờ trước'),
+                    _buildNotifItem(icon: Icons.warning_amber_rounded, iconBg: const Color(0xFFFFE4E6), iconColor: const Color(0xFFDC2626),
+                        title: 'Bỏ lỡ thuốc buổi trưa',
+                        body: 'Bác chưa xác nhận uống Metformin 500mg lúc 12:00. Hệ thống đã gửi nhắc nhở.',
+                        time: 'Hôm qua'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -929,7 +932,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: 20 + MediaQuery.of(ctx).padding.bottom,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

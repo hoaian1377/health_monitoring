@@ -40,21 +40,23 @@ class _HistoryScreenState extends State<HistoryScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F9FF),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildMedicineTab(),
-                _buildMetricsTab(),
-                _buildAppointmentsTab(),
-                _buildNotificationsTab(),
-              ],
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(
+              child: _buildHeader(),
             ),
-          ),
-        ],
+          ];
+        },
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildMedicineTab(),
+            _buildMetricsTab(),
+            _buildAppointmentsTab(),
+            _buildNotificationsTab(),
+          ],
+        ),
       ),
     );
   }

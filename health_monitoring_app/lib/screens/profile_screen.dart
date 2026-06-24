@@ -128,11 +128,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
@@ -267,8 +267,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -475,14 +475,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Row(
                       children: [
                         Container(
-                          width: ApiService.currentRole == 'elderly' ? 56 : 40,
-                          height: ApiService.currentRole == 'elderly' ? 56 : 40,
+                          width: 40,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: item.iconBg,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(item.icon,
-                              color: item.iconColor, size: ApiService.currentRole == 'elderly' ? 32 : 20),
+                              color: item.iconColor, size: 20),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -490,15 +490,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(item.title,
-                                  style: TextStyle(
-                                      fontSize: ApiService.currentRole == 'elderly' ? 20 : 14.5,
+                                  style: const TextStyle(
+                                      fontSize: 14.5,
                                       fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF1E293B))),
+                                      color: Color(0xFF1E293B))),
                               const SizedBox(height: 2),
                               Text(item.subtitle,
-                                  style: TextStyle(
-                                      fontSize: ApiService.currentRole == 'elderly' ? 16 : 12,
-                                      color: const Color(0xFF94A3B8))),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF94A3B8))),
                             ],
                           ),
                         ),
@@ -544,30 +544,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Row(
               children: [
                 Container(
-                  width: ApiService.currentRole == 'elderly' ? 56 : 40,
-                  height: ApiService.currentRole == 'elderly' ? 56 : 40,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFEBEB),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: Icon(Icons.logout_rounded,
-                      color: const Color(0xFFC81E1E), size: ApiService.currentRole == 'elderly' ? 32 : 22),
+                  child: const Icon(Icons.logout_rounded,
+                      color: Color(0xFFC81E1E), size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    children: const [
                       Text('Đăng xuất',
                           style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 20 : 14.5,
+                              fontSize: 14.5,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFFC81E1E))),
+                              color: Color(0xFFC81E1E))),
                       SizedBox(height: 2),
                       Text('Thoát khỏi tài khoản hiện tại',
                           style: TextStyle(
-                              fontSize: ApiService.currentRole == 'elderly' ? 16 : 12, color: const Color(0xFF94A3B8))),
+                              fontSize: 12, color: Color(0xFF94A3B8))),
                     ],
                   ),
                 ),
@@ -611,7 +611,7 @@ class _SOSBottomSheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

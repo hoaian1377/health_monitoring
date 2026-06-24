@@ -182,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          padding: EdgeInsets.fromLTRB(24, 16, 24, 32 + MediaQuery.of(ctx).padding.bottom),
           child: Form(
             key: resetFormKey,
             child: Column(
@@ -337,11 +337,11 @@ class _LoginScreenState extends State<LoginScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - 32,
+                      minHeight: constraints.maxHeight - 24,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -350,23 +350,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         // App Logo & Welcome Text
                         Column(
                           children: [
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 12),
                             // Custom beautiful logo markup
                             Container(
-                              width: 80,
-                              height: 80,
+                              width: 60,
+                              height: 60,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                borderRadius: BorderRadius.circular(22),
+                                borderRadius: BorderRadius.circular(18),
                                 boxShadow: [
                                   BoxShadow(
                                     color: const Color(0xFF0EA5E9).withOpacity(0.3),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 8),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 6),
                                   )
                                 ],
                               ),
@@ -375,8 +375,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   // Translucent internal circle for premium look
                                   Container(
-                                    width: 54,
-                                    height: 54,
+                                    width: 40,
+                                    height: 40,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       color: Colors.white.withOpacity(0.15),
@@ -385,45 +385,45 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const Icon(
                                     Icons.health_and_safety_rounded,
                                     color: Colors.white,
-                                    size: 42,
+                                    size: 32,
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
                             const Text(
                               'CareLink',
                               style: TextStyle(
-                                fontSize: 28,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0284C7),
                                 letterSpacing: 0.5,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             const Text(
                               'Đồng hành sức khỏe cùng gia đình bạn',
                               style: TextStyle(
-                                fontSize: 13.5,
+                                fontSize: 13,
                                 color: Color(0xFF64748B),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 16),
                           ],
                         ),
 
                         // Form input
                         Container(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.04),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               )
                             ],
                           ),
@@ -619,7 +619,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 12),
 
                         // Login Options (Biometric / Social)
                         Column(
@@ -628,11 +628,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 const Expanded(child: Divider(color: Color(0xFFCBD5E1))),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
                                   child: Text(
                                     'Hoặc đăng nhập nhanh bằng',
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       color: const Color(0xFF64748B),
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -641,7 +641,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const Expanded(child: Divider(color: Color(0xFFCBD5E1))),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
                             
                             // Quick login buttons
                             Row(
@@ -651,20 +651,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Expanded(
                                   child: InkWell(
                                     onTap: _simulatedBiometricLogin,
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(color: const Color(0xFFE2E8F0)),
                                       ),
                                       child: const Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.fingerprint_rounded, color: Color(0xFF0EA5E9), size: 28),
-                                          SizedBox(height: 4),
-                                          Text('Vân tay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                          Icon(Icons.fingerprint_rounded, color: Color(0xFF0EA5E9), size: 24),
+                                          SizedBox(height: 2),
+                                          Text('Vân tay', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
                                         ],
                                       ),
                                     ),
@@ -680,20 +680,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                         MaterialPageRoute(builder: (_) => const QrScanLoginScreen()),
                                       );
                                     },
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(color: const Color(0xFFE2E8F0)),
                                       ),
                                       child: const Column(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF10B981), size: 28),
-                                          SizedBox(height: 4),
-                                          Text('Quét QR', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                          Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF10B981), size: 24),
+                                          SizedBox(height: 2),
+                                          Text('Quét QR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
                                         ],
                                       ),
                                     ),
@@ -702,7 +702,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                             
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 16),
                             
                             // Don't have an account
                             Row(
@@ -712,7 +712,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   'Bác chưa có tài khoản? ',
                                   style: TextStyle(
                                     color: Color(0xFF64748B),
-                                    fontSize: 14,
+                                    fontSize: 13,
                                   ),
                                 ),
                                 GestureDetector(
@@ -727,13 +727,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                     style: TextStyle(
                                       color: Color(0xFF0EA5E9),
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                      fontSize: 13,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 8),
                           ],
                         )
                       ],

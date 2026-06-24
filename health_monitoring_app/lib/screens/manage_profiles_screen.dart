@@ -128,7 +128,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.only(
                     left: 20, right: 20,
-                    bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                    bottom: MediaQuery.of(ctx).viewInsets.bottom + 20 + MediaQuery.of(ctx).padding.bottom,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -60,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
           top: 20,
           left: 20,
           right: 20,
@@ -488,8 +488,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildSliverHeader() {
     return SliverAppBar(
       expandedHeight: 130.0,
-      floating: false,
-      pinned: true,
+      floating: true,
+      pinned: false,
       backgroundColor: const Color(0xFF0284C7),
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
@@ -1383,8 +1383,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         showModalBottomSheet(
           context: context,
           backgroundColor: Colors.transparent,
-          builder: (_) => Container(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+          builder: (ctx) => Container(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(ctx).padding.bottom),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

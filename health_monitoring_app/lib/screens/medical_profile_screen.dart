@@ -108,11 +108,11 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: Column(
-        children: [
-          _buildAppBar(context),
-          Expanded(
-            child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildAppBar(context),
+            Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
@@ -334,13 +334,12 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

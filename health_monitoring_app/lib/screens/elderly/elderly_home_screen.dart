@@ -33,11 +33,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
               child: Column(
                 children: [
@@ -54,8 +54,8 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

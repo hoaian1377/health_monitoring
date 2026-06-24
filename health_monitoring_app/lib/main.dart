@@ -167,24 +167,26 @@ class _MainNavigatorState extends State<MainNavigator> {
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF1A56DB),
-          unselectedItemColor: const Color(0xFF94A3B8),
-          selectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.w700, 
-            fontSize: ApiService.currentRole == 'elderly' ? 14 : 11
+        child: SafeArea(
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            selectedItemColor: const Color(0xFF1A56DB),
+            unselectedItemColor: const Color(0xFF94A3B8),
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w700, 
+              fontSize: 11
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500, 
+              fontSize: 11
+            ),
+            iconSize: 24,
+            elevation: 0,
+            items: _buildNavItems(),
           ),
-          unselectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.w500, 
-            fontSize: ApiService.currentRole == 'elderly' ? 14 : 11
-          ),
-          iconSize: ApiService.currentRole == 'elderly' ? 32 : 24,
-          elevation: 0,
-          items: _buildNavItems(),
         ),
       ),
     );

@@ -304,7 +304,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 ),
               ),
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24 + MediaQuery.of(context).padding.bottom,
                 top: 24,
                 left: 24,
                 right: 24,
@@ -790,82 +790,93 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      appBar: AppBar(
-        title: const Text(
-          'Checklist Sức Khỏe',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
-        ),
-        centerTitle: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF475569)),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Checklist sức khỏe'),
-                  content: const Text(
-                    'Được thiết kế riêng để bác có thể dễ dàng quản lý việc uống thuốc đúng giờ, đo chỉ số huyết áp/đường huyết và duy trì thói quen sống lành mạnh mỗi ngày.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Đã hiểu'),
-                    )
-                  ],
-                ),
-              );
-            },
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: false,
+            floating: true,
+            title: const Text(
+              'Checklist Sức Khỏe',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
+            ),
+            centerTitle: false,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF475569)),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Checklist sức khỏe'),
+                      content: const Text(
+                        'Được thiết kế riêng để bác có thể dễ dàng quản lý việc uống thuốc đúng giờ, đo chỉ số huyết áp/đường huyết và duy trì thói quen sống lành mạnh mỗi ngày.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Đã hiểu'),
+                        )
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ── Beautiful Progress Summary Card ──
-          _buildSummaryProgressCard(completedCount, totalCount, completionRate),
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                // ── Beautiful Progress Summary Card ──
+                _buildSummaryProgressCard(completedCount, totalCount, completionRate),
 
-          // ── Inline Add Task Button ──
-          if (ApiService.currentRole != 'elderly')
-            Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: ElevatedButton.icon(
-              onPressed: _showAddTaskSheet,
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text(
-                'Thêm nhiệm vụ mới',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
+                // ── Inline Add Task Button ──
+                if (ApiService.currentRole != 'elderly')
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: ElevatedButton.icon(
+                      onPressed: _showAddTaskSheet,
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text(
+                        'Thêm nhiệm vụ mới',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0EA5E9),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+
+                // ── Category Filters Row ──
+                _buildCategoryFilters(),
+              ],
             ),
           ),
-
-          // ── Category Filters Row ──
-          _buildCategoryFilters(),
-
-          // ── Scrollable List of Checklist Items ──
-          Expanded(
-            child: filteredTasks.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                    itemCount: filteredTasks.length,
-                    itemBuilder: (context, index) {
-                      final task = filteredTasks[index];
-                      return _buildChecklistItemCard(task);
-                    },
+          filteredTasks.isEmpty
+              ? SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildEmptyState(),
+                )
+              : SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final task = filteredTasks[index];
+                        return _buildChecklistItemCard(task);
+                      },
+                      childCount: filteredTasks.length,
+                    ),
                   ),
-          ),
+                ),
         ],
       ),
     );
@@ -1171,8 +1182,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   // Animated Check Circle Icon
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    width: ApiService.currentRole == 'elderly' ? 40 : 24,
-                    height: ApiService.currentRole == 'elderly' ? 40 : 24,
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
                       color: task.isCompleted ? typeColor : Colors.transparent,
                       shape: BoxShape.circle,
@@ -1182,7 +1193,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       ),
                     ),
                     child: task.isCompleted
-                        ? Icon(Icons.done_rounded, color: Colors.white, size: ApiService.currentRole == 'elderly' ? 24 : 16)
+                        ? const Icon(Icons.done_rounded, color: Colors.white, size: 16)
                         : null,
                   ),
                   const SizedBox(width: 16),
@@ -1214,7 +1225,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                   Text(
                                     typeLabel,
                                     style: TextStyle(
-                                      fontSize: ApiService.currentRole == 'elderly' ? 12 : 9,
+                                      fontSize: 9,
                                       fontWeight: FontWeight.bold,
                                       color: task.isCompleted ? Colors.grey : typeColor,
                                     ),
@@ -1227,7 +1238,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             Text(
                               task.time,
                               style: TextStyle(
-                                fontSize: ApiService.currentRole == 'elderly' ? 16 : 12,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: task.isCompleted ? Colors.grey : const Color(0xFF0EA5E9),
                               ),
@@ -1238,7 +1249,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         Text(
                           task.title,
                           style: TextStyle(
-                            fontSize: ApiService.currentRole == 'elderly' ? 20 : 14.5,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.bold,
                             decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                             color: task.isCompleted ? Colors.grey.shade400 : Colors.black87,
@@ -1248,7 +1259,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         Text(
                           task.details,
                           style: TextStyle(
-                            fontSize: ApiService.currentRole == 'elderly' ? 16 : 12,
+                            fontSize: 12,
                             color: task.isCompleted ? Colors.grey.shade300 : const Color(0xFF64748B),
                           ),
                         ),
@@ -1314,7 +1325,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     return Text(
       text,
       style: TextStyle(
-        fontSize: ApiService.currentRole == 'elderly' ? 14 : 10,
+        fontSize: 10,
         fontWeight: FontWeight.bold,
         color: isCompleted ? Colors.grey : const Color(0xFF0369A1),
       ),
