@@ -126,7 +126,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       content: Row(children: [
                         Icon(Icons.phone_in_talk_rounded, color: Colors.white),
                         SizedBox(width: 12),
-                        Text('Đang thực hiện cuộc gọi khẩn cấp tới con gái...'),
+                        Expanded(
+                          child: Text('Đang thực hiện cuộc gọi khẩn cấp tới con gái...'),
+                        ),
                       ]),
                       duration: Duration(seconds: 3),
                     ),
@@ -224,7 +226,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   // ── Thẻ Hồ sơ khám bệnh ──────────────────────────────────────────────────
   Widget _buildMedicalRecordCard() {
     return Container(
-      height: 180,
+      height: 190,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -237,7 +239,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           borderRadius: BorderRadius.circular(24),
           onTap: () => MainNavigator.of(context)?.setTab(2),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -293,7 +295,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     final shortName = nameSplit.isNotEmpty ? nameSplit.last : name;
 
     return Container(
-      height: 180,
+      height: 190,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -306,7 +308,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           borderRadius: BorderRadius.circular(24),
           onTap: () => MainNavigator.of(context)?.setTab(4),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -642,24 +644,23 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(children: [
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Icon(Icons.monitor_heart_rounded, color: Color(0xFF0284C7), size: 20),
-                      ),
+                const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Icon(Icons.monitor_heart_rounded, color: Color(0xFF0284C7), size: 20),
                     ),
                   ),
-                  SizedBox(width: 4),
-                  Column(
+                ),
+                const SizedBox(width: 4),
+                const Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Theo dõi sức khỏe người cao tuổi',
@@ -669,7 +670,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           style: TextStyle(fontSize: 12, color: Colors.grey)),
                     ],
                   ),
-                ]),
+                ),
                 IconButton(
                   icon: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 16),
                   onPressed: () => MainNavigator.of(context)?.setTab(3),

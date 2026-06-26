@@ -52,7 +52,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Icon(Icons.check_circle_rounded, color: Colors.white),
                   SizedBox(width: 12),
-                  Text('Đăng nhập thành công! Chào mừng bạn trở lại.'),
+                  Expanded(
+                    child: Text('Đăng nhập thành công! Chào mừng bạn trở lại.'),
+                  ),
                 ],
               ),
             ),

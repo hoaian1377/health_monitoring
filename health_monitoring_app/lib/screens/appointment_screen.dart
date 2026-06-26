@@ -787,6 +787,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             ),
           ),
           Container(
+            width: double.infinity,
             padding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(
@@ -796,60 +797,72 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                 bottomRight: Radius.circular(20),
               ),
             ),
-            child: Row(
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 10,
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 14, color: Color(0xFF64748B)),
-                const SizedBox(width: 6),
-                Text(_fmtDate(item.date),
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569))),
-                const SizedBox(width: 16),
-                const Icon(Icons.access_time_rounded,
-                    size: 14, color: Color(0xFF64748B)),
-                const SizedBox(width: 6),
-                Text(item.time,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569))),
-                const Spacer(),
-                if (ApiService.currentRole != 'elderly') ...[
-                  GestureDetector(
-                    onTap: () => _showCancelDialog(item),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Text(_fmtDate(item.date),
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569))),
+                    const SizedBox(width: 16),
+                    const Icon(Icons.access_time_rounded,
+                        size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Text(item.time,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475569))),
+                  ],
+                ),
+                if (ApiService.currentRole != 'elderly')
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showCancelDialog(item),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('Hủy',
+                              style: TextStyle(
+                                  color: Color(0xFFEF4444),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      child: const Text('Hủy',
-                          style: TextStyle(
-                              color: Color(0xFFEF4444),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _showResultSheet(item),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0EA5E9),
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showResultSheet(item),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0EA5E9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('Ghi kết quả',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      child: const Text('Ghi kết quả',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ),
+                    ],
                   ),
-                ],
               ],
             ),
           ),

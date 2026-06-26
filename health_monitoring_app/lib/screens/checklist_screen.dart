@@ -1203,7 +1203,10 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             // Category Tag Label inside Card
                             Container(
@@ -1215,6 +1218,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
                                     typeIcon,
@@ -1233,7 +1237,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
                             // Scheduled Time text
                             Text(
                               task.time,

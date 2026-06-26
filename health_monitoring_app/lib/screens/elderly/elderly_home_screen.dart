@@ -122,7 +122,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> {
                   content: Row(children: [
                     Icon(Icons.phone_in_talk_rounded, color: Colors.white),
                     SizedBox(width: 12),
-                    Text('Đang gọi khẩn cấp cho con gái...'),
+                    Expanded(
+                      child: Text('Đang gọi khẩn cấp cho con gái...'),
+                    ),
                   ]),
                   duration: Duration(seconds: 3),
                 ),
