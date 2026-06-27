@@ -14,9 +14,10 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
 
   void _switchActive(int index) {
     globalState.switchActiveProfile(index);
+    final isElderly = ApiService.currentRole == 'elderly';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: const Color(0xFF0EA5E9),
+        backgroundColor: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
         content: Text('Đã chuyển sang hồ sơ: ${globalState.profiles.value[index].name}'),
         duration: const Duration(seconds: 2),
       ),
@@ -30,22 +31,25 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
   }
 
   void _deleteProfile(int index) {
+    final isElderly = ApiService.currentRole == 'elderly';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Xóa hồ sơ?',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Bạn có chắc muốn xóa hồ sơ "${globalState.profiles.value[index].name}"? Dữ liệu sức khỏe liên quan sẽ bị xóa vĩnh viễn.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isElderly ? 24 : 20)),
+        title: Text(isElderly ? 'Xóa hồ sơ sức khỏe?' : 'Xóa hồ sơ?',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(isElderly
+            ? 'Bác có chắc muốn xóa hồ sơ "${globalState.profiles.value[index].name}" không ạ? Dữ liệu đo sức khỏe liên quan sẽ bị mất vĩnh viễn.'
+            : 'Bạn có chắc muốn xóa hồ sơ "${globalState.profiles.value[index].name}"? Dữ liệu sức khỏe liên quan sẽ bị xóa vĩnh viễn.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy', style: TextStyle(color: Color(0xFF64748B))),
+            child: Text(isElderly ? 'Hủy bỏ' : 'Hủy', style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isElderly ? 12 : 10)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -57,7 +61,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                 ),
               );
             },
-            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+            child: Text(isElderly ? 'Xác nhận xóa' : 'Xóa', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -65,6 +69,10 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
   }
 
   void _showAddOrEditDialog({ElderlyProfile? existing, int? editIndex}) {
+    final isElderly = ApiService.currentRole == 'elderly';
+    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
+    final accentBgColor = isElderly ? const Color(0xFFE6F5F4) : const Color(0xFFE0F2FE);
+
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     final dobCtrl = TextEditingController(text: existing?.dob ?? '');
     final phoneCtrl = TextEditingController(text: existing?.phone ?? '');
@@ -82,9 +90,9 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Container(
           height: MediaQuery.of(context).size.height * 0.92,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(isElderly ? 32 : 28)),
           ),
           child: Column(
             children: [
@@ -105,19 +113,21 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
+                        color: accentBgColor,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         existing == null ? Icons.person_add_rounded : Icons.edit_rounded,
-                        color: const Color(0xFF0EA5E9), size: 20,
+                        color: themeColor, size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      existing == null ? 'Thêm hồ sơ mới' : 'Chỉnh sửa hồ sơ',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                      existing == null 
+                          ? (isElderly ? 'Thêm hồ sơ mới của bác' : 'Thêm hồ sơ mới') 
+                          : (isElderly ? 'Sửa hồ sơ sức khỏe' : 'Chỉnh sửa hồ sơ'),
+                      style: TextStyle(
+                          fontSize: isElderly ? 20 : 18, fontWeight: FontWeight.bold, color: const Color(0xFF1E293B)),
                     ),
                   ],
                 ),
@@ -138,8 +148,8 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                       _formField('Ngày sinh *', dobCtrl, Icons.cake_outlined, 'dd/mm/yyyy'),
                       const SizedBox(height: 14),
                       // Gender selector
-                      const Text('Giới tính *',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+                      Text('Giới tính *',
+                          style: TextStyle(fontSize: isElderly ? 14 : 13, fontWeight: FontWeight.w700, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF475569))),
                       const SizedBox(height: 8),
                       Row(
                         children: ['Nam', 'Nữ'].map((g) {
@@ -151,9 +161,9 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                 margin: EdgeInsets.only(right: g == 'Nam' ? 8 : 0),
                                 padding: const EdgeInsets.symmetric(vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: sel ? const Color(0xFF0EA5E9) : Colors.white,
+                                  color: sel ? themeColor : Colors.white,
                                   border: Border.all(
-                                    color: sel ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
+                                    color: sel ? themeColor : const Color(0xFFE2E8F0),
                                   ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -161,7 +171,8 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                 child: Text(g,
                                     style: TextStyle(
                                         color: sel ? Colors.white : const Color(0xFF64748B),
-                                        fontWeight: FontWeight.w600)),
+                                        fontSize: isElderly ? 15 : 14,
+                                        fontWeight: FontWeight.bold)),
                               ),
                             ),
                           );
@@ -182,10 +193,10 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
-                        height: 52,
+                        height: isElderly ? 54 : 52,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0EA5E9),
+                            backgroundColor: themeColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             elevation: 0,
@@ -239,11 +250,14 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                 showDialog(
                                   context: context,
                                   builder: (c) => AlertDialog(
-                                    title: const Text("Mã QR Đăng Nhập", textAlign: TextAlign.center),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isElderly ? 24 : 20)),
+                                    title: Text(isElderly ? "Mã QR Đăng Nhập Của Bác" : "Mã QR Đăng Nhập", textAlign: TextAlign.center),
                                     content: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Text("Dùng mã QR này để người cao tuổi quét và đăng nhập vào ứng dụng.", textAlign: TextAlign.center),
+                                        Text(isElderly 
+                                            ? "Bác hãy lưu hoặc dùng điện thoại quét mã QR này để đăng nhập nhanh nhé."
+                                            : "Dùng mã QR này để người cao tuổi quét và đăng nhập vào ứng dụng.", textAlign: TextAlign.center),
                                         const SizedBox(height: 20),
                                         QrImageView(
                                           data: res['qr_token'],
@@ -255,7 +269,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.pop(c),
-                                        child: const Text("Đóng"),
+                                        child: Text(isElderly ? "Đóng lại" : "Đóng", style: TextStyle(color: themeColor, fontWeight: FontWeight.bold)),
                                       )
                                     ],
                                   ),
@@ -277,7 +291,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                               }
                             }
                           },
-                          child: Text(existing == null ? 'Thêm hồ sơ' : 'Lưu thay đổi',
+                          child: Text(existing == null ? (isElderly ? 'Thêm hồ sơ sức khỏe' : 'Thêm hồ sơ') : 'Lưu thay đổi',
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
@@ -294,35 +308,37 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
 
   Widget _formField(String label, TextEditingController ctrl, IconData icon, String hint,
       {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+            style: TextStyle(
+                fontSize: isElderly ? 14 : 13, fontWeight: FontWeight.w700, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF475569))),
         const SizedBox(height: 8),
         TextField(
           controller: ctrl,
           keyboardType: keyboardType,
           maxLines: maxLines,
+          style: TextStyle(fontSize: isElderly ? 16 : 14),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13),
-            prefixIcon: Icon(icon, color: const Color(0xFF0EA5E9), size: 18),
+            hintStyle: TextStyle(color: const Color(0xFFCBD5E1), fontSize: isElderly ? 14 : 13),
+            prefixIcon: Icon(icon, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9), size: isElderly ? 20 : 18),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: isElderly ? 16 : 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
               borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
               borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
+              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
+              borderSide: BorderSide(color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9), width: 1.5),
             ),
           ),
         ),
@@ -332,20 +348,25 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
+    final headerGradient = isElderly
+        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
+        : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
       body: Column(
         children: [
           // Header
           Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                colors: headerGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(32),
                 bottomRight: Radius.circular(32),
               ),
@@ -360,7 +381,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.arrow_back_rounded,
@@ -368,17 +389,17 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Quản lý hồ sơ',
-                          style: TextStyle(
+                      Text(isElderly ? 'Danh sách hồ sơ của bác' : 'Quản lý hồ sơ',
+                          style: const TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
-                      Text('Thêm, chỉnh sửa và chuyển đổi hồ sơ người cao tuổi',
-                          style: TextStyle(fontSize: 12, color: Colors.white70)),
+                      Text(isElderly ? 'Chuyển đổi hoặc xem thông tin hồ sơ sức khỏe' : 'Thêm, chỉnh sửa và chuyển đổi hồ sơ người cao tuổi',
+                          style: const TextStyle(fontSize: 12, color: Colors.white70)),
                     ],
                   ),
                 ),
@@ -392,33 +413,66 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
               child: Column(
                 children: [
                   // Add button
-                  GestureDetector(
-                    onTap: () => _showAddOrEditDialog(),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0EA5E9).withOpacity(0.08),
-                        border: Border.all(
-                            color: const Color(0xFF0EA5E9).withOpacity(0.4),
-                            style: BorderStyle.solid),
-                        borderRadius: BorderRadius.circular(16),
+                  if (isElderly)
+                    GestureDetector(
+                      onTap: () => _showAddOrEditDialog(),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F605A),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F605A).withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.person_add_rounded,
+                                color: Colors.white, size: 24),
+                            SizedBox(width: 10),
+                            Text('Thêm hồ sơ sức khỏe mới',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16)),
+                          ],
+                        ),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.person_add_rounded,
-                              color: Color(0xFF0EA5E9), size: 22),
-                          SizedBox(width: 10),
-                          Text('Thêm hồ sơ người cao tuổi mới',
-                              style: TextStyle(
-                                  color: Color(0xFF0EA5E9),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15)),
-                        ],
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () => _showAddOrEditDialog(),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0EA5E9).withValues(alpha: 0.08),
+                          border: Border.all(
+                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.4),
+                              style: BorderStyle.solid),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.person_add_rounded,
+                                color: Color(0xFF0EA5E9), size: 22),
+                            SizedBox(width: 10),
+                            Text('Thêm hồ sơ người cao tuổi mới',
+                                style: TextStyle(
+                                    color: Color(0xFF0EA5E9),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   const SizedBox(height: 20),
                   // List of profiles
                   ValueListenableBuilder<List<ElderlyProfile>>(
@@ -431,25 +485,25 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                             margin: const EdgeInsets.only(bottom: 14),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(isElderly ? 24 : 20),
                               border: Border.all(
                                 color: p.isActive
-                                    ? const Color(0xFF0EA5E9)
+                                    ? (isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9))
                                     : const Color(0xFFE2E8F0),
                                 width: p.isActive ? 2 : 1,
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: p.isActive
-                                      ? const Color(0xFF0EA5E9).withOpacity(0.1)
-                                      : Colors.black.withOpacity(0.03),
+                                      ? (isElderly ? const Color(0xFF0F605A).withValues(alpha: 0.1) : const Color(0xFF0EA5E9).withValues(alpha: 0.1))
+                                      : Colors.black.withValues(alpha: 0.03),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 )
                               ],
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.all(isElderly ? 18 : 16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -457,19 +511,19 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                     children: [
                                       // Avatar
                                       Container(
-                                        width: 50,
-                                        height: 50,
+                                        width: isElderly ? 54 : 50,
+                                        height: isElderly ? 54 : 50,
                                         decoration: BoxDecoration(
                                           color: p.isActive
-                                              ? const Color(0xFF0EA5E9)
+                                              ? (isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9))
                                               : const Color(0xFFE2E8F0),
-                                          borderRadius: BorderRadius.circular(14),
+                                          borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
                                         ),
                                         alignment: Alignment.center,
                                         child: Text(
                                           p.name.isNotEmpty ? p.name[0] : '?',
                                           style: TextStyle(
-                                              fontSize: 20,
+                                              fontSize: isElderly ? 22 : 20,
                                               fontWeight: FontWeight.bold,
                                               color: p.isActive
                                                   ? Colors.white
@@ -483,18 +537,21 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                           children: [
                                             Row(
                                               children: [
-                                                Text(p.name,
-                                                    style: const TextStyle(
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Color(0xFF1E293B))),
+                                                Expanded(
+                                                  child: Text(p.name,
+                                                      style: TextStyle(
+                                                          fontSize: isElderly ? 17 : 16,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: const Color(0xFF1E293B)),
+                                                      overflow: TextOverflow.ellipsis),
+                                                ),
                                                 if (p.isActive) ...[
                                                   const SizedBox(width: 8),
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(
                                                         horizontal: 8, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: const Color(0xFF0EA5E9),
+                                                      color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
                                                       borderRadius: BorderRadius.circular(20),
                                                     ),
                                                     child: const Text('Đang theo dõi',
@@ -506,9 +563,10 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                                 ]
                                               ],
                                             ),
+                                            const SizedBox(height: 2),
                                             Text('${p.gender} · ${p.dob}',
-                                                style: const TextStyle(
-                                                    fontSize: 12, color: Color(0xFF64748B))),
+                                                style: TextStyle(
+                                                    fontSize: isElderly ? 13 : 12, color: const Color(0xFF64748B))),
                                           ],
                                         ),
                                       ),
@@ -535,17 +593,17 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                           child: OutlinedButton.icon(
                                             onPressed: () => _switchActive(i),
                                             style: OutlinedButton.styleFrom(
-                                              side: const BorderSide(color: Color(0xFF0EA5E9)),
+                                              side: BorderSide(color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9)),
                                               shape: RoundedRectangleBorder(
                                                   borderRadius: BorderRadius.circular(10)),
                                               padding: const EdgeInsets.symmetric(vertical: 10),
                                             ),
-                                            icon: const Icon(Icons.swap_horiz_rounded,
-                                                size: 16, color: Color(0xFF0EA5E9)),
-                                            label: const Text('Chuyển sang',
+                                            icon: Icon(Icons.swap_horiz_rounded,
+                                                size: 16, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9)),
+                                            label: Text('Chuyển sang',
                                                 style: TextStyle(
-                                                    color: Color(0xFF0EA5E9),
-                                                    fontWeight: FontWeight.w600,
+                                                    color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
+                                                    fontWeight: FontWeight.bold,
                                                     fontSize: 13)),
                                           ),
                                         ),
@@ -554,17 +612,17 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
                                         child: OutlinedButton.icon(
                                           onPressed: () => _showAddOrEditDialog(existing: p, editIndex: i),
                                           style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(color: Color(0xFF94A3B8)),
+                                            side: BorderSide(color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF94A3B8)),
                                             shape: RoundedRectangleBorder(
                                                 borderRadius: BorderRadius.circular(10)),
                                             padding: const EdgeInsets.symmetric(vertical: 10),
                                           ),
-                                          icon: const Icon(Icons.edit_rounded,
-                                              size: 16, color: Color(0xFF475569)),
-                                          label: const Text('Chỉnh sửa',
+                                          icon: Icon(Icons.edit_rounded,
+                                              size: 16, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF475569)),
+                                          label: Text('Chỉnh sửa',
                                               style: TextStyle(
-                                                  color: Color(0xFF475569),
-                                                  fontWeight: FontWeight.w600,
+                                                  color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF475569),
+                                                  fontWeight: FontWeight.bold,
                                                   fontSize: 13)),
                                         ),
                                       ),
@@ -604,8 +662,9 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
   }
 
   Widget _infoChip(IconData icon, String label, {bool isWarning = false}) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: isElderly ? 10 : 8, vertical: isElderly ? 5 : 4),
       decoration: BoxDecoration(
         color: isWarning
             ? const Color(0xFFFFF4E6)
@@ -616,14 +675,14 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon,
-              size: 12,
+              size: isElderly ? 13 : 12,
               color: isWarning
                   ? const Color(0xFFEA580C)
                   : const Color(0xFF64748B)),
           const SizedBox(width: 4),
           Text(label,
               style: TextStyle(
-                  fontSize: 11,
+                  fontSize: isElderly ? 12 : 11,
                   color: isWarning
                       ? const Color(0xFFEA580C)
                       : const Color(0xFF64748B),

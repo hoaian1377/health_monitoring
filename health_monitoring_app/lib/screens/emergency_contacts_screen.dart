@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/api_service.dart';
 
 class EmergencyContactsScreen extends StatefulWidget {
   const EmergencyContactsScreen({super.key});
@@ -28,6 +29,7 @@ class _EmergencyContactsScreenState
   ];
 
   void _showAddDialog() {
+    final isElderly = ApiService.currentRole == 'elderly';
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final relCtrl = TextEditingController();
@@ -39,10 +41,10 @@ class _EmergencyContactsScreenState
         padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
             borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
+                BorderRadius.vertical(top: Radius.circular(isElderly ? 28 : 24)),
           ),
           padding: EdgeInsets.only(
             left: 24,
@@ -54,18 +56,18 @@ class _EmergencyContactsScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Thêm liên lạc khẩn cấp',
+              Text(isElderly ? 'Thêm người thân khẩn cấp' : 'Thêm liên lạc khẩn cấp',
                   style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+                      fontSize: isElderly ? 20 : 18, fontWeight: FontWeight.bold, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF1E293B))),
               const SizedBox(height: 16),
-              _inputField(nameCtrl, 'Họ và tên',
+              _inputField(nameCtrl, 'Họ và tên người thân',
                   Icons.person_outline_rounded),
               const SizedBox(height: 12),
               _inputField(
                   phoneCtrl, 'Số điện thoại', Icons.phone_outlined,
                   keyboardType: TextInputType.phone),
               const SizedBox(height: 12),
-              _inputField(relCtrl, 'Mối quan hệ',
+              _inputField(relCtrl, 'Mối quan hệ (ví dụ: Con gái, Con trai...)',
                   Icons.family_restroom_rounded),
               const SizedBox(height: 20),
               SizedBox(
@@ -85,13 +87,13 @@ class _EmergencyContactsScreenState
                     Navigator.pop(ctx);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0EA5E9),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
+                    padding: EdgeInsets.symmetric(vertical: isElderly ? 16 : 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(isElderly ? 14 : 12)),
                   ),
-                  child: const Text('Thêm',
-                      style: TextStyle(
+                  child: Text(isElderly ? 'Thêm người thân khẩn cấp' : 'Thêm',
+                      style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold)),
                 ),
@@ -105,6 +107,7 @@ class _EmergencyContactsScreenState
   }
 
   void _showEditDialog(_EContact c) {
+    final isElderly = ApiService.currentRole == 'elderly';
     final nameCtrl = TextEditingController(text: c.name);
     final phoneCtrl = TextEditingController(text: c.phone);
     final relCtrl = TextEditingController(text: c.relation);
@@ -116,10 +119,10 @@ class _EmergencyContactsScreenState
         padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.white,
             borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
+                BorderRadius.vertical(top: Radius.circular(isElderly ? 28 : 24)),
           ),
           padding: EdgeInsets.only(
             left: 24,
@@ -131,9 +134,9 @@ class _EmergencyContactsScreenState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Chỉnh sửa liên lạc',
+              Text(isElderly ? 'Sửa thông tin liên lạc' : 'Chỉnh sửa liên lạc',
                   style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+                      fontSize: isElderly ? 20 : 18, fontWeight: FontWeight.bold, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF1E293B))),
               const SizedBox(height: 16),
               _inputField(nameCtrl, 'Họ và tên',
                   Icons.person_outline_rounded),
@@ -160,13 +163,13 @@ class _EmergencyContactsScreenState
                     Navigator.pop(ctx);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0EA5E9),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
+                    padding: EdgeInsets.symmetric(vertical: isElderly ? 16 : 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(isElderly ? 14 : 12)),
                   ),
-                  child: const Text('Lưu',
-                      style: TextStyle(
+                  child: Text(isElderly ? 'Lưu thay đổi' : 'Lưu',
+                      style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold)),
                 ),
@@ -181,47 +184,59 @@ class _EmergencyContactsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
+    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
+    final headerGradient = isElderly
+        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
+        : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
       body: Column(
         children: [
           // AppBar
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                colors: headerGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
             ),
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white, size: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white, size: 18),
+                  ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Liên lạc khẩn cấp',
-                          style: TextStyle(
-                              fontSize: 18,
+                      Text(isElderly ? 'Danh sách khẩn cấp' : 'Liên lạc khẩn cấp',
+                          style: const TextStyle(
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
-                      Text('Danh sách ưu tiên khi SOS',
-                          style: TextStyle(
+                      Text(isElderly ? 'Người thân sẽ nhận thông báo khi bác nhấn SOS' : 'Danh sách ưu tiên khi SOS',
+                          style: const TextStyle(
                               fontSize: 12, color: Colors.white70)),
                     ],
                   ),
                 ),
-                const Icon(Icons.contact_phone_rounded,
-                    color: Colors.white70, size: 24),
+                Icon(Icons.contact_phone_rounded,
+                    color: Colors.white.withValues(alpha: 0.7), size: 24),
               ],
             ),
           ),
@@ -236,37 +251,41 @@ class _EmergencyContactsScreenState
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(isElderly ? 18 : 16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2))
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4))
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                          padding: EdgeInsets.fromLTRB(16, isElderly ? 18 : 16, 16, 12),
                           child: Row(
                             children: [
-                              const Icon(Icons.people_rounded,
-                                  color: Color(0xFFDC2626), size: 18),
+                              Icon(Icons.people_rounded,
+                                  color: isElderly ? const Color(0xFF0F605A) : const Color(0xFFDC2626), size: isElderly ? 20 : 18),
                               const SizedBox(width: 8),
-                              const Text('Danh sách ưu tiên',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFDC2626))),
-                              const Spacer(),
+                              Expanded(
+                                child: Text(isElderly ? 'Người thân liên lạc chính' : 'Danh sách ưu tiên',
+                                    style: TextStyle(
+                                        fontSize: isElderly ? 15 : 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: isElderly ? const Color(0xFF0F605A) : const Color(0xFFDC2626)),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                              const SizedBox(width: 8),
                               const Icon(Icons.drag_indicator_rounded,
                                   color: Color(0xFF94A3B8), size: 18),
                               const SizedBox(width: 4),
-                              const Text('Kéo để sắp xếp',
+                              Text('Kéo để sắp xếp',
                                   style: TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF94A3B8))),
+                                      fontSize: isElderly ? 12 : 11,
+                                      color: const Color(0xFF94A3B8))),
                             ],
                           ),
                         ),
@@ -295,11 +314,11 @@ class _EmergencyContactsScreenState
                   const SizedBox(height: 20),
 
                   // Emergency fixed numbers
-                  const Text('SỐ KHẨN CẤP CỐ ĐỊNH',
+                  Text(isElderly ? 'SỐ ĐIỆN THOẠI KHẨN CẤP Y TẾ' : 'SỐ KHẨN CẤP CỐ ĐỊNH',
                       style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey,
+                          fontSize: isElderly ? 13 : 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF64748B),
                           letterSpacing: 0.6)),
                   const SizedBox(height: 10),
                   Row(
@@ -308,24 +327,27 @@ class _EmergencyContactsScreenState
                               child: Container(
                                 margin: EdgeInsets.only(
                                     right: e['num'] != '114' ? 8 : 0),
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 12),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: isElderly ? 16 : 12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFEBEB),
+                                  color: isElderly ? const Color(0xFFFEF2F2) : const Color(0xFFFFEBEB),
                                   borderRadius: BorderRadius.circular(12),
+                                  border: isElderly ? Border.all(color: const Color(0xFFFCA5A5), width: 1.5) : null,
                                 ),
                                 alignment: Alignment.center,
                                 child: Column(
                                   children: [
                                     Text(e['num']!,
-                                        style: const TextStyle(
-                                            fontSize: 18,
+                                        style: TextStyle(
+                                            fontSize: isElderly ? 20 : 18,
                                             fontWeight: FontWeight.bold,
-                                            color: Color(0xFFC81E1E))),
+                                            color: const Color(0xFFC81E1E))),
+                                    const SizedBox(height: 2),
                                     Text(e['label']!,
-                                        style: const TextStyle(
-                                            fontSize: 10,
-                                            color: Color(0xFF7F1D1D))),
+                                        style: TextStyle(
+                                            fontSize: isElderly ? 11.5 : 10,
+                                            fontWeight: isElderly ? FontWeight.bold : FontWeight.normal,
+                                            color: const Color(0xFF7F1D1D))),
                                   ],
                                 ),
                               ),
@@ -333,25 +355,42 @@ class _EmergencyContactsScreenState
                         .toList(),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
                   // Add button
-                  OutlinedButton.icon(
-                    onPressed: _showAddDialog,
-                    icon: const Icon(Icons.person_add_alt_1_rounded,
-                        size: 20),
-                    label: const Text('Thêm liên lạc'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0EA5E9),
-                      side: const BorderSide(color: Color(0xFF0EA5E9)),
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      textStyle: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
+                  if (isElderly)
+                    ElevatedButton.icon(
+                      onPressed: _showAddDialog,
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 22, color: Colors.white),
+                      label: const Text('Thêm người thân khẩn cấp'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F605A),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        textStyle: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                        elevation: 0,
+                      ),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: _showAddDialog,
+                      icon: const Icon(Icons.person_add_alt_1_rounded,
+                          size: 20),
+                      label: const Text('Thêm liên lạc'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0EA5E9),
+                        side: const BorderSide(color: Color(0xFF0EA5E9)),
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24 + MediaQuery.of(context).padding.bottom),
                 ],
               ),
             ),
@@ -362,28 +401,29 @@ class _EmergencyContactsScreenState
   }
 
   Widget _contactTile(_EContact c, int idx, bool isLast) {
+    final isElderly = ApiService.currentRole == 'elderly';
     final initials =
         c.name.split(' ').map((w) => w[0]).take(2).join('').toUpperCase();
     return Column(
       key: ValueKey(c.name + idx.toString()),
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: isElderly ? 15 : 12),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: isElderly ? 50 : 44,
+                height: isElderly ? 50 : 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEB),
+                  color: isElderly ? const Color(0xFFEBFDFB) : const Color(0xFFFFEBEB),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
                 child: Text(initials,
-                    style: const TextStyle(
-                        fontSize: 15,
+                    style: TextStyle(
+                        fontSize: isElderly ? 16 : 15,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFC81E1E))),
+                        color: isElderly ? const Color(0xFF0F605A) : const Color(0xFFC81E1E))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -391,13 +431,14 @@ class _EmergencyContactsScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(c.name,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E293B))),
+                        style: TextStyle(
+                            fontSize: isElderly ? 16 : 14,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E293B))),
+                    const SizedBox(height: 2),
                     Text('${c.phone} · ${c.relation}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF94A3B8))),
+                        style: TextStyle(
+                            fontSize: isElderly ? 13.5 : 12, color: const Color(0xFF94A3B8))),
                   ],
                 ),
               ),
@@ -411,14 +452,14 @@ class _EmergencyContactsScreenState
                   ),
                 ),
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: isElderly ? 42 : 36,
+                  height: isElderly ? 42 : 36,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE6FBF3),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.phone_rounded,
-                      color: Color(0xFF16A34A), size: 18),
+                  child: Icon(Icons.phone_rounded,
+                      color: const Color(0xFF16A34A), size: isElderly ? 20 : 18),
                 ),
               ),
               const SizedBox(width: 8),
@@ -426,46 +467,50 @@ class _EmergencyContactsScreenState
               GestureDetector(
                 onTap: () => _showEditDialog(c),
                 child: Container(
-                  width: 36,
-                  height: 36,
+                  width: isElderly ? 42 : 36,
+                  height: isElderly ? 42 : 36,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEBF3FF),
+                    color: isElderly ? const Color(0xFFEBFDFB) : const Color(0xFFEBF3FF),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.edit_rounded,
-                      color: Color(0xFF0EA5E9), size: 18),
+                  child: Icon(Icons.edit_rounded,
+                      color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9), size: isElderly ? 20 : 18),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               ReorderableDragStartListener(
                 index: idx,
-                child: const Icon(Icons.drag_handle_rounded,
-                    color: Color(0xFFCBD5E1), size: 22),
+                child: Icon(Icons.drag_handle_rounded,
+                    color: const Color(0xFFCBD5E1), size: isElderly ? 24 : 22),
               ),
             ],
           ),
         ),
         if (!isLast)
-          const Divider(
-              height: 1, indent: 70, color: Color(0xFFF1F5F9)),
+          Divider(
+              height: 1, indent: isElderly ? 76 : 70, color: const Color(0xFFF1F5F9)),
       ],
     );
   }
 
   Widget _inputField(TextEditingController ctrl, String hint, IconData icon,
       {TextInputType? keyboardType}) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
+      style: TextStyle(fontSize: isElderly ? 16 : 14),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: const Color(0xFF94A3B8)),
+        hintStyle: TextStyle(fontSize: isElderly ? 15 : 14, color: const Color(0xFF94A3B8)),
+        prefixIcon: Icon(icon, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF94A3B8), size: isElderly ? 22 : 20),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: isElderly ? 18 : 16),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
             borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
+            borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
+            borderSide: BorderSide(color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9), width: 1.5)),
       ),
     );
   }

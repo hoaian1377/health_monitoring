@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/api_service.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -51,20 +52,26 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
+    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF7C3AED);
+    final headerGradient = isElderly
+        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
+        : [const Color(0xFF7C3AED), const Color(0xFFA78BFA)];
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
       body: Column(
         children: [
           // Header
           Container(
             width: double.infinity,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
+                colors: headerGradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.only(
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(32),
                 bottomRight: Radius.circular(32),
               ),
@@ -77,7 +84,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.arrow_back_rounded,
@@ -85,17 +92,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Đổi Mật Khẩu',
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    Text('Bảo mật tài khoản của bạn',
-                        style: TextStyle(fontSize: 13, color: Colors.white70)),
-                  ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(isElderly ? 'Đổi mật khẩu của bác' : 'Đổi Mật Khẩu',
+                          style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      Text(isElderly ? 'Hãy tạo mật khẩu mới để bảo vệ tài khoản' : 'Bảo mật tài khoản của bạn',
+                          style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -114,31 +123,33 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF3EEFF),
+                        color: isElderly ? const Color(0xFFEBFDFB) : const Color(0xFFF3EEFF),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFDDD6FE)),
+                        border: Border.all(color: isElderly ? const Color(0xFF99F6E4) : const Color(0xFFDDD6FE)),
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
                           Icon(Icons.info_outline_rounded,
-                              color: Color(0xFF7C3AED), size: 20),
-                          SizedBox(width: 10),
+                              color: themeColor, size: 20),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Mật khẩu mới phải có ít nhất 6 ký tự và khác mật khẩu hiện tại.',
+                              isElderly 
+                                  ? 'Mật khẩu mới của bác phải có ít nhất 6 ký tự và khác mật khẩu hiện tại.'
+                                  : 'Mật khẩu mới phải có ít nhất 6 ký tự và khác mật khẩu hiện tại.',
                               style: TextStyle(
-                                  fontSize: 13, color: Color(0xFF5B21B6)),
+                                  fontSize: isElderly ? 14 : 13, color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF5B21B6), fontWeight: isElderly ? FontWeight.w600 : FontWeight.normal),
                             ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 28),
-                    _buildLabel('Mật khẩu hiện tại'),
+                    _buildLabel(isElderly ? 'Nhập mật khẩu hiện tại' : 'Mật khẩu hiện tại'),
                     const SizedBox(height: 8),
                     _buildPasswordField(
                       controller: _oldPassCtrl,
-                      hint: 'Nhập mật khẩu hiện tại',
+                      hint: 'Mật khẩu hiện tại của bác',
                       show: _showOld,
                       onToggle: () => setState(() => _showOld = !_showOld),
                       validator: (v) {
@@ -147,11 +158,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
-                    _buildLabel('Mật khẩu mới'),
+                    _buildLabel(isElderly ? 'Nhập mật khẩu mới' : 'Mật khẩu mới'),
                     const SizedBox(height: 8),
                     _buildPasswordField(
                       controller: _newPassCtrl,
-                      hint: 'Nhập mật khẩu mới (tối thiểu 6 ký tự)',
+                      hint: 'Mật khẩu mới (tối thiểu 6 ký tự)',
                       show: _showNew,
                       onToggle: () => setState(() => _showNew = !_showNew),
                       validator: (v) {
@@ -162,11 +173,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
-                    _buildLabel('Xác nhận mật khẩu mới'),
+                    _buildLabel(isElderly ? 'Nhập lại mật khẩu mới để xác nhận' : 'Xác nhận mật khẩu mới'),
                     const SizedBox(height: 8),
                     _buildPasswordField(
                       controller: _confirmCtrl,
-                      hint: 'Nhập lại mật khẩu mới',
+                      hint: 'Xác nhận lại mật khẩu mới',
                       show: _showConfirm,
                       onToggle: () => setState(() => _showConfirm = !_showConfirm),
                       validator: (v) {
@@ -178,14 +189,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     const SizedBox(height: 36),
                     SizedBox(
                       width: double.infinity,
-                      height: 52,
+                      height: isElderly ? 56 : 52,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF7C3AED),
+                          backgroundColor: themeColor,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
+                              borderRadius: BorderRadius.circular(isElderly ? 18 : 16)),
                           elevation: 0,
                         ),
                         child: _isLoading
@@ -195,9 +206,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: Colors.white),
                               )
-                            : const Text('Xác nhận đổi mật khẩu',
+                            : Text(isElderly ? 'Lưu mật khẩu mới của bác' : 'Xác nhận đổi mật khẩu',
                                 style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                                    fontSize: isElderly ? 17 : 16, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -211,11 +222,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Widget _buildLabel(String text) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Text(text,
-        style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF475569)));
+        style: TextStyle(
+            fontSize: isElderly ? 14 : 13,
+            fontWeight: FontWeight.bold,
+            color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF475569)));
   }
 
   Widget _buildPasswordField({
@@ -225,46 +237,50 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     required VoidCallback onToggle,
     required String? Function(String?) validator,
   }) {
+    final isElderly = ApiService.currentRole == 'elderly';
+    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF7C3AED);
+
     return TextFormField(
       controller: controller,
       obscureText: !show,
       validator: validator,
+      style: TextStyle(fontSize: isElderly ? 16 : 14),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
-        prefixIcon: const Icon(Icons.lock_outline_rounded,
-            color: Color(0xFF7C3AED), size: 20),
+        hintStyle: TextStyle(color: const Color(0xFFCBD5E1), fontSize: isElderly ? 15 : 14),
+        prefixIcon: Icon(Icons.lock_outline_rounded,
+            color: themeColor, size: isElderly ? 22 : 20),
         suffixIcon: IconButton(
           icon: Icon(
             show ? Icons.visibility_off_rounded : Icons.visibility_rounded,
             color: const Color(0xFF94A3B8),
-            size: 20,
+            size: isElderly ? 22 : 20,
           ),
           onPressed: onToggle,
         ),
         filled: true,
         fillColor: Colors.white,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            EdgeInsets.symmetric(horizontal: 16, vertical: isElderly ? 18 : 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
           borderSide:
-              const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+              BorderSide(color: themeColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
           borderSide: const BorderSide(color: Color(0xFFDC2626)),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
           borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
         ),
       ),

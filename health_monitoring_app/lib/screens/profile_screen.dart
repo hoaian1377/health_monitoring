@@ -34,11 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ─── Logout Dialog ──────────────────────────────────────────────────────────
   void _showLogoutDialog() {
+    final isElderly = ApiService.currentRole == 'elderly';
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isElderly ? 24 : 20)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -46,28 +47,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: isElderly ? 64 : 56,
+                height: isElderly ? 64 : 56,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEB),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(isElderly ? 18 : 16),
                 ),
-                child: const Icon(Icons.logout_rounded,
-                    color: Color(0xFFC81E1E), size: 28),
+                child: Icon(Icons.logout_rounded,
+                    color: const Color(0xFFC81E1E), size: isElderly ? 32 : 28),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Đăng xuất?',
+              Text(
+                isElderly ? 'Đăng xuất tài khoản?' : 'Đăng xuất?',
                 style: TextStyle(
-                    fontSize: 18,
+                    fontSize: isElderly ? 20 : 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B)),
+                    color: const Color(0xFF1E293B)),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Bạn có chắc muốn thoát khỏi tài khoản?',
+              Text(
+                isElderly 
+                    ? 'Bác có chắc chắn muốn đăng xuất khỏi tài khoản không ạ?' 
+                    : 'Bạn có chắc muốn thoát khỏi tài khoản?',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                style: TextStyle(fontSize: isElderly ? 15 : 14, color: const Color(0xFF64748B)),
               ),
               const SizedBox(height: 24),
               Row(
@@ -77,13 +80,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onPressed: () => Navigator.of(ctx).pop(),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: isElderly ? 16 : 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Hủy',
+                      child: Text(isElderly ? 'Quay lại' : 'Hủy',
                           style: TextStyle(
-                              color: Color(0xFF64748B),
+                              color: const Color(0xFF64748B),
+                              fontSize: isElderly ? 15 : 14,
                               fontWeight: FontWeight.w600)),
                     ),
                   ),
@@ -100,15 +104,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC81E1E),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: EdgeInsets.symmetric(vertical: isElderly ? 16 : 14),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      child: const Text('Đăng xuất',
+                      child: Text(isElderly ? 'Đăng xuất' : 'Đăng xuất',
                           style: TextStyle(
                               color: Colors.white,
-                              fontWeight: FontWeight.w700)),
+                              fontSize: isElderly ? 15 : 14,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -126,22 +131,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildHeader(),
+            if (isElderly)
+              _buildElderlyHeader()
+            else
+              _buildHeader(),
             Padding(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSOSButton(),
+                  if (isElderly)
+                    _buildElderlySOSButton()
+                  else
+                    _buildSOSButton(),
                   const SizedBox(height: 24),
 
-                  if (ApiService.currentRole != 'elderly') ...[
+                  if (isElderly) ...[
+                    _sectionLabel('LIÊN LẠC & AN TOÀN'),
+                    const SizedBox(height: 8),
+                    _menuGroup([
+                      _MenuItem(
+                        icon: Icons.contact_phone_outlined,
+                        iconBg: const Color(0xFFFFEBEB),
+                        iconColor: const Color(0xFFDC2626),
+                        title: 'Người liên hệ khẩn cấp',
+                        subtitle: 'Số điện thoại của người thân khi cần hỗ trợ',
+                        onTap: () => _navigate(const EmergencyContactsScreen()),
+                      ),
+                    ]),
+                    const SizedBox(height: 24),
+                  ] else ...[
                     _sectionLabel('HỒ SƠ & THÔNG TIN CÁ NHÂN'),
                     const SizedBox(height: 8),
                     _menuGroup([
@@ -180,21 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                     const SizedBox(height: 24),
                   ],
-                  if (ApiService.currentRole == 'elderly') ...[
-                    _sectionLabel('LIÊN LẠC KHẨN CẤP'),
-                    const SizedBox(height: 8),
-                    _menuGroup([
-                      _MenuItem(
-                        icon: Icons.contact_phone_outlined,
-                        iconBg: const Color(0xFFFFEBEB),
-                        iconColor: const Color(0xFFDC2626),
-                        title: 'Liên lạc khẩn cấp',
-                        subtitle: 'Danh sách số điện thoại ưu tiên khi SOS',
-                        onTap: () => _navigate(const EmergencyContactsScreen()),
-                      ),
-                    ]),
-                    const SizedBox(height: 24),
-                  ],
+
                   _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
                   const SizedBox(height: 8),
                   _menuGroup([
@@ -202,8 +214,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.lock_outline_rounded,
                       iconBg: const Color(0xFFF3EEFF),
                       iconColor: const Color(0xFF7C3AED),
-                      title: 'Đổi mật khẩu',
-                      subtitle: 'Bảo mật tài khoản của bạn',
+                      title: isElderly ? 'Đổi mật khẩu bảo mật' : 'Đổi mật khẩu',
+                      subtitle: isElderly ? 'Đổi mật khẩu đăng nhập của bác' : 'Bảo mật tài khoản của bạn',
                       onTap: () => _navigate(const ChangePasswordScreen()),
                     ),
                   ]),
@@ -232,9 +244,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                   ],
 
-                  const SizedBox(height: 8),
-                  _buildLogoutButton(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  if (isElderly)
+                    _buildElderlyLogoutButton()
+                  else
+                    _buildLogoutButton(),
+                  SizedBox(height: isElderly ? 100 : 24),
                 ],
               ),
             ),
@@ -288,7 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+              color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -297,7 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
@@ -327,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.25),
+                          color: Colors.white.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
@@ -401,6 +416,185 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Icon(Icons.chevron_right_rounded,
                   color: Colors.white70, size: 20),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Elderly Header ─────────────────────────────────────────────────────────
+  Widget _buildElderlyHeader() {
+    final displayName = ApiService.currentFullname.isNotEmpty
+        ? ApiService.currentFullname
+        : ApiService.currentUsername;
+    final avatar = displayName.isNotEmpty ? displayName.substring(0, displayName.length >= 2 ? 2 : 1).toUpperCase() : 'ND';
+    final phoneText = ApiService.currentPhone.isNotEmpty ? ApiService.currentPhone : ApiService.currentUsername;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0F605A), Color(0xFF1B8E85)], // Brand Slate Teal
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x220F605A),
+              blurRadius: 16,
+              offset: Offset(0, 8))
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Chào bác,',
+              style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 2),
+          Text(displayName,
+              style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(avatar,
+                      style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(displayName,
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text('SĐT: $phoneText · Tài khoản bác',
+                          style:
+                              const TextStyle(fontSize: 13, color: Colors.white70),
+                          overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEBF3FF).withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_outlined,
+                                color: Colors.white, size: 14),
+                            SizedBox(width: 4),
+                            Text('Đã bảo mật',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ManageProfilesScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 28),
+                  tooltip: 'Chuyển đổi hồ sơ',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Elderly SOS Button ─────────────────────────────────────────────────────
+  Widget _buildElderlySOSButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFDC2626),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: _showSOSSheet,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
+              children: [
+                const Icon(Icons.phone_callback_rounded,
+                    color: Colors.white, size: 26),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('GỌI KHẨN CẤP (SOS)',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5)),
+                      SizedBox(height: 3),
+                      Text('Nhấn vào đây để gọi nhanh cho con cháu',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded,
+                    color: Colors.white.withValues(alpha: 0.7), size: 16),
+              ],
+            ),
           ),
         ),
       ),
@@ -498,7 +692,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 3))
         ],
@@ -551,6 +745,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
+  // ─── Elderly Logout Button ──────────────────────────────────────────────────
+  Widget _buildElderlyLogoutButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
+        border: Border.all(color: const Color(0xFFFFEBEB), width: 1.5),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: _showLogoutDialog,
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEB),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.logout_rounded,
+                      color: Color(0xFFDC2626), size: 24),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Đăng xuất tài khoản',
+                          style: TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFDC2626))),
+                      SizedBox(height: 2),
+                      Text('Thoát khỏi ứng dụng',
+                          style: TextStyle(
+                              fontSize: 12, color: Color(0xFF94A3B8))),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFFCBD5E1), size: 14),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── SOS Bottom Sheet ─────────────────────────────────────────────────────────
@@ -577,10 +834,11 @@ class _SOSBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(isElderly ? 28 : 24)),
       ),
       padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(context).padding.bottom),
       child: Column(
@@ -599,28 +857,30 @@ class _SOSBottomSheet extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: isElderly ? 46 : 40,
+                height: isElderly ? 46 : 40,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEB),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(isElderly ? 12 : 10),
                 ),
-                child: const Icon(Icons.phone_callback_rounded,
-                    color: Color(0xFFC81E1E), size: 22),
+                child: Icon(Icons.phone_callback_rounded,
+                    color: const Color(0xFFC81E1E), size: isElderly ? 24 : 22),
               ),
               const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('SOS — Gọi người thân',
-                      style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E293B))),
-                  Text('Chọn người để gọi ngay',
-                      style:
-                          TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isElderly ? 'Gọi điện khẩn cấp cho con cháu' : 'SOS — Gọi người thân',
+                        style: TextStyle(
+                            fontSize: isElderly ? 18 : 17,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1E293B))),
+                    Text(isElderly ? 'Bác chọn người muốn gọi điện dưới đây' : 'Chọn người để gọi ngay',
+                        style:
+                            TextStyle(fontSize: isElderly ? 13 : 12, color: const Color(0xFF94A3B8))),
+                  ],
+                ),
               ),
             ],
           ),
@@ -632,32 +892,33 @@ class _SOSBottomSheet extends StatelessWidget {
   }
 
   Widget _buildContactRow(BuildContext context, _SOSContact c) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(isElderly ? 16 : 14),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isElderly ? 16 : 12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: isElderly ? 50 : 44,
+            height: isElderly ? 50 : 44,
             decoration: BoxDecoration(
               color: c.isEmergency
                   ? const Color(0xFFFFEBEB)
-                  : const Color(0xFFEBF3FF),
-              borderRadius: BorderRadius.circular(22),
+                  : const Color(0xFFEBFDFB),
+              borderRadius: BorderRadius.circular(25),
             ),
             alignment: Alignment.center,
             child: Text(
               c.isEmergency ? '🚑' : c.name[0],
               style: TextStyle(
-                fontSize: c.isEmergency ? 20 : 16,
+                fontSize: c.isEmergency ? (isElderly ? 22 : 20) : (isElderly ? 18 : 16),
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF0EA5E9),
+                color: c.isEmergency ? const Color(0xFFC81E1E) : const Color(0xFF0F605A),
               ),
             ),
           ),
@@ -667,13 +928,14 @@ class _SOSBottomSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(c.name,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E293B))),
+                    style: TextStyle(
+                        fontSize: isElderly ? 16 : 14,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1E293B))),
+                const SizedBox(height: 2),
                 Text('${c.role} · ${c.phone}',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B))),
+                    style: TextStyle(
+                        fontSize: isElderly ? 13.5 : 12, color: const Color(0xFF64748B))),
               ],
             ),
           ),
@@ -687,14 +949,14 @@ class _SOSBottomSheet extends StatelessWidget {
               ));
             },
             child: Container(
-              width: 40,
-              height: 40,
+              width: isElderly ? 44 : 40,
+              height: isElderly ? 44 : 40,
               decoration: BoxDecoration(
                 color: const Color(0xFF16A34A),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.phone_rounded,
-                  color: Colors.white, size: 20),
+              child: Icon(Icons.phone_rounded,
+                  color: Colors.white, size: isElderly ? 22 : 20),
             ),
           ),
         ],

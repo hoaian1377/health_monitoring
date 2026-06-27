@@ -112,7 +112,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       details: 'Ghi chú cho bác sĩ lần khám tới',
       isCompleted: false,
     ),
-    // Checklist chuẩn bị giấy tờ đi khám (Yêu cầu F05)
+    // Checklist chuẩn bị giấy tờ đi khám
     TaskItem(
       id: 'doc_1',
       title: 'Chuẩn bị CCCD/CMND',
@@ -230,7 +230,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           endDate: isMed ? '${_endDate.day.toString().padLeft(2, '0')}/${_endDate.month.toString().padLeft(2, '0')}/${_endDate.year}' : null,
         ),
       );
-      // Sắp xếp nhiệm vụ theo thời gian (giấy tờ khám đưa lên đầu/hoặc cuối tùy ý, ở đây xếp theo alphabet thời gian)
       _tasks.sort((a, b) => a.time.compareTo(b.time));
     });
 
@@ -246,7 +245,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        backgroundColor: Color(0xFF10B981),
+        backgroundColor: Color(0xFF0EA5E9),
         content: Text('Đã thêm nhiệm vụ mới thành công!'),
       ),
     );
@@ -314,7 +313,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Handle line
                     Center(
                       child: Container(
                         width: 46,
@@ -424,7 +422,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Additional Medication form fields (F03)
+                    // Additional Medication form fields
                     if (_newTaskType == 'medication') ...[
                       Row(
                         children: [
@@ -609,7 +607,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       const SizedBox(height: 18),
                     ],
 
-                    // Time Picker (Only show if not a medical document, since document prep doesn't have specific time)
+                    // Time Picker
                     if (_newTaskType != 'document') ...[
                       Row(
                         children: [
@@ -750,7 +748,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.08) : const Color(0xFFF8FAFC),
+          color: isSelected ? color.withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? color : Colors.transparent,
@@ -777,6 +775,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
+
     // Calculate statistics
     final totalCount = _tasks.length;
     final completedCount = _tasks.where((t) => t.isCompleted).length;
@@ -789,15 +789,15 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: false,
             floating: true,
-            title: const Text(
-              'Checklist Sức Khỏe',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
+            title: Text(
+              isElderly ? 'Việc Cần Làm Hôm Nay' : 'Checklist Sức Khỏe',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
             ),
             centerTitle: false,
             backgroundColor: Colors.white,
@@ -810,14 +810,21 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Checklist sức khỏe'),
-                      content: const Text(
-                        'Được thiết kế riêng để bác có thể dễ dàng quản lý việc uống thuốc đúng giờ, đo chỉ số huyết áp/đường huyết và duy trì thói quen sống lành mạnh mỗi ngày.',
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: Text(
+                        isElderly ? 'Việc cần làm hôm nay' : 'Checklist sức khỏe',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      content: Text(
+                        isElderly
+                            ? 'Danh sách giúp bác theo dõi việc uống thuốc, đo chỉ số sức khỏe và duy trì các thói quen tốt mỗi ngày để cơ thể luôn khỏe mạnh.'
+                            : 'Được thiết kế riêng để bác có thể dễ dàng quản lý việc uống thuốc đúng giờ, đo chỉ số huyết áp/đường huyết và duy trì thói quen sống lành mạnh mỗi ngày.',
+                        style: const TextStyle(fontSize: 15, height: 1.4, color: Colors.black87),
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Đã hiểu'),
+                          child: const Text('Đã hiểu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                         )
                       ],
                     ),
@@ -829,10 +836,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                // ── Beautiful Progress Summary Card ──
-                _buildSummaryProgressCard(completedCount, totalCount, completionRate),
+                // ── Dynamic Summary Progress Card ──
+                if (isElderly)
+                  _buildElderlySummaryProgressCard(completedCount, totalCount, completionRate)
+                else
+                  _buildCaregiverSummaryProgressCard(completedCount, totalCount, completionRate),
 
-                // ── Inline Add Task Button ──
+                // ── Inline Add Task Button (Only shown for caregiver) ──
                 if (ApiService.currentRole != 'elderly')
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -855,8 +865,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     ),
                   ),
 
-                // ── Category Filters Row ──
-                _buildCategoryFilters(),
+                // ── Category Filters (Elderly Grid vs Caregiver List) ──
+                if (isElderly)
+                  _buildElderlyCategoryFilters()
+                else
+                  _buildCaregiverCategoryFilters(),
+
+                if (isElderly) const SizedBox(height: 12),
               ],
             ),
           ),
@@ -871,7 +886,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final task = filteredTasks[index];
-                        return _buildChecklistItemCard(task);
+                        if (isElderly) {
+                          return _buildElderlyChecklistItemCard(task);
+                        } else {
+                          return _buildCaregiverChecklistItemCard(task);
+                        }
                       },
                       childCount: filteredTasks.length,
                     ),
@@ -882,8 +901,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // A premium summary card displaying an animated circular progress indicator
-  Widget _buildSummaryProgressCard(int completed, int total, double rate) {
+  // ==========================================
+  // CAREGIVER VERSION WIDGETS (Fully restored)
+  // ==========================================
+
+  Widget _buildCaregiverSummaryProgressCard(int completed, int total, double rate) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 10),
@@ -897,7 +919,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0EA5E9).withOpacity(0.2),
+            color: const Color(0xFF0EA5E9).withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           )
@@ -905,7 +927,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       ),
       child: Row(
         children: [
-          // Circular Progress Widget
           Stack(
             alignment: Alignment.center,
             children: [
@@ -915,7 +936,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 child: CircularProgressIndicator(
                   value: rate,
                   strokeWidth: 8,
-                  backgroundColor: Colors.white.withOpacity(0.25),
+                  backgroundColor: Colors.white.withValues(alpha: 0.25),
                   color: Colors.white,
                   strokeCap: StrokeCap.round,
                 ),
@@ -931,7 +952,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             ],
           ),
           const SizedBox(width: 20),
-          // Progress details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -971,8 +991,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // Beautiful Tab Filters Row
-  Widget _buildCategoryFilters() {
+  Widget _buildCaregiverCategoryFilters() {
     final categories = [
       {'key': 'all', 'label': 'Tất cả', 'icon': Icons.list_rounded},
       {'key': 'medication', 'label': 'Uống thuốc', 'icon': Icons.medication_rounded},
@@ -1007,7 +1026,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             themeColor = const Color(0xFF475569);
           }
 
-          // Count matching tasks
           int count = cat['key'] == 'all' 
               ? _tasks.length 
               : _tasks.where((t) => t.type == cat['key']).length;
@@ -1030,13 +1048,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   boxShadow: [
                     if (isSelected)
                       BoxShadow(
-                        color: themeColor.withOpacity(0.2),
+                        color: themeColor.withValues(alpha: 0.2),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       )
                     else
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 4,
                         offset: const Offset(0, 1),
                       )
@@ -1065,7 +1083,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.white24 : themeColor.withOpacity(0.08),
+                        color: isSelected ? Colors.white24 : themeColor.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -1087,40 +1105,39 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // Task list item card
-  Widget _buildChecklistItemCard(TaskItem task) {
+  Widget _buildCaregiverChecklistItemCard(TaskItem task) {
     Color typeColor;
     IconData typeIcon;
     String typeLabel;
 
     switch (task.type) {
       case 'medication':
-        typeColor = const Color(0xFF0EA5E9); // Blue
+        typeColor = const Color(0xFF0EA5E9);
         typeIcon = Icons.medication_rounded;
         typeLabel = 'Uống thuốc';
         break;
       case 'measurement':
-        typeColor = const Color(0xFFEF4444); // Red
+        typeColor = const Color(0xFFEF4444);
         typeIcon = Icons.heart_broken_rounded;
         typeLabel = 'Đo chỉ số';
         break;
       case 'habit':
-        typeColor = const Color(0xFF10B981); // Green
+        typeColor = const Color(0xFF10B981);
         typeIcon = Icons.directions_run_rounded;
         typeLabel = 'Thói quen';
         break;
       case 'symptom':
-        typeColor = const Color(0xFF8B5CF6); // Purple
+        typeColor = const Color(0xFF8B5CF6);
         typeIcon = Icons.sick_rounded;
         typeLabel = 'Triệu chứng';
         break;
       case 'document':
-        typeColor = const Color(0xFFF59E0B); // Amber
+        typeColor = const Color(0xFFF59E0B);
         typeIcon = Icons.assignment_rounded;
         typeLabel = 'Giấy tờ khám';
         break;
       default:
-        typeColor = const Color(0xFF64748B); // Grey
+        typeColor = const Color(0xFF64748B);
         typeIcon = Icons.check_circle_outline_rounded;
         typeLabel = 'Khác';
         break;
@@ -1133,13 +1150,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           )
         ],
         border: Border.all(
-          color: task.isCompleted ? const Color(0xFFE2E8F0) : typeColor.withOpacity(0.12),
+          color: task.isCompleted ? const Color(0xFFE2E8F0) : typeColor.withValues(alpha: 0.12),
           width: 1,
         ),
       ),
@@ -1179,7 +1196,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  // Animated Check Circle Icon
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: 24,
@@ -1197,8 +1213,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         : null,
                   ),
                   const SizedBox(width: 16),
-
-                  // Task details
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1208,13 +1222,12 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            // Category Tag Label inside Card
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: task.isCompleted 
                                     ? const Color(0xFFF1F5F9) 
-                                    : typeColor.withOpacity(0.08),
+                                    : typeColor.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
@@ -1237,14 +1250,12 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                 ],
                               ),
                             ),
-                            // Scheduled Time text
                             Text(
                               task.time,
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: task.isCompleted ? Colors.grey : const Color(0xFF0EA5E9),
-                              ),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: task.isCompleted ? Colors.grey : const Color(0xFF0EA5E9)),
                             ),
                           ],
                         ),
@@ -1278,11 +1289,11 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                               spacing: 8,
                               runSpacing: 4,
                               children: [
-                                _buildMedInfoTag('Mã: ${task.medCode}', task.isCompleted),
-                                _buildMedInfoTag('Liều: ${task.dosage}', task.isCompleted),
-                                _buildMedInfoTag('Uống: ${task.dosesPerDay} lần/ngày', task.isCompleted),
+                                _buildCaregiverMedInfoTag('Mã: ${task.medCode}', task.isCompleted),
+                                _buildCaregiverMedInfoTag('Liều: ${task.dosage}', task.isCompleted),
+                                _buildCaregiverMedInfoTag('Uống: ${task.dosesPerDay} lần/ngày', task.isCompleted),
                                 if (task.startDate != null)
-                                  _buildMedInfoTag('${task.startDate} - ${task.endDate}', task.isCompleted),
+                                  _buildCaregiverMedInfoTag('${task.startDate} - ${task.endDate}', task.isCompleted),
                               ],
                             ),
                           ),
@@ -1291,30 +1302,24 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  
-                  // Edit Button
-                  if (ApiService.currentRole != 'elderly')
-                    IconButton(
-                      icon: Icon(Icons.edit_outlined, color: Colors.blue.shade400, size: 20),
-                      onPressed: () => _showEditTaskSheet(task),
-                    ),
-                  
-                  // Delete Button
-                  if (ApiService.currentRole != 'elderly')
-                    IconButton(
-                      icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
-                      onPressed: () {
-                        setState(() {
-                          _tasks.removeWhere((t) => t.id == task.id);
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: Colors.red.shade600,
-                            content: Text('Đã xóa nhiệm vụ: ${task.title}'),
-                          ),
-                        );
-                      },
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined, color: Colors.blue.shade400, size: 20),
+                    onPressed: () => _showEditTaskSheet(task),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _tasks.removeWhere((t) => t.id == task.id);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Colors.red.shade600,
+                          content: Text('Đã xóa nhiệm vụ: ${task.title}'),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1324,13 +1329,468 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  Widget _buildMedInfoTag(String text, bool isCompleted) {
+  Widget _buildCaregiverMedInfoTag(String text, bool isCompleted) {
     return Text(
       text,
       style: TextStyle(
         fontSize: 10,
         fontWeight: FontWeight.bold,
         color: isCompleted ? Colors.grey : const Color(0xFF0369A1),
+      ),
+    );
+  }
+
+  // ==========================================
+  // ELDERLY VERSION WIDGETS (Senior friendly)
+  // ==========================================
+
+  Widget _buildElderlySummaryProgressCard(int completed, int total, double rate) {
+    String encouragingText;
+    if (rate == 1.0) {
+      encouragingText = 'Tuyệt vời! Bác đã hoàn thành xuất sắc tất cả việc.';
+    } else if (rate >= 0.5) {
+      encouragingText = 'Rất tốt! Bác đã làm được hơn nửa chặng đường rồi.';
+    } else if (rate > 0) {
+      encouragingText = 'Khởi đầu tốt! Hãy tiếp tục hoàn thành các việc còn lại nhé.';
+    } else {
+      encouragingText = 'Chúc bác một ngày mới ngập tràn năng lượng và sức khỏe!';
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F605A), Color(0xFF1B8E85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F605A).withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 80,
+                height: 80,
+                child: CircularProgressIndicator(
+                  value: rate,
+                  strokeWidth: 8.5,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  color: Colors.white,
+                  strokeCap: StrokeCap.round,
+                ),
+              ),
+              Text(
+                '${(rate * 100).toInt()}%',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Tiến trình ngày hôm nay',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$completed / $total việc xong',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  encouragingText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.white,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildElderlyCategoryFilters() {
+    final categories = [
+      {'key': 'all', 'label': 'Tất cả', 'icon': Icons.list_rounded},
+      {'key': 'medication', 'label': 'Uống thuốc', 'icon': Icons.medication_rounded},
+      {'key': 'measurement', 'label': 'Đo chỉ số', 'icon': Icons.favorite_rounded},
+      {'key': 'habit', 'label': 'Thói quen', 'icon': Icons.directions_run_rounded},
+      {'key': 'symptom', 'label': 'Triệu chứng', 'icon': Icons.sick_rounded},
+      {'key': 'document', 'label': 'Giấy tờ khám', 'icon': Icons.assignment_rounded},
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 2.8,
+        ),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = _selectedCategory == cat['key'];
+          
+          Color typeColor;
+          Color typeBg;
+          
+          if (cat['key'] == 'medication') {
+            typeColor = const Color(0xFF0284C7);
+            typeBg = const Color(0xFFE0F2FE);
+          } else if (cat['key'] == 'measurement') {
+            typeColor = const Color(0xFFE11D48);
+            typeBg = const Color(0xFFFFE4E6);
+          } else if (cat['key'] == 'habit') {
+            typeColor = const Color(0xFF059669);
+            typeBg = const Color(0xFFD1FAE5);
+          } else if (cat['key'] == 'symptom') {
+            typeColor = const Color(0xFF8B5CF6);
+            typeBg = const Color(0xFFF3E8FF);
+          } else if (cat['key'] == 'document') {
+            typeColor = const Color(0xFFD97706);
+            typeBg = const Color(0xFFFEF3C7);
+          } else {
+            typeColor = const Color(0xFF475569);
+            typeBg = const Color(0xFFF1F5F9);
+          }
+
+          int count = cat['key'] == 'all' 
+              ? _tasks.length 
+              : _tasks.where((t) => t.type == cat['key']).length;
+
+          return InkWell(
+            onTap: () {
+              setState(() {
+                _selectedCategory = cat['key'] as String;
+              });
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? typeColor : typeBg,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  if (isSelected)
+                    BoxShadow(
+                      color: typeColor.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    )
+                ],
+                border: Border.all(
+                  color: isSelected ? Colors.transparent : typeColor.withValues(alpha: 0.15),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    cat['icon'] as IconData,
+                    size: 20,
+                    color: isSelected ? Colors.white : typeColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      cat['label'] as String,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : typeColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white24 : typeColor.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : typeColor,
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildElderlyChecklistItemCard(TaskItem task) {
+    Color typeColor;
+    IconData typeIcon;
+    String typeLabel;
+
+    switch (task.type) {
+      case 'medication':
+        typeColor = const Color(0xFF0284C7);
+        typeIcon = Icons.medication_rounded;
+        typeLabel = 'Uống thuốc';
+        break;
+      case 'measurement':
+        typeColor = const Color(0xFFE11D48);
+        typeIcon = Icons.favorite_rounded;
+        typeLabel = 'Đo chỉ số';
+        break;
+      case 'habit':
+        typeColor = const Color(0xFF059669);
+        typeIcon = Icons.directions_run_rounded;
+        typeLabel = 'Thói quen';
+        break;
+      case 'symptom':
+        typeColor = const Color(0xFF8B5CF6);
+        typeIcon = Icons.sick_rounded;
+        typeLabel = 'Triệu chứng';
+        break;
+      case 'document':
+        typeColor = const Color(0xFFD97706);
+        typeIcon = Icons.assignment_rounded;
+        typeLabel = 'Giấy tờ khám';
+        break;
+      default:
+        typeColor = const Color(0xFF475569);
+        typeIcon = Icons.check_circle_outline_rounded;
+        typeLabel = 'Khác';
+        break;
+    }
+
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 250),
+      opacity: task.isCompleted ? 0.65 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+          border: Border.all(
+            color: task.isCompleted ? Colors.grey.shade200 : typeColor.withValues(alpha: 0.15),
+            width: 1.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  task.isCompleted = !task.isCompleted;
+                });
+                
+                if (task.isCompleted && task.type == 'medication') {
+                  globalState.addMedicationLog(MedicationLog(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    takenAt: DateTime.now(),
+                    status: 'taken',
+                  ));
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    duration: const Duration(milliseconds: 1200),
+                    backgroundColor: task.isCompleted ? const Color(0xFF059669) : const Color(0xFF475569),
+                    content: Text(
+                      task.isCompleted
+                          ? '✓ Đã hoàn thành: ${task.title}'
+                          : 'Đã hủy hoàn thành: ${task.title}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2.0),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: task.isCompleted ? typeColor : Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: task.isCompleted ? Colors.transparent : const Color(0xFFCBD5E1),
+                            width: 2.2,
+                          ),
+                        ),
+                        child: task.isCompleted
+                            ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: task.isCompleted 
+                                      ? const Color(0xFFE2E8F0) 
+                                      : typeColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      typeIcon,
+                                      size: 11,
+                                      color: task.isCompleted ? Colors.grey : typeColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      typeLabel,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: task.isCompleted ? Colors.grey : typeColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                task.time == 'Trước khám' ? 'Trước khám' : '⏰ ${task.time}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: task.isCompleted ? Colors.grey : const Color(0xFF0284C7),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                              color: task.isCompleted ? Colors.grey.shade400 : const Color(0xFF1E293B),
+                              height: 1.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            task.details,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: task.isCompleted ? Colors.grey.shade300 : const Color(0xFF64748B),
+                            ),
+                          ),
+                          if (task.type == 'medication' && task.medCode != null) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: task.isCompleted ? const Color(0xFFF1F5F9) : typeColor.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  _buildElderlyMedInfoTag('💊 ${task.dosage}', task.isCompleted),
+                                  _buildElderlyMedInfoTag('🔁 ${task.dosesPerDay} lần/ngày', task.isCompleted),
+                                  if (task.startDate != null)
+                                    _buildElderlyMedInfoTag('📅 ${task.startDate} - ${task.endDate}', task.isCompleted),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildElderlyMedInfoTag(String text, bool isCompleted) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isCompleted ? Colors.grey.shade200 : const Color(0xFFE0F2FE),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isCompleted ? Colors.grey : const Color(0xFF0369A1),
+        ),
       ),
     );
   }
@@ -1347,27 +1807,27 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
               ],
             ),
-            child: Icon(
+            child: const Icon(
               Icons.playlist_add_check_rounded,
               size: 64,
-              color: Colors.blue.shade200,
+              color: Color(0xFFBAE6FD),
             ),
           ),
           const SizedBox(height: 18),
           const Text(
             'Không tìm thấy nhiệm vụ nào!',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF1E293B)),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           const Text(
-            'Bác hãy thêm nhiệm vụ mới bằng cách bấm nút dưới đây.',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
+            'Bác đã hoàn thành hết công việc của danh mục này.',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],
       ),
