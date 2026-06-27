@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../utils/global_state.dart';
 import '../utils/api_service.dart';
 
 class PersonalProfileScreen extends StatefulWidget {
@@ -10,17 +9,6 @@ class PersonalProfileScreen extends StatefulWidget {
 }
 
 class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
-  // ─── Tính tuổi từ ngày sinh ──────────────────────────────────────────────
-  int get _age {
-    final birth = DateTime(1955, 3, 15);
-    final now = DateTime.now();
-    int age = now.year - birth.year;
-    if (now.month < birth.month ||
-        (now.month == birth.month && now.day < birth.day)) {
-      age--;
-    }
-    return age;
-  }
 
   void _showSaveToast() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -86,8 +74,8 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                     ),
                     const SizedBox(width: 12),
                     Text(isElderly ? 'Hồ sơ của bác' : 'Hồ sơ cá nhân',
-                        style: const TextStyle(
-                            fontSize: 20,
+                        style: TextStyle(
+                            fontSize: isElderly ? 22 : 20,
                             fontWeight: FontWeight.bold,
                             color: Colors.white)),
                   ],
@@ -120,19 +108,19 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                           alignment: Alignment.center,
                           child: Text(avatarText,
                               style: TextStyle(
-                                  fontSize: 30,
+                                  fontSize: isElderly ? 32 : 30,
                                   fontWeight: FontWeight.bold,
                                   color: themeColor)),
                         ),
                         const SizedBox(height: 12),
                         Text(displayName,
-                            style: const TextStyle(
-                                fontSize: 22,
+                            style: TextStyle(
+                                fontSize: isElderly ? 24 : 22,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
                         const SizedBox(height: 4),
                         Text(isElderly ? 'Tài khoản người lớn tuổi' : roleText,
-                            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                            style: TextStyle(fontSize: isElderly ? 15 : 13, color: Colors.white70)),
                         const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -141,16 +129,16 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.verified_rounded,
+                              const Icon(Icons.verified_rounded,
                                   color: Colors.white, size: 14),
-                              SizedBox(width: 5),
+                              const SizedBox(width: 5),
                               Text('Đã xác minh',
                                   style: TextStyle(
                                       color: Colors.white,
-                                      fontSize: 12,
+                                      fontSize: isElderly ? 14 : 12,
                                       fontWeight: FontWeight.w600)),
                             ],
                           ),
@@ -287,8 +275,8 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                         elevation: 0,
                       ),
                       child: Text(isElderly ? 'Lưu thông tin của bác' : 'Lưu thay đổi',
-                          style: const TextStyle(
-                              fontSize: 17,
+                          style: TextStyle(
+                              fontSize: isElderly ? 19 : 17,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
                     ),
@@ -332,7 +320,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                 const SizedBox(width: 8),
                 Text(title,
                     style: TextStyle(
-                        fontSize: isElderly ? 15 : 14,
+                        fontSize: isElderly ? 17 : 14,
                         fontWeight: FontWeight.bold,
                         color: iconColor)),
               ],
@@ -366,11 +354,11 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
               children: [
                 Text(label,
                     style: TextStyle(
-                        fontSize: isElderly ? 12 : 11, color: const Color(0xFF94A3B8))),
+                        fontSize: isElderly ? 14 : 12, color: const Color(0xFF94A3B8))),
                 const SizedBox(height: 2),
                 Text(value,
                     style: TextStyle(
-                        fontSize: isElderly ? 15.5 : 14,
+                        fontSize: isElderly ? 17.5 : 15.5,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF1E293B))),
               ],
@@ -407,12 +395,12 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
               children: [
                 Text(name,
                     style: TextStyle(
-                        fontSize: isElderly ? 15.5 : 14,
+                        fontSize: isElderly ? 17.5 : 15.5,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF1E293B))),
                 Text(role,
                     style: TextStyle(
-                        fontSize: isElderly ? 12.5 : 12, color: const Color(0xFF94A3B8))),
+                        fontSize: isElderly ? 14.5 : 12.5, color: const Color(0xFF94A3B8))),
               ],
             ),
           ),
@@ -424,7 +412,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
             ),
             child: Text(badgeText,
                 style: TextStyle(
-                    fontSize: isElderly ? 11.5 : 11,
+                    fontSize: isElderly ? 13 : 11.5,
                     fontWeight: FontWeight.bold,
                     color: badgeColor)),
           ),

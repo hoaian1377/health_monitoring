@@ -225,13 +225,13 @@ class _EmergencyContactsScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(isElderly ? 'Danh sách khẩn cấp' : 'Liên lạc khẩn cấp',
-                          style: const TextStyle(
-                              fontSize: 20,
+                          style: TextStyle(
+                              fontSize: isElderly ? 22 : 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
                       Text(isElderly ? 'Người thân sẽ nhận thông báo khi bác nhấn SOS' : 'Danh sách ưu tiên khi SOS',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.white70)),
+                          style: TextStyle(
+                              fontSize: isElderly ? 14 : 12, color: Colors.white70)),
                     ],
                   ),
                 ),
@@ -272,7 +272,7 @@ class _EmergencyContactsScreenState
                               Expanded(
                                 child: Text(isElderly ? 'Người thân liên lạc chính' : 'Danh sách ưu tiên',
                                     style: TextStyle(
-                                        fontSize: isElderly ? 15 : 14,
+                                        fontSize: isElderly ? 17.5 : 14,
                                         fontWeight: FontWeight.bold,
                                         color: isElderly ? const Color(0xFF0F605A) : const Color(0xFFDC2626)),
                                     maxLines: 1,
@@ -284,7 +284,7 @@ class _EmergencyContactsScreenState
                               const SizedBox(width: 4),
                               Text('Kéo để sắp xếp',
                                   style: TextStyle(
-                                      fontSize: isElderly ? 12 : 11,
+                                      fontSize: isElderly ? 14 : 11,
                                       color: const Color(0xFF94A3B8))),
                             ],
                           ),
@@ -316,7 +316,7 @@ class _EmergencyContactsScreenState
                   // Emergency fixed numbers
                   Text(isElderly ? 'SỐ ĐIỆN THOẠI KHẨN CẤP Y TẾ' : 'SỐ KHẨN CẤP CỐ ĐỊNH',
                       style: TextStyle(
-                          fontSize: isElderly ? 13 : 11.5,
+                          fontSize: isElderly ? 15 : 11.5,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFF64748B),
                           letterSpacing: 0.6)),
@@ -339,13 +339,13 @@ class _EmergencyContactsScreenState
                                   children: [
                                     Text(e['num']!,
                                         style: TextStyle(
-                                            fontSize: isElderly ? 20 : 18,
+                                            fontSize: isElderly ? 22 : 18,
                                             fontWeight: FontWeight.bold,
                                             color: const Color(0xFFC81E1E))),
                                     const SizedBox(height: 2),
                                     Text(e['label']!,
                                         style: TextStyle(
-                                            fontSize: isElderly ? 11.5 : 10,
+                                            fontSize: isElderly ? 13.5 : 10,
                                             fontWeight: isElderly ? FontWeight.bold : FontWeight.normal,
                                             color: const Color(0xFF7F1D1D))),
                                   ],
@@ -370,7 +370,7 @@ class _EmergencyContactsScreenState
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16)),
                         textStyle: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
+                            fontSize: 18, fontWeight: FontWeight.bold),
                         elevation: 0,
                       ),
                     )
@@ -421,7 +421,7 @@ class _EmergencyContactsScreenState
                 alignment: Alignment.center,
                 child: Text(initials,
                     style: TextStyle(
-                        fontSize: isElderly ? 16 : 15,
+                        fontSize: isElderly ? 18 : 15,
                         fontWeight: FontWeight.bold,
                         color: isElderly ? const Color(0xFF0F605A) : const Color(0xFFC81E1E))),
               ),
@@ -432,13 +432,13 @@ class _EmergencyContactsScreenState
                   children: [
                     Text(c.name,
                         style: TextStyle(
-                            fontSize: isElderly ? 16 : 14,
+                            fontSize: isElderly ? 18 : 14,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF1E293B))),
                     const SizedBox(height: 2),
                     Text('${c.phone} · ${c.relation}',
                         style: TextStyle(
-                            fontSize: isElderly ? 13.5 : 12, color: const Color(0xFF94A3B8))),
+                            fontSize: isElderly ? 15.5 : 12, color: const Color(0xFF94A3B8))),
                   ],
                 ),
               ),

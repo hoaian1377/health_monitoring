@@ -301,7 +301,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     Text(
                       _getTimeGreeting(),
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16.5,
                         color: Colors.white70,
                         fontWeight: FontWeight.w500,
                       ),
@@ -310,7 +310,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     Text(
                       'Bác $name 👋',
                       style: const TextStyle(
-                        fontSize: 26,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                         letterSpacing: 0.2,
@@ -322,7 +322,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     Text(
                       _getVietnameseDate(),
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14.5,
                         color: Colors.white60,
                         fontWeight: FontWeight.w400,
                       ),
@@ -369,7 +369,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 11,
+                        fontSize: 12.5,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -391,7 +391,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               children: [
                 Text(
                   '💧',
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(fontSize: 20),
                 ),
                 SizedBox(width: 10),
                 Expanded(
@@ -399,7 +399,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     'Bác nhớ uống đủ 2 lít nước ngày hôm nay để khỏe mạnh nhé!',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 13,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w500,
                       height: 1.3,
                     ),
@@ -478,7 +478,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
           RichText(
@@ -488,11 +488,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               children: [
                 TextSpan(
                   text: value,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 17.5, fontWeight: FontWeight.bold),
                 ),
                 TextSpan(
                   text: '\n$unit',
-                  style: const TextStyle(fontSize: 9, color: Colors.grey, fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -539,7 +539,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 const Text(
                   'Bác chưa xác nhận thuốc Sáng!',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 17.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF991B1B),
                   ),
@@ -548,7 +548,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 const Text(
                   'Amlodipine 5mg (Huyết áp) · Lúc 07:00\nĐã báo nhắc nhở cho con gái.',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14.5,
                     color: Color(0xFF7F1D1D),
                     height: 1.4,
                     fontWeight: FontWeight.w500,
@@ -579,7 +579,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                       },
                       child: const Text(
                         'Bác đã uống rồi',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -591,7 +591,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                         'Bỏ qua',
                         style: TextStyle(
                           color: Color(0xFF64748B),
-                          fontSize: 13,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -648,7 +648,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 child: Text(
                   'Uống thuốc hôm nay',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 19.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E293B),
                   ),
@@ -663,7 +663,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 child: Text(
                   '$_takenCount/4 liều',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: allDone ? const Color(0xFF059669) : const Color(0xFF475569),
                   ),
@@ -690,7 +690,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
           // Lịch trình thời gian uống thuốc trong ngày (Timeline)
           const Text(
             'Lịch trình uống thuốc ngày:',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
+            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold, color: Colors.grey),
           ),
           const SizedBox(height: 12),
           _buildTimelineRow(
@@ -756,7 +756,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               ),
               label: Text(
                 _isMedsTakenToday ? 'Đã uống thuốc Tối' : 'Bác đã uống thuốc Tối',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17.5),
               ),
             ),
           ),
@@ -768,7 +768,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 'Xem toàn bộ việc cần làm hôm nay',
                 style: TextStyle(
                   color: Color(0xFF0F605A),
-                  fontSize: 14,
+                  fontSize: 15.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -793,11 +793,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
         children: [
           // Thời gian
           SizedBox(
-            width: 80,
+            width: 88,
             child: Text(
               time,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15.5,
                 fontWeight: isNext ? FontWeight.bold : FontWeight.w500,
                 color: isNext ? const Color(0xFF1E293B) : Colors.grey,
               ),
@@ -818,7 +818,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 Text(
                   detail,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 16.5,
                     fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
                     color: isNext ? const Color(0xFF1E293B) : Colors.black87,
                   ),
@@ -827,7 +827,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 Text(
                   statusText,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.bold,
                     color: statusColor,
                   ),
@@ -881,7 +881,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 child: Text(
                   'Lịch khám sắp tới',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 19.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E293B),
                   ),
@@ -896,7 +896,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 child: const Text(
                   'Còn 3 ngày',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFB45309),
                   ),
@@ -908,12 +908,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
           // Chi tiết lịch khám
           const Text(
             'Bệnh viện Chợ Rẫy',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+            style: TextStyle(fontSize: 19.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
           ),
           const SizedBox(height: 6),
           const Text(
             'BS. Nguyễn Thị Lan  ·  Khoa Tim mạch',
-            style: TextStyle(fontSize: 15, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 16, color: Color(0xFF475569), fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 10),
           // Thời gian nổi bật
@@ -930,7 +930,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 Text(
                   '08:30  ·  Thứ Sáu, 12/06/2026',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 16.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFB45309),
                   ),
@@ -956,7 +956,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               },
               child: const Text(
                 'Xem chi tiết lịch khám bệnh',
-                style: TextStyle(color: Color(0xFF0F605A), fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(color: Color(0xFF0F605A), fontWeight: FontWeight.bold, fontSize: 15),
               ),
             ),
           ),
@@ -977,7 +977,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     child: Text(
                       'Bác cần chuẩn bị giấy tờ gì?',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 17.5,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B),
                       ),
@@ -994,7 +994,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               const SizedBox(height: 12),
               const Text(
                 'Hãy tích chọn vào ô bên dưới khi bác bỏ giấy tờ vào cặp mang đi khám nhé:',
-                style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.3),
+                style: TextStyle(fontSize: 13.5, color: Colors.grey, height: 1.3),
               ),
               const SizedBox(height: 8),
               _buildCheckItem(
@@ -1048,7 +1048,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                         child: Text(
                           'Bác đã chuẩn bị đầy đủ giấy tờ khám! Thật tuyệt vời.',
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 14.5,
                             color: Color(0xFF065F46),
                             fontWeight: FontWeight.bold,
                           ),
@@ -1099,7 +1099,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               child: Text(
                 label,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 17.5,
                   fontWeight: FontWeight.w600,
                   color: value ? Colors.grey : const Color(0xFF1E293B),
                   decoration: value ? TextDecoration.lineThrough : null,

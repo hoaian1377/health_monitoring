@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import 'personal_profile_screen.dart';
 import 'medical_profile_screen.dart';
 import 'medical_documents_screen.dart';
-import 'family_links_screen.dart';
 import 'emergency_contacts_screen.dart';
-import 'notification_settings_screen.dart';
-import 'health_thresholds_screen.dart';
 import 'login_screen.dart';
 import 'appointment_screen.dart';
 import 'change_password_screen.dart';
 import 'manage_profiles_screen.dart';
 import 'admin_backup_screen.dart';
-import '../utils/global_state.dart';
 import '../utils/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -455,13 +451,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           const Text('Chào bác,',
               style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 18,
                   color: Colors.white70,
                   fontWeight: FontWeight.w500)),
           const SizedBox(height: 2),
           Text(displayName,
               style: const TextStyle(
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
           const SizedBox(height: 16),
@@ -483,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   alignment: Alignment.center,
                   child: Text(avatar,
                       style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
                 ),
@@ -494,13 +490,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text(displayName,
                           style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
                       const SizedBox(height: 4),
                       Text('SĐT: $phoneText · Tài khoản bác',
                           style:
-                              const TextStyle(fontSize: 13, color: Colors.white70),
+                              const TextStyle(fontSize: 15, color: Colors.white70),
                           overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 6),
                       Container(
@@ -519,7 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text('Đã bảo mật',
                                 style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 11,
+                                    fontSize: 12.5,
                                     fontWeight: FontWeight.bold)),
                           ],
                         ),
@@ -579,14 +575,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text('GỌI KHẨN CẤP (SOS)',
                           style: TextStyle(
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                               letterSpacing: 0.5)),
                       SizedBox(height: 3),
                       Text('Nhấn vào đây để gọi nhanh cho con cháu',
                           style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 14,
                               color: Colors.white70)),
                     ],
                   ),
@@ -603,9 +599,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ─── Section label ───────────────────────────────────────────────────────────
   Widget _sectionLabel(String label) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Text(label,
-        style: const TextStyle(
-            fontSize: 11.5,
+        style: TextStyle(
+            fontSize: isElderly ? 14 : 11.5,
             fontWeight: FontWeight.w700,
             color: Colors.grey,
             letterSpacing: 0.6));
@@ -613,6 +610,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // ─── Menu Group ──────────────────────────────────────────────────────────────
   Widget _menuGroup(List<_MenuItem> items) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -655,15 +653,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(item.title,
-                                  style: const TextStyle(
-                                      fontSize: 14.5,
+                                  style: TextStyle(
+                                      fontSize: isElderly ? 16.5 : 14.5,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1E293B))),
+                                      color: const Color(0xFF1E293B))),
                               const SizedBox(height: 2),
                               Text(item.subtitle,
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF94A3B8))),
+                                  style: TextStyle(
+                                      fontSize: isElderly ? 14 : 12,
+                                      color: const Color(0xFF94A3B8))),
                             ],
                           ),
                         ),
@@ -789,13 +787,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Text('Đăng xuất tài khoản',
                           style: TextStyle(
-                              fontSize: 15.5,
+                              fontSize: 17.5,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFFDC2626))),
                       SizedBox(height: 2),
                       Text('Thoát khỏi ứng dụng',
                           style: TextStyle(
-                              fontSize: 12, color: Color(0xFF94A3B8))),
+                              fontSize: 14, color: Color(0xFF94A3B8))),
                     ],
                   ),
                 ),

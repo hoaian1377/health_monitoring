@@ -871,7 +871,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 else
                   _buildCaregiverCategoryFilters(),
 
-                if (isElderly) const SizedBox(height: 12),
+                if (isElderly) const SizedBox(height: 4),
               ],
             ),
           ),
@@ -881,7 +881,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   child: _buildEmptyState(),
                 )
               : SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  padding: EdgeInsets.fromLTRB(16, isElderly ? 4 : 8, 16, 80),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -1358,7 +1358,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -1394,7 +1394,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
               Text(
                 '${(rate * 100).toInt()}%',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -1409,7 +1409,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 const Text(
                   'Tiến trình ngày hôm nay',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 15.5,
                     color: Colors.white70,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1418,7 +1418,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 Text(
                   '$completed / $total việc xong',
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -1427,7 +1427,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 Text(
                   encouragingText,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: Colors.white,
                     height: 1.3,
                   ),
@@ -1453,6 +1453,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.builder(
+        padding: EdgeInsets.zero,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -1531,7 +1532,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     child: Text(
                       cat['label'] as String,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: isSelected ? Colors.white : typeColor,
                       ),
@@ -1548,7 +1549,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     child: Text(
                       '$count',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: isSelected ? Colors.white : typeColor,
                       ),
@@ -1649,7 +1650,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       task.isCompleted
                           ? '✓ Đã hoàn thành: ${task.title}'
                           : 'Đã hủy hoàn thành: ${task.title}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15.5),
                     ),
                   ),
                 );
@@ -1699,14 +1700,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                   children: [
                                     Icon(
                                       typeIcon,
-                                      size: 11,
+                                      size: 12.5,
                                       color: task.isCompleted ? Colors.grey : typeColor,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       typeLabel,
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: task.isCompleted ? Colors.grey : typeColor,
                                       ),
@@ -1718,7 +1719,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                               Text(
                                 task.time == 'Trước khám' ? 'Trước khám' : '⏰ ${task.time}',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14.5,
                                   fontWeight: FontWeight.bold,
                                   color: task.isCompleted ? Colors.grey : const Color(0xFF0284C7),
                                 ),
@@ -1729,7 +1730,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                           Text(
                             task.title,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                               decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                               color: task.isCompleted ? Colors.grey.shade400 : const Color(0xFF1E293B),
@@ -1740,7 +1741,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                           Text(
                             task.details,
                             style: TextStyle(
-                              fontSize: 13,
+                              fontSize: 15,
                               color: task.isCompleted ? Colors.grey.shade300 : const Color(0xFF64748B),
                             ),
                           ),
@@ -1787,7 +1788,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 12.5,
           fontWeight: FontWeight.bold,
           color: isCompleted ? Colors.grey : const Color(0xFF0369A1),
         ),
@@ -1822,12 +1823,12 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           const SizedBox(height: 18),
           const Text(
             'Không tìm thấy nhiệm vụ nào!',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF1E293B)),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19, color: Color(0xFF1E293B)),
           ),
           const SizedBox(height: 6),
           const Text(
             'Bác đã hoàn thành hết công việc của danh mục này.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],
       ),

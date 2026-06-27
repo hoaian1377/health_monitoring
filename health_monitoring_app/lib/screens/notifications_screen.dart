@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'appointment_screen.dart';
+import '../utils/api_service.dart';
 
 class NotificationItem {
   final String id;
@@ -134,6 +135,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isElderly = ApiService.currentRole == 'elderly';
     // Lọc thông báo
     final filteredList = _notifications.where((item) {
       if (_filter == 'unread') return !item.isRead;
@@ -153,9 +155,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           SliverAppBar(
             pinned: false,
             floating: true,
-            title: const Text(
+            title: Text(
               'Thông Báo Sức Khỏe',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Color(0xFF1E293B)),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: isElderly ? 24 : 22, color: const Color(0xFF1E293B)),
             ),
             backgroundColor: Colors.white,
             elevation: 0,
@@ -165,10 +167,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (unreadCount > 0)
                 TextButton.icon(
                   onPressed: _markAllAsRead,
-                  icon: const Icon(Icons.done_all_rounded, size: 18, color: Color(0xFF0F605A)),
-                  label: const Text(
+                  icon: Icon(Icons.done_all_rounded, size: isElderly ? 20 : 18, color: const Color(0xFF0F605A)),
+                  label: Text(
                     'Đọc tất cả',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F605A), fontSize: 14),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: const Color(0xFF0F605A), fontSize: isElderly ? 16 : 14),
                   ),
                 ),
             ],
@@ -191,7 +193,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: _buildEmptyState(),
                 )
               : SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100), // Adjusted bottom padding to clear floating SOS button
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       if (todayNotifications.isNotEmpty) ...[
@@ -214,6 +216,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildFilterChip(String filterType, String label) {
+    final isElderly = ApiService.currentRole == 'elderly';
     final isSelected = _filter == filterType;
     return InkWell(
       onTap: () {
@@ -244,7 +247,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: isElderly ? 15 : 13,
             fontWeight: FontWeight.bold,
             color: isSelected ? Colors.white : const Color(0xFF475569),
           ),
@@ -254,6 +257,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildDateHeader(String text) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Row(
       children: [
         Container(
@@ -267,10 +271,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         const SizedBox(width: 8),
         Text(
           text,
-          style: const TextStyle(
-            fontSize: 15,
+          style: TextStyle(
+            fontSize: isElderly ? 17 : 15,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF475569),
+            color: const Color(0xFF475569),
           ),
         ),
       ],
@@ -278,6 +282,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationItem item) {
+    final isElderly = ApiService.currentRole == 'elderly';
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
       opacity: item.isRead ? 0.65 : 1.0,
@@ -331,7 +336,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: Icon(
                       item.icon,
                       color: item.isRead ? Colors.grey : item.themeColor,
-                      size: 24,
+                      size: isElderly ? 26 : 24,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -363,7 +368,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   item.title,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                    fontSize: isElderly ? 18 : 16,
                                     color: item.isRead ? const Color(0xFF64748B) : const Color(0xFF1E293B),
                                   ),
                                 ),
@@ -374,7 +379,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(
                             item.description,
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: isElderly ? 16 : 14,
                               color: item.isRead ? Colors.grey.shade400 : const Color(0xFF475569),
                               height: 1.35,
                             ),
@@ -383,7 +388,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(
                             item.time,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: isElderly ? 14 : 12,
                               fontWeight: FontWeight.bold,
                               color: item.isRead ? Colors.grey.shade300 : const Color(0xFF94A3B8),
                             ),
@@ -421,6 +426,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isElderly = ApiService.currentRole == 'elderly';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -445,14 +451,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          const Text(
+          Text(
             'Hộp thư của bác đang trống!',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF1E293B)),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: isElderly ? 19 : 17, color: const Color(0xFF1E293B)),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Không có thông báo nào cần xử lý lúc này.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: isElderly ? 16 : 14, color: Colors.grey),
           ),
         ],
       ),

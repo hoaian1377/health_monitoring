@@ -624,12 +624,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(isElderly ? 'Lịch khám của bác' : 'Lịch Khám Bệnh',
-                        style: const TextStyle(
-                            fontSize: 22,
+                        style: TextStyle(
+                            fontSize: isElderly ? 24 : 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.white)),
                     Text(isElderly ? 'Xem lịch khám và kết quả tái khám định kỳ' : 'Quản lý lịch tái khám của bác',
-                        style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                        style: TextStyle(fontSize: isElderly ? 15 : 13, color: Colors.white70)),
                   ],
                 ),
               ),
@@ -643,7 +643,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
             labelStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                TextStyle(fontWeight: FontWeight.bold, fontSize: isElderly ? 16 : 14),
             indicatorSize: TabBarIndicatorSize.label,
             tabs: [
               Tab(text: 'Sắp tới (${_upcoming.length})'),
@@ -786,18 +786,18 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     children: [
                       Text(item.hospital,
                           style: TextStyle(
-                              fontSize: isElderly ? 16 : 15,
+                              fontSize: isElderly ? 18 : 15,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1E293B))),
                       const SizedBox(height: 4),
                       Text('${item.doctor} · ${item.specialty}',
                           style: TextStyle(
-                              fontSize: isElderly ? 13.5 : 13, color: const Color(0xFF64748B))),
+                              fontSize: isElderly ? 15.5 : 13, color: const Color(0xFF64748B))),
                       if (item.notes.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(item.notes,
                             style: TextStyle(
-                                fontSize: isElderly ? 13 : 12, color: const Color(0xFF94A3B8)),
+                                fontSize: isElderly ? 15 : 12, color: const Color(0xFF94A3B8)),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis),
                       ],
@@ -813,7 +813,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   ),
                   child: Text(urgentLabel,
                       style: TextStyle(
-                          fontSize: 11,
+                          fontSize: isElderly ? 12.5 : 11,
                           fontWeight: FontWeight.bold,
                           color: urgentColor)),
                 ),
@@ -841,20 +841,20 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.calendar_today_rounded,
-                        size: isElderly ? 16 : 14, color: const Color(0xFF64748B)),
+                        size: isElderly ? 18 : 14, color: const Color(0xFF64748B)),
                     const SizedBox(width: 6),
                     Text(_fmtDate(item.date),
                         style: TextStyle(
-                            fontSize: isElderly ? 14 : 13,
+                            fontSize: isElderly ? 16 : 13,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF475569))),
                     const SizedBox(width: 16),
                     Icon(Icons.access_time_rounded,
-                        size: isElderly ? 16 : 14, color: const Color(0xFF64748B)),
+                        size: isElderly ? 18 : 14, color: const Color(0xFF64748B)),
                     const SizedBox(width: 6),
                     Text(item.time,
                         style: TextStyle(
-                            fontSize: isElderly ? 14 : 13,
+                            fontSize: isElderly ? 16 : 13,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF475569))),
                   ],
@@ -943,12 +943,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     children: [
                       Text(item.hospital,
                           style: TextStyle(
-                              fontSize: isElderly ? 15 : 14,
+                              fontSize: isElderly ? 18 : 14,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
                           style: TextStyle(
-                              fontSize: isElderly ? 13 : 12, color: const Color(0xFF64748B))),
+                              fontSize: isElderly ? 15 : 12, color: const Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -978,15 +978,15 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Lý do hủy:',
+                    Text('Lý do hủy:',
                         style: TextStyle(
-                            fontSize: 11,
+                            fontSize: isElderly ? 13 : 11,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF64748B))),
+                            color: const Color(0xFF64748B))),
                     const SizedBox(height: 4),
                     Text(item.cancelReason,
                         style: TextStyle(
-                            fontSize: isElderly ? 14 : 13, color: const Color(0xFF475569))),
+                            fontSize: isElderly ? 16 : 13, color: const Color(0xFF475569))),
                   ],
                 ),
               ),
@@ -1039,12 +1039,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     children: [
                       Text(item.hospital,
                           style: TextStyle(
-                              fontSize: isElderly ? 15 : 14,
+                              fontSize: isElderly ? 18 : 14,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
                           style: TextStyle(
-                              fontSize: isElderly ? 13 : 12, color: const Color(0xFF64748B))),
+                              fontSize: isElderly ? 15 : 12, color: const Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -1078,14 +1078,14 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   children: [
                     Text('Kết quả khám:',
                         style: TextStyle(
-                            fontSize: 11,
+                            fontSize: isElderly ? 13 : 11,
                             fontWeight: FontWeight.bold,
                             color: themeColor)),
                     const SizedBox(height: 4),
                     Text(item.result,
-                        style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF1E293B),
+                        style: TextStyle(
+                            fontSize: isElderly ? 15 : 13,
+                            color: const Color(0xFF1E293B),
                             height: 1.4)),
                   ],
                 ),
