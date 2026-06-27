@@ -59,7 +59,6 @@ class _MainNavigatorState extends State<MainNavigator> {
         children: const [
           HomeScreen(),
           ChecklistScreen(),
-          DashboardScreen(),
           NotificationsScreen(),
           ProfileScreen(),
         ],
@@ -90,11 +89,6 @@ class _MainNavigatorState extends State<MainNavigator> {
           icon: Icon(Icons.check_box_outlined),
           activeIcon: Icon(Icons.check_box_rounded),
           label: 'Việc làm',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.favorite_border_rounded),
-          activeIcon: Icon(Icons.favorite_rounded),
-          label: 'Sức khỏe',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.notifications_outlined),

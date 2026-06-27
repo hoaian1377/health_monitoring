@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
+import '../appointment_screen.dart';
 
 class ElderlyHomeScreen extends StatefulWidget {
   const ElderlyHomeScreen({super.key});
@@ -342,7 +343,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> {
   // ── Thẻ lịch khám tiếp theo ───────────────────────────────────────────────
   Widget _buildAppointmentCard() {
     return GestureDetector(
-      onTap: () => MainNavigator.of(context)?.setTab(2),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AppointmentScreen()),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -381,7 +387,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> {
             const SizedBox(height: 12),
             Center(
               child: TextButton(
-                onPressed: () => MainNavigator.of(context)?.setTab(2),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AppointmentScreen()),
+                  );
+                },
                 child: const Text('Xem chi tiết',
                     style: TextStyle(color: Color(0xFF0EA5E9), fontSize: 14, fontWeight: FontWeight.w600)),
               ),
