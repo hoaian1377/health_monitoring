@@ -447,12 +447,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
                   const SizedBox(height: 24),
 
-                  // Bộ lọc thời gian + Xuất báo cáo
-                  _buildSectionLabel('BỘ LỌC THỜI GIAN BÁO CÁO'),
+                  // Bộ lọc thời gian
+                  _buildSectionLabel('BỘ LỌC THỜI GIAN THEO DÕI'),
                   const SizedBox(height: 10),
                   _buildPeriodFilterRow(),
-                  const SizedBox(height: 12),
-                  _buildExportButton(),
                   const SizedBox(height: 24),
 
                   // Biểu đồ đa chỉ số

@@ -180,53 +180,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                     const SizedBox(height: 24),
                   ],
-                  if (ApiService.currentRole != 'elderly')
-                    _sectionLabel('LIÊN KẾT GIA ĐÌNH')
-                  else
+                  if (ApiService.currentRole == 'elderly') ...[
                     _sectionLabel('LIÊN LẠC KHẨN CẤP'),
-                  const SizedBox(height: 8),
-                  _menuGroup([
-                    if (ApiService.currentRole != 'elderly')
+                    const SizedBox(height: 8),
+                    _menuGroup([
                       _MenuItem(
-                        icon: Icons.people_outline_rounded,
-                        iconBg: const Color(0xFFFFF4E6),
-                        iconColor: const Color(0xFFEA580C),
-                        title: 'Liên kết người thân',
-                        subtitle: 'Kết nối con cháu & người chăm sóc trong gia đình',
-                        onTap: () => _navigate(const FamilyLinksScreen()),
+                        icon: Icons.contact_phone_outlined,
+                        iconBg: const Color(0xFFFFEBEB),
+                        iconColor: const Color(0xFFDC2626),
+                        title: 'Liên lạc khẩn cấp',
+                        subtitle: 'Danh sách số điện thoại ưu tiên khi SOS',
+                        onTap: () => _navigate(const EmergencyContactsScreen()),
                       ),
-                    _MenuItem(
-                      icon: Icons.contact_phone_outlined,
-                      iconBg: const Color(0xFFFFEBEB),
-                      iconColor: const Color(0xFFDC2626),
-                      title: 'Liên lạc khẩn cấp',
-                      subtitle: 'Danh sách số điện thoại ưu tiên khi SOS',
-                      onTap: () => _navigate(const EmergencyContactsScreen()),
-                    ),
-                  ]),
-
-                  const SizedBox(height: 24),
+                    ]),
+                    const SizedBox(height: 24),
+                  ],
                   _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
                   const SizedBox(height: 8),
                   _menuGroup([
-                    if (ApiService.currentRole != 'elderly') ...[
-                      _MenuItem(
-                        icon: Icons.notifications_outlined,
-                        iconBg: const Color(0xFFE6FBF3),
-                        iconColor: const Color(0xFF16A34A),
-                        title: 'Cài đặt thông báo',
-                        subtitle: 'Nhắc uống thuốc, lịch khám, cảnh báo sức khỏe',
-                        onTap: () => _navigate(const NotificationSettingsScreen()),
-                      ),
-                      _MenuItem(
-                        icon: Icons.warning_amber_rounded,
-                        iconBg: const Color(0xFFFFF4E6),
-                        iconColor: const Color(0xFFEA580C),
-                        title: 'Ngưỡng cảnh báo sức khỏe',
-                        subtitle: 'Huyết áp, đường huyết, cân nặng bất thường',
-                        onTap: () => _navigate(const HealthThresholdsScreen()),
-                      ),
-                    ],
                     _MenuItem(
                       icon: Icons.lock_outline_rounded,
                       iconBg: const Color(0xFFF3EEFF),

@@ -142,7 +142,7 @@ class _MainNavigatorState extends State<MainNavigator> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _buildBody(),
-      floatingActionButton: ApiService.currentRole == 'elderly' ? null : FloatingActionButton(
+      floatingActionButton: ApiService.currentRole == 'caregiver' ? null : FloatingActionButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

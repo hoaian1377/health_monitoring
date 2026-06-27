@@ -110,32 +110,6 @@ class _HistoryScreenState extends State<HistoryScreen>
                   ),
                 ],
               ),
-              InkWell(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: Colors.red,
-                      content: Text('Đang gọi khẩn cấp...'),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade600,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.4),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      )
-                    ],
-                  ),
-                  child: const Icon(Icons.phone_in_talk_rounded,
-                      color: Colors.white, size: 20),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
