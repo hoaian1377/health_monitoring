@@ -497,7 +497,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Dashboard',
+              'Theo Dõi Sức Khỏe',
               style: TextStyle(
                   color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
             ),

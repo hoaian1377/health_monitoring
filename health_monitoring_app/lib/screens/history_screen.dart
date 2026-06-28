@@ -135,11 +135,11 @@ class _HistoryScreenState extends State<HistoryScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16),
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: TextField(
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Color(0xFF1E293B)),
               onChanged: (val) {
                 setState(() {
                   _searchQuery = val.toLowerCase();
@@ -147,9 +147,9 @@ class _HistoryScreenState extends State<HistoryScreen>
               },
               decoration: const InputDecoration(
                 hintText: 'Tìm kiếm lịch sử...',
-                hintStyle: TextStyle(color: Colors.white70),
+                hintStyle: TextStyle(color: Color(0xFF94A3B8)),
                 border: InputBorder.none,
-                icon: Icon(Icons.search, color: Colors.white70),
+                icon: Icon(Icons.search, color: Color(0xFF94A3B8)),
               ),
             ),
           ),

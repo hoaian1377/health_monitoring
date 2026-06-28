@@ -106,12 +106,12 @@ class _MainNavigatorState extends State<MainNavigator> {
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
           activeIcon: Icon(Icons.home_rounded),
-          label: 'Home',
+          label: 'Trang chủ',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.check_box_outlined),
           activeIcon: Icon(Icons.check_box_rounded),
-          label: 'Checklist',
+          label: 'Công việc',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.history_rounded),
@@ -121,12 +121,12 @@ class _MainNavigatorState extends State<MainNavigator> {
         BottomNavigationBarItem(
           icon: Icon(Icons.dashboard_outlined),
           activeIcon: Icon(Icons.dashboard_rounded),
-          label: 'Dashboard',
+          label: 'Theo dõi',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline_rounded),
           activeIcon: Icon(Icons.person_rounded),
-          label: 'Người dùng',
+          label: 'Cá nhân',
         ),
       ];
     }

@@ -60,6 +60,14 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         ? ApiService.currentFullname
         : ApiService.currentUsername;
 
+    final hour = DateTime.now().hour;
+    String greeting = 'Chào buổi sáng,';
+    if (hour >= 12 && hour < 18) {
+      greeting = 'Chào buổi chiều,';
+    } else if (hour >= 18) {
+      greeting = 'Chào buổi tối,';
+    }
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -91,9 +99,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Chào buổi sáng,',
-                      style: TextStyle(
+                    Text(
+                      greeting,
+                      style: const TextStyle(
                         fontSize: 14,
                         color: Colors.white70,
                         fontWeight: FontWeight.w500,
