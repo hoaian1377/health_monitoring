@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'personal_profile_screen.dart';
-import 'medical_profile_screen.dart';
-import 'medical_documents_screen.dart';
 import 'emergency_contacts_screen.dart';
 import 'login_screen.dart';
-import 'appointment_screen.dart';
 import 'change_password_screen.dart';
 import 'manage_profiles_screen.dart';
 import 'admin_backup_screen.dart';
+import 'health_dashboard_screen.dart';
+import 'add_elderly_screen.dart';
+import 'elderly_list_screen.dart';
 import '../utils/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -176,28 +176,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: () => _navigate(const PersonalProfileScreen()),
                       ),
                       _MenuItem(
-                        icon: Icons.medical_services_outlined,
+                        icon: Icons.health_and_safety_outlined,
                         iconBg: const Color(0xFFE6FBF3),
                         iconColor: const Color(0xFF16A34A),
-                        title: 'Hồ sơ khám bệnh',
-                        subtitle: 'Bệnh nền, dị ứng, nhóm máu, tiền sử bệnh',
-                        onTap: () => _navigate(const MedicalProfileScreen()),
+                        title: 'Hồ sơ sức khỏe',
+                        subtitle: 'Tổng quan, toa thuốc, giấy tờ và lịch khám',
+                        onTap: () => _navigate(const HealthDashboardScreen()),
                       ),
+                    ]),
+                    const SizedBox(height: 24),
+
+                    // ── QUẢN LÝ NGƯỜI CAO TUỔI (caregiver only)
+                    _sectionLabel('QUẢN LÝ NGƯỜI CAO TUỔI'),
+                    const SizedBox(height: 8),
+                    _menuGroup([
                       _MenuItem(
-                        icon: Icons.description_outlined,
-                        iconBg: const Color(0xFFF3EEFF),
+                        icon: Icons.person_add_rounded,
+                        iconBg: const Color(0xFFF3E8FF),
                         iconColor: const Color(0xFF7C3AED),
-                        title: 'Toa thuốc & xét nghiệm',
-                        subtitle: 'Upload, xem lại toa thuốc & kết quả xét nghiệm',
-                        onTap: () => _navigate(const MedicalDocumentsScreen()),
+                        title: 'Thêm người cao tuổi',
+                        subtitle: 'Tạo hồ sơ mới & sinh mã QR đăng nhập',
+                        onTap: () => _navigate(const AddElderlyScreen()),
                       ),
                       _MenuItem(
-                        icon: Icons.calendar_month_outlined,
-                        iconBg: const Color(0xFFF0F9FF),
-                        iconColor: const Color(0xFF0EA5E9),
-                        title: 'Lịch khám bệnh',
-                        subtitle: 'Quản lý lịch tái khám và kết quả',
-                        onTap: () => _navigate(const AppointmentScreen()),
+                        icon: Icons.qr_code_scanner_rounded,
+                        iconBg: const Color(0xFFF3E8FF),
+                        iconColor: const Color(0xFF7C3AED),
+                        title: 'Xem danh sách người cao tuổi',
+                        subtitle: 'Quản lý, xem và sửa hồ sơ đã tạo',
+                        onTap: () => _navigate(const ElderlyListScreen()),
                       ),
                     ]),
                     const SizedBox(height: 24),

@@ -176,23 +176,41 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   }
 
   Future<void> _fetchMedications() async {
-    final meds = await ApiService.getMedication();
-    if (meds.isNotEmpty) {
-      setState(() {
-        _tasks.removeWhere((t) => t.type == 'medication');
-        for (var med in meds) {
-          _tasks.add(TaskItem(
-            id: med['medicationid'].toString(),
-            title: med['name'] ?? 'Thuốc',
-            type: 'medication',
-            time: '08:00',
-            details: '${med['dosage'] ?? ''} - ${med['instruction'] ?? ''}',
-            isCompleted: false,
-            medCode: 'MED-${med['medicationid']}',
-            dosage: med['dosage'],
-          ));
+    int? targetElderlyId;
+    if (ApiService.currentRole == 'elderly') {
+      targetElderlyId = ApiService.currentAccountId;
+    } else {
+      final res = await ApiService.getElderlyList();
+      if (res['success'] == true) {
+        final list = res['elderly_list'] as List;
+        if (list.isNotEmpty) {
+          targetElderlyId = list.first['id'] as int;
         }
-      });
+      }
+    }
+
+    if (targetElderlyId == null) return;
+
+    final schedules = await ApiService.getElderlyMedicationSchedule(targetElderlyId);
+    if (schedules.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _tasks.removeWhere((t) => t.type == 'medication');
+          for (var s in schedules) {
+            final med = s['medication'] ?? {};
+            _tasks.add(TaskItem(
+              id: s['schedule_id'].toString(),
+              title: med['name'] ?? 'Thuốc',
+              type: 'medication',
+              time: s['time']?.isNotEmpty == true ? s['time'] : '08:00',
+              details: '${med['dosage'] ?? ''} - ${med['instruction'] ?? ''}',
+              isCompleted: false,
+              medCode: 'MED-${s['schedule_id']}',
+              dosage: med['dosage'],
+            ));
+          }
+        });
+      }
     }
   }
 

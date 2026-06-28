@@ -122,7 +122,72 @@ class LoginByQrView(generics.CreateAPIView):
                 "id": elderly.elderlyid,
                 "fullname": elderly.fullname,
                 "dob": str(elderly.date_of_birthday) if elderly.date_of_birthday else None,
-                "gender": "Nam" if elderly.gender else "Nữ",
+                "gender": "Nam" if elderly.gender else "Nu",
                 "medical_note": elderly.medical_note,
+            }
+        }, status=status.HTTP_200_OK)
+
+# ── Lấy danh sách người cao tuổi của caregiver ─────────────────────────────
+class GetElderlyListView(generics.RetrieveAPIView):
+    """GET /api/users/elderly-list/?caregiver_account_id=<id>"""
+    def get(self, request):
+        caregiver_account_id = request.query_params.get('caregiver_account_id')
+        if not caregiver_account_id:
+            return Response({"error": "Thiếu caregiver_account_id"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            caregiver = Caregiver.objects.get(accountid=caregiver_account_id)
+        except Caregiver.DoesNotExist:
+            return Response({"error": "Caregiver not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        relations = CaregiverElderly.objects.filter(caregiverid=caregiver).select_related('elderlyid')
+        elderly_list = []
+        for rel in relations:
+            e = rel.elderlyid
+            if e:
+                elderly_list.append({
+                    "id": e.elderlyid,
+                    "fullname": e.fullname,
+                    "dob": str(e.date_of_birthday) if e.date_of_birthday else None,
+                    "gender": "Nam" if e.gender else "Nu",
+                    "medical_note": e.medical_note or "",
+                    "qr_token": e.qr_token or "",
+                })
+        return Response({"elderly_list": elderly_list}, status=status.HTTP_200_OK)
+
+# ── Cập nhật thông tin người cao tuổi ──────────────────────────────────────
+class UpdateElderlyView(generics.UpdateAPIView):
+    """PUT /api/users/elderly/<elderly_id>/update/"""
+    def put(self, request, elderly_id):
+        try:
+            elderly = Elderly.objects.get(elderlyid=elderly_id)
+        except Elderly.DoesNotExist:
+            return Response({"error": "Không tìm thấy người cao tuổi"}, status=status.HTTP_404_NOT_FOUND)
+
+        fullname = request.data.get('fullname', elderly.fullname)
+        dob_str = request.data.get('dob')
+        gender_str = request.data.get('gender')
+        medical_note = request.data.get('medical_note', elderly.medical_note)
+
+        if fullname:
+            elderly.fullname = fullname
+        if dob_str:
+            try:
+                elderly.date_of_birthday = datetime.strptime(dob_str, "%d/%m/%Y").date()
+            except ValueError:
+                pass
+        if gender_str is not None:
+            elderly.gender = (gender_str == 'Nam')
+        elderly.medical_note = medical_note
+        elderly.save()
+
+        return Response({
+            "message": "Cap nhat thanh cong",
+            "elderly": {
+                "id": elderly.elderlyid,
+                "fullname": elderly.fullname,
+                "dob": str(elderly.date_of_birthday) if elderly.date_of_birthday else None,
+                "gender": "Nam" if elderly.gender else "Nu",
+                "medical_note": elderly.medical_note,
+                "qr_token": elderly.qr_token,
             }
         }, status=status.HTTP_200_OK)

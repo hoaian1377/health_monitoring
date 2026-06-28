@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../utils/api_service.dart';
 
 class MedicalDocumentsScreen extends StatefulWidget {
-  const MedicalDocumentsScreen({super.key});
+  final bool isEmbedded;
+  const MedicalDocumentsScreen({super.key, this.isEmbedded = false});
 
   @override
   State<MedicalDocumentsScreen> createState() =>
@@ -83,53 +84,61 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
       backgroundColor: const Color(0xFFF0F4FB),
       body: Column(
         children: [
-          // ── AppBar ──────────────────────────────────────────────────────
+          // ── Header / Filters ────────────────────────────────────────────────
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 52, 20, 20),
+            decoration: widget.isEmbedded 
+                ? null
+                : const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius:
+                        BorderRadius.vertical(bottom: Radius.circular(24)),
+                  ),
+            padding: EdgeInsets.fromLTRB(20, widget.isEmbedded ? 16 : 52, 20, 20),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Toa thuốc & Xét nghiệm',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)),
-                          Text('Tài liệu y tế của bạn',
-                              style: TextStyle(
-                                  fontSize: 12, color: Colors.white70)),
-                        ],
+                if (!widget.isEmbedded) ...[
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white, size: 20),
                       ),
-                    ),
-                    const Icon(Icons.description_rounded,
-                        color: Colors.white70, size: 24),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Toa thuốc & Xét nghiệm',
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                            Text('Tài liệu y tế của bạn',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.description_rounded,
+                          color: Colors.white70, size: 24),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Search bar
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: widget.isEmbedded ? Colors.white : Colors.white,
                     borderRadius: BorderRadius.circular(12),
+                    border: widget.isEmbedded ? Border.all(color: const Color(0xFFE2E8F0)) : null,
+                    boxShadow: widget.isEmbedded ? [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))
+                    ] : null,
                   ),
                   child: TextField(
                     controller: _searchCtrl,
@@ -148,27 +157,29 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
                 // Filter chips
                 Row(
                   children: _filters.asMap().entries.map((e) {
-                    final selected = e.key == _filterIndex;
+                    final isActive = _filterIndex == e.key;
+                    final textColor = isActive 
+                        ? (widget.isEmbedded ? Colors.white : const Color(0xFF0284C7))
+                        : (widget.isEmbedded ? const Color(0xFF64748B) : Colors.white70);
+                    final bgColor = isActive 
+                        ? (widget.isEmbedded ? const Color(0xFF0EA5E9) : Colors.white)
+                        : (widget.isEmbedded ? const Color(0xFFF1F5F9) : Colors.white.withValues(alpha: 0.15));
+
                     return GestureDetector(
                       onTap: () => setState(() => _filterIndex = e.key),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                      child: Container(
                         margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 7),
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          color: selected
-                              ? Colors.white
-                              : Colors.white.withOpacity(0.2),
+                          color: bgColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(e.value,
                             style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: selected
-                                    ? const Color(0xFF0EA5E9)
-                                    : Colors.white)),
+                                fontWeight: FontWeight.bold,
+                                color: textColor)),
                       ),
                     );
                   }).toList(),
@@ -176,6 +187,9 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
               ],
             ),
           ),
+          
+          if (widget.isEmbedded)
+            const SizedBox(height: 8),
 
           // ── List ────────────────────────────────────────────────────────
           Expanded(

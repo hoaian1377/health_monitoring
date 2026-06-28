@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.17:8000";
+  static const String baseUrl = "http://192.168.123.4:8000";
   static int? currentAccountId;
   static String currentUsername = 'Người dùng';
   static String currentRole = 'caregiver';
@@ -113,7 +113,7 @@ class ApiService {
         body: jsonEncode({
           "caregiver_account_id": currentAccountId,
           "fullname": fullname,
-          "date_of_birthday": dob,
+          "dob": dob,
           "gender": gender,
           "medical_note": medicalNote,
         }),
@@ -140,6 +140,52 @@ class ApiService {
         "success": false,
         "error": "Lỗi kết nối máy chủ.",
       };
+    }
+  }
+
+  // ================= GET ELDERLY LIST =================
+  static Future<Map<String, dynamic>> getElderlyList() async {
+    final url = Uri.parse(
+        "$baseUrl/api/users/elderly-list/?caregiver_account_id=$currentAccountId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return {"success": true, "elderly_list": data["elderly_list"] ?? []};
+      }
+      return {"success": false, "error": "Không thể tải danh sách."};
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= UPDATE ELDERLY =================
+  static Future<Map<String, dynamic>> updateElderly({
+    required int elderlyId,
+    required String fullname,
+    required String dob,
+    required String gender,
+    required String medicalNote,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/users/elderly/$elderlyId/update/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "fullname": fullname,
+          "dob": dob,
+          "gender": gender,
+          "medical_note": medicalNote,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return {"success": true, "elderly": data["elderly"]};
+      }
+      return {"success": false, "error": "Cập nhật thất bại."};
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
 
@@ -202,6 +248,136 @@ class ApiService {
     } catch (e) {
       print("ERROR: $e");
       return [];
+    }
+  }
+
+  // ================= GET ELDERLY MEDICATION SCHEDULE =================
+  static Future<List<dynamic>> getElderlyMedicationSchedule(int elderlyId) async {
+    final url = Uri.parse("$baseUrl/api/medication/elderly-schedule/?elderly_id=$elderlyId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data["schedules"] ?? [];
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
+    }
+  }
+
+  // ================= ADD MEDICATION & SCHEDULE =================
+  static Future<bool> addMedication({
+    required int elderlyId,
+    required String name,
+    required String dosage,
+    required String instruction,
+    required String time,
+    required String frequency,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/medication/create/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "elderly_id": elderlyId,
+          "name": name,
+          "dosage": dosage,
+          "instruction": instruction,
+          "time": time,
+          "frequency": frequency,
+        }),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ================= UPDATE MEDICATION & SCHEDULE =================
+  static Future<bool> updateMedication({
+    required int scheduleId,
+    required String name,
+    required String dosage,
+    required String instruction,
+    required String time,
+    required String frequency,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/medication/schedule/$scheduleId/update/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "name": name,
+          "dosage": dosage,
+          "instruction": instruction,
+          "time": time,
+          "frequency": frequency,
+        }),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ================= DELETE MEDICATION SCHEDULE =================
+  static Future<bool> deleteMedication(int scheduleId) async {
+    final url = Uri.parse("$baseUrl/api/medication/schedule/$scheduleId/delete/");
+    try {
+      final res = await http.delete(url);
+      return res.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ================= SCAN PRESCRIPTION (OCR Mock) =================
+  static Future<Map<String, dynamic>> scanPrescription(String imagePath) async {
+    final url = Uri.parse("$baseUrl/api/medication/scan-prescription/");
+    try {
+      var request = http.MultipartRequest('POST', url);
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      var streamedResponse = await request.send();
+      var res = await http.Response.fromStream(streamedResponse);
+      
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {"error": "Lỗi quét ảnh (status ${res.statusCode})"};
+    } catch (e) {
+      return {"error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= CREATE APPOINTMENT =================
+  static Future<bool> createAppointment({
+    required int elderlyId,
+    required String doctorName,
+    required String location,
+    required String appointmentDate,
+    required String appointmentTime,
+    String note = '',
+  }) async {
+    final url = Uri.parse("$baseUrl/api/medication/appointment/create/");
+    try {
+      final res = await http.post(url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'elderly_id': elderlyId,
+          'doctor_name': doctorName,
+          'location': location,
+          'appointment_date': appointmentDate,
+          'appointment_time': appointmentTime,
+          'note': note,
+        }),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      return false;
     }
   }
 

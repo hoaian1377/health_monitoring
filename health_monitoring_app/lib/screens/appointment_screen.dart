@@ -30,7 +30,8 @@ class AppointmentItem {
 }
 
 class AppointmentScreen extends StatefulWidget {
-  const AppointmentScreen({super.key});
+  final bool isEmbedded;
+  const AppointmentScreen({super.key, this.isEmbedded = false});
 
   @override
   State<AppointmentScreen> createState() => _AppointmentScreenState();
@@ -594,62 +595,86 @@ class _AppointmentScreenState extends State<AppointmentScreen>
         : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: headerGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-        boxShadow: [
-          BoxShadow(
-              color: isElderly ? const Color(0x220F605A) : const Color(0x400EA5E9), blurRadius: 20, offset: const Offset(0, 8)),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(4, 52, 20, 0),
+      decoration: widget.isEmbedded 
+        ? null
+        : BoxDecoration(
+            gradient: LinearGradient(
+              colors: headerGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(32),
+              bottomRight: Radius.circular(32),
+            ),
+            boxShadow: [
+              BoxShadow(
+                  color: isElderly ? const Color(0x220F605A) : const Color(0x400EA5E9), blurRadius: 20, offset: const Offset(0, 8)),
+            ],
+          ),
+      padding: EdgeInsets.fromLTRB(4, widget.isEmbedded ? 16 : 52, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(isElderly ? 'Lịch khám của bác' : 'Lịch Khám Bệnh',
-                        style: TextStyle(
-                            fontSize: isElderly ? 24 : 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    Text(isElderly ? 'Xem lịch khám và kết quả tái khám định kỳ' : 'Quản lý lịch tái khám của bác',
-                        style: TextStyle(fontSize: isElderly ? 15 : 13, color: Colors.white70)),
-                  ],
+          if (!widget.isEmbedded)
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TabBar(
-            controller: _tabController,
-            indicatorColor: Colors.white,
-            indicatorWeight: 3,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white60,
-            labelStyle:
-                TextStyle(fontWeight: FontWeight.bold, fontSize: isElderly ? 16 : 14),
-            indicatorSize: TabBarIndicatorSize.label,
-            tabs: [
-              Tab(text: 'Sắp tới (${_upcoming.length})'),
-              Tab(text: 'Đã khám (${_completed.length})'),
-              Tab(text: 'Đã hủy (${_cancelled.length})'),
-            ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(isElderly ? 'Lịch khám của bác' : 'Lịch Khám Bệnh',
+                          style: TextStyle(
+                              fontSize: isElderly ? 24 : 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      Text(isElderly ? 'Xem lịch khám và kết quả tái khám định kỳ' : 'Quản lý lịch tái khám của bác',
+                          style: TextStyle(fontSize: isElderly ? 15 : 13, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          if (!widget.isEmbedded) const SizedBox(height: 12),
+          Container(
+            margin: EdgeInsets.only(left: widget.isEmbedded ? 16 : 0),
+            decoration: widget.isEmbedded
+                ? BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))
+                    ]
+                  )
+                : null,
+            padding: widget.isEmbedded ? const EdgeInsets.symmetric(vertical: 4, horizontal: 4) : EdgeInsets.zero,
+            child: TabBar(
+              controller: _tabController,
+              indicator: widget.isEmbedded
+                  ? BoxDecoration(
+                      color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
+                      borderRadius: BorderRadius.circular(8),
+                    )
+                  : null,
+              indicatorColor: widget.isEmbedded ? Colors.transparent : Colors.white,
+              indicatorWeight: widget.isEmbedded ? 0 : 3,
+              labelColor: widget.isEmbedded ? Colors.white : Colors.white,
+              unselectedLabelColor: widget.isEmbedded ? const Color(0xFF64748B) : Colors.white60,
+              labelStyle:
+                  TextStyle(fontWeight: FontWeight.bold, fontSize: isElderly ? 14 : 13),
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+              tabs: [
+                Tab(text: 'Sắp tới (${_upcoming.length})'),
+                Tab(text: 'Đã khám (${_completed.length})'),
+                Tab(text: 'Đã hủy (${_cancelled.length})'),
+              ],
+            ),
           ),
         ],
       ),
