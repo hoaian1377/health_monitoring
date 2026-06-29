@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import '../utils/api_service.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 class MedicineItem {
@@ -354,8 +353,6 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   // ── UI Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final isElderly = ApiService.currentRole == 'elderly';
-
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
       body: NestedScrollView(

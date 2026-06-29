@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/global_state.dart';
-import '../utils/api_service.dart';
+
 
 class MedicalProfileScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -108,12 +107,8 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor =
-        isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final gradientColors = isElderly
-        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
-        : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
+    const themeColor = Color(0xFF0EA5E9);
+    const gradientColors = [Color(0xFF0284C7), Color(0xFF38BDF8)];
 
     final content = SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(16, widget.isEmbedded ? 16 : 0, 16, 100),
@@ -125,7 +120,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
               width: double.infinity,
               margin: const EdgeInsets.only(left: -16, right: -16, bottom: 16),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: const LinearGradient(
                   colors: gradientColors,
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -156,10 +151,10 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Text(
-                      isElderly ? 'Hồ sơ y tế của bác' : 'Hồ sơ khám bệnh',
-                      style: const TextStyle(
+                      'Hồ sơ khám bệnh',
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -400,57 +395,8 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
       return content;
     }
     return Scaffold(
-      backgroundColor:
-          isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
+      backgroundColor: const Color(0xFFF0F4FB),
       body: content,
-    );
-  }
-
-  // ─── App Bar ─────────────────────────────────────────────────────────────
-  Widget _buildAppBar(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius:
-            BorderRadius.vertical(bottom: Radius.circular(24)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          ValueListenableBuilder<List<ElderlyProfile>>(
-            valueListenable: globalState.profiles,
-            builder: (context, profiles, child) {
-              final activeProfile = globalState.activeProfile;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Hồ sơ khám bệnh',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                  Text(activeProfile.name,
-                      style: const TextStyle(fontSize: 12, color: Colors.white70)),
-                ],
-              );
-            }
-          ),
-          const Spacer(),
-          const Icon(Icons.medical_services_rounded,
-              color: Colors.white70, size: 24),
-        ],
-      ),
     );
   }
 
@@ -500,6 +446,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
+          Navigator.canPop(context) ? const SizedBox() : const SizedBox(), // Keep structure similar
           Container(
             width: 34,
             height: 34,

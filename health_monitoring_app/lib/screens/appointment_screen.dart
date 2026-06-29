@@ -111,7 +111,6 @@ class _AppointmentScreenState extends State<AppointmentScreen>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   void _showAddSheet() {
-    final isElderly = ApiService.currentRole == 'elderly';
     _hospitalCtrl.clear();
     _doctorCtrl.clear();
     _specialtyCtrl.clear();
@@ -127,7 +126,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
         builder: (ctx, setModal) => Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(isElderly ? 32 : 28)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
@@ -152,9 +151,9 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  isElderly ? 'Thêm lịch hẹn khám mới' : 'Thêm Lịch Khám Mới',
+                  'Thêm Lịch Khám Mới',
                   style: TextStyle(
-                      fontSize: isElderly ? 20 : 18,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF1E293B)),
                 ),
@@ -183,13 +182,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  height: isElderly ? 56 : 52,
+                  height: 52,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
+                      backgroundColor: const Color(0xFF0EA5E9),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(isElderly ? 16 : 12)),
+                          borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -222,7 +221,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                         ),
                       );
                     },
-                    child: Text(isElderly ? 'Lưu lịch hẹn khám' : 'Lưu lịch khám',
+                    child: Text('Lưu lịch khám',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
@@ -238,37 +237,36 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   Widget _field(String label, TextEditingController ctrl, IconData icon,
       String hint,
       {int lines = 1}) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final themeBg = isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F9FF);
+    final themeColor = const Color(0xFF0EA5E9);
+    final themeBg = const Color(0xFFF0F9FF);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
             style: TextStyle(
-                fontSize: isElderly ? 14 : 13,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF64748B))),
         const SizedBox(height: 8),
         TextField(
           controller: ctrl,
           maxLines: lines,
-          style: TextStyle(fontSize: isElderly ? 16 : 14),
+          style: TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: const Color(0xFFCBD5E1), fontSize: isElderly ? 14 : 13),
-            prefixIcon: Icon(icon, color: themeColor, size: isElderly ? 22 : 20),
+            hintStyle: TextStyle(color: const Color(0xFFCBD5E1), fontSize: 13),
+            prefixIcon: Icon(icon, color: themeColor, size: 20),
             filled: true,
             fillColor: themeBg,
             contentPadding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: isElderly ? 16 : 14),
+                EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
+              borderRadius: BorderRadius.circular(12),
               borderSide:
                   BorderSide(color: themeColor, width: 1.5),
             ),
@@ -279,16 +277,15 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _dateBox(BuildContext ctx, StateSetter setModal) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final themeBg = isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F9FF);
+    final themeColor = const Color(0xFF0EA5E9);
+    final themeBg = const Color(0xFFF0F9FF);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(isElderly ? 'Chọn ngày *' : 'Ngày khám',
+        Text('Ngày khám',
             style: TextStyle(
-                fontSize: isElderly ? 14 : 13,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF64748B))),
         const SizedBox(height: 8),
@@ -304,21 +301,21 @@ class _AppointmentScreenState extends State<AppointmentScreen>
           },
           child: Container(
             padding:
-                EdgeInsets.symmetric(horizontal: 12, vertical: isElderly ? 16 : 14),
+                EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
               color: themeBg,
-              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
-              border: Border.all(color: isElderly ? const Color(0xFF99F6E4) : const Color(0xFFBAE6FD)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
             ),
             child: Row(
               children: [
                 Icon(Icons.calendar_today_rounded,
-                    size: isElderly ? 18 : 16, color: themeColor),
+                    size: 16, color: themeColor),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(_fmtDate(_pickedDate),
                       style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: isElderly ? 14 : 12)),
+                          fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ],
             ),
@@ -329,16 +326,15 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _timeBox(BuildContext ctx, StateSetter setModal) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final themeBg = isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F9FF);
+    final themeColor = const Color(0xFF0EA5E9);
+    final themeBg = const Color(0xFFF0F9FF);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(isElderly ? 'Chọn giờ *' : 'Giờ khám',
+        Text('Giờ khám',
             style: TextStyle(
-                fontSize: isElderly ? 14 : 13,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF64748B))),
         const SizedBox(height: 8),
@@ -350,21 +346,21 @@ class _AppointmentScreenState extends State<AppointmentScreen>
           },
           child: Container(
             padding:
-                EdgeInsets.symmetric(horizontal: 12, vertical: isElderly ? 16 : 14),
+                EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
               color: themeBg,
-              borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
-              border: Border.all(color: isElderly ? const Color(0xFF99F6E4) : const Color(0xFFBAE6FD)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
             ),
             child: Row(
               children: [
                 Icon(Icons.access_time_rounded,
-                    size: isElderly ? 18 : 16, color: themeColor),
+                    size: 16, color: themeColor),
                 const SizedBox(width: 8),
                 Text(
                   '${_pickedTime.hour.toString().padLeft(2, '0')}:${_pickedTime.minute.toString().padLeft(2, '0')}',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: isElderly ? 14 : 13),
+                      fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ],
             ),
@@ -375,26 +371,23 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   void _showCancelDialog(AppointmentItem item) {
-    final isElderly = ApiService.currentRole == 'elderly';
     final ctrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isElderly ? 24 : 20)),
-        title: Text(isElderly ? 'Hủy lịch hẹn khám?' : 'Hủy lịch khám', style: const TextStyle(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hủy lịch khám', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(isElderly 
-                ? 'Bác có chắc chắn muốn hủy lịch hẹn khám tại ${item.hospital} không ạ?'
-                : 'Bác có chắc muốn hủy lịch khám tại ${item.hospital}?'),
+            Text('Bạn có chắc muốn hủy lịch khám tại ${item.hospital}?'),
             const SizedBox(height: 16),
             TextField(
               controller: ctrl,
-              style: TextStyle(fontSize: isElderly ? 15 : 14),
+              style: TextStyle(fontSize: 14),
               decoration: InputDecoration(
-                hintText: isElderly ? 'Nhập lý do bác muốn hủy' : 'Lý do hủy (không bắt buộc)',
+                hintText: 'Lý do hủy (không bắt buộc)',
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
@@ -409,12 +402,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(isElderly ? 'Quay lại' : 'Đóng', style: const TextStyle(color: Color(0xFF64748B))),
+            child: Text('Đóng', style: const TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isElderly ? 12 : 10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
               setState(() {
@@ -429,7 +422,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                 ),
               );
             },
-            child: Text(isElderly ? 'Xác nhận hủy lịch' : 'Xác nhận hủy', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text('Xác nhận hủy', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -437,9 +430,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   void _showResultSheet(AppointmentItem item) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final themeBg = isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F9FF);
+    final themeColor = const Color(0xFF0EA5E9);
+    final themeBg = const Color(0xFFF0F9FF);
 
     final ctrl = TextEditingController(text: item.result);
     showModalBottomSheet(
@@ -449,7 +441,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
       builder: (ctx) => Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(isElderly ? 32 : 28)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
@@ -472,23 +464,21 @@ class _AppointmentScreenState extends State<AppointmentScreen>
               ),
             ),
             const SizedBox(height: 20),
-            Text(isElderly ? 'Ghi kết quả khám của bác' : 'Ghi kết quả khám',
-                style: TextStyle(fontSize: isElderly ? 20 : 18, fontWeight: FontWeight.bold)),
+            Text('Ghi kết quả khám',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Text(item.hospital,
                 style: TextStyle(
-                    fontSize: isElderly ? 14 : 13, color: const Color(0xFF64748B))),
+                    fontSize: 13, color: const Color(0xFF64748B))),
             const SizedBox(height: 16),
             TextField(
               controller: ctrl,
               maxLines: 5,
-              style: TextStyle(fontSize: isElderly ? 16 : 14),
+              style: TextStyle(fontSize: 14),
               decoration: InputDecoration(
-                hintText: isElderly 
-                    ? 'Nhập đơn thuốc hoặc dặn dò của bác sĩ...'
-                    : 'Nhập chẩn đoán, kết quả xét nghiệm, đơn thuốc mới...',
+                hintText: 'Nhập chẩn đoán, kết quả xét nghiệm, đơn thuốc mới...',
                 hintStyle:
-                    TextStyle(color: const Color(0xFFCBD5E1), fontSize: isElderly ? 14 : 13),
+                    TextStyle(color: const Color(0xFFCBD5E1), fontSize: 13),
                 filled: true,
                 fillColor: themeBg,
                 border: OutlineInputBorder(
@@ -505,13 +495,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              height: isElderly ? 56 : 52,
+              height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(isElderly ? 16 : 12)),
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 onPressed: () {
@@ -527,7 +517,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     ),
                   );
                 },
-                child: Text(isElderly ? 'Lưu kết quả khám của bác' : 'Lưu kết quả',
+                child: Text('Lưu kết quả',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
@@ -544,9 +534,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    final isElderly = ApiService.currentRole == 'elderly';
     return Scaffold(
-      backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F9FF),
+      backgroundColor: const Color(0xFFF0F9FF),
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
@@ -564,7 +553,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
           ],
         ),
       ),
-      floatingActionButton: ApiService.currentRole == 'elderly' ? null : FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSheet,
         backgroundColor: const Color(0xFF0EA5E9),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
@@ -577,10 +566,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _buildHeader() {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final headerGradient = isElderly
-        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
-        : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
+    const headerGradient = [Color(0xFF0284C7), Color(0xFF38BDF8)];
 
     return Container(
       decoration: widget.isEmbedded 
@@ -597,7 +583,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             ),
             boxShadow: [
               BoxShadow(
-                  color: isElderly ? const Color(0x220F605A) : const Color(0x400EA5E9), blurRadius: 20, offset: const Offset(0, 8)),
+                  color: const Color(0x400EA5E9), blurRadius: 20, offset: const Offset(0, 8)),
             ],
           ),
       padding: EdgeInsets.fromLTRB(4, widget.isEmbedded ? 16 : 52, 20, 0),
@@ -615,13 +601,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(isElderly ? 'Lịch khám của bác' : 'Lịch Khám Bệnh',
+                      Text('Lịch Khám Bệnh',
                           style: TextStyle(
-                              fontSize: isElderly ? 24 : 22,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
-                      Text(isElderly ? 'Xem lịch khám và kết quả tái khám định kỳ' : 'Quản lý lịch tái khám của bác',
-                          style: TextStyle(fontSize: isElderly ? 15 : 13, color: Colors.white70)),
+                      Text('Quản lý lịch tái khám của bác',
+                          style: TextStyle(fontSize: 13, color: Colors.white70)),
                     ],
                   ),
                 ),
@@ -645,7 +631,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
               controller: _tabController,
               indicator: widget.isEmbedded
                   ? BoxDecoration(
-                      color: isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9),
+                      color: const Color(0xFF0EA5E9),
                       borderRadius: BorderRadius.circular(8),
                     )
                   : null,
@@ -654,7 +640,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
               labelColor: widget.isEmbedded ? Colors.white : Colors.white,
               unselectedLabelColor: widget.isEmbedded ? const Color(0xFF64748B) : Colors.white60,
               labelStyle:
-                  TextStyle(fontWeight: FontWeight.bold, fontSize: isElderly ? 14 : 13),
+                  TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
               tabs: [
@@ -707,9 +693,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _emptyState(String title, String sub, IconData icon) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final themeBg = isElderly ? const Color(0xFFEBFDFB) : const Color(0xFFEFF6FF);
+    final themeColor = const Color(0xFF0EA5E9);
+    final themeBg = const Color(0xFFEFF6FF);
 
     return Center(
       child: Padding(
@@ -729,13 +714,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
             const SizedBox(height: 16),
             Text(title,
                 style: TextStyle(
-                    fontSize: isElderly ? 18 : 16,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF1E293B))),
             const SizedBox(height: 8),
             Text(sub,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: isElderly ? 14 : 13, color: const Color(0xFF64748B))),
+                style: TextStyle(fontSize: 13, color: const Color(0xFF64748B))),
           ],
         ),
       ),
@@ -743,7 +728,6 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _upcomingCard(AppointmentItem item) {
-    final isElderly = ApiService.currentRole == 'elderly';
     final days = item.date.difference(DateTime.now()).inDays;
     final Color urgentColor;
     final Color urgentBg;
@@ -758,8 +742,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
       urgentBg = const Color(0xFFFEF3C7);
       urgentLabel = 'Còn $days ngày';
     } else {
-      urgentColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-      urgentBg = isElderly ? const Color(0xFFEBFDFB) : const Color(0xFFEFF6FF);
+      urgentColor = const Color(0xFF0EA5E9);
+      urgentBg = const Color(0xFFEFF6FF);
       urgentLabel = 'Còn $days ngày';
     }
 
@@ -767,7 +751,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isElderly ? 24 : 20),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -778,19 +762,19 @@ class _AppointmentScreenState extends State<AppointmentScreen>
       child: Column(
         children: [
           Padding(
-            padding: EdgeInsets.all(isElderly ? 18 : 16),
+            padding: EdgeInsets.all(16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: isElderly ? 52 : 48,
-                  height: isElderly ? 52 : 48,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: urgentBg,
-                    borderRadius: BorderRadius.circular(isElderly ? 16 : 14),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(Icons.local_hospital_rounded,
-                      color: urgentColor, size: isElderly ? 26 : 24),
+                      color: urgentColor, size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -799,18 +783,18 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     children: [
                       Text(item.hospital,
                           style: TextStyle(
-                              fontSize: isElderly ? 18 : 15,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1E293B))),
                       const SizedBox(height: 4),
                       Text('${item.doctor} · ${item.specialty}',
                           style: TextStyle(
-                              fontSize: isElderly ? 15.5 : 13, color: const Color(0xFF64748B))),
+                              fontSize: 13, color: const Color(0xFF64748B))),
                       if (item.notes.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(item.notes,
                             style: TextStyle(
-                                fontSize: isElderly ? 15 : 12, color: const Color(0xFF94A3B8)),
+                                fontSize: 12, color: const Color(0xFF94A3B8)),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis),
                       ],
@@ -826,7 +810,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   ),
                   child: Text(urgentLabel,
                       style: TextStyle(
-                          fontSize: isElderly ? 12.5 : 11,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: urgentColor)),
                 ),
@@ -836,12 +820,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
           Container(
             width: double.infinity,
             padding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: isElderly ? 14 : 12),
+                EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(isElderly ? 24 : 20),
-                bottomRight: Radius.circular(isElderly ? 24 : 20),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               ),
             ),
             child: Wrap(
@@ -854,25 +838,25 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.calendar_today_rounded,
-                        size: isElderly ? 18 : 14, color: const Color(0xFF64748B)),
+                        size: 14, color: const Color(0xFF64748B)),
                     const SizedBox(width: 6),
                     Text(_fmtDate(item.date),
                         style: TextStyle(
-                            fontSize: isElderly ? 16 : 13,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF475569))),
                     const SizedBox(width: 16),
                     Icon(Icons.access_time_rounded,
-                        size: isElderly ? 18 : 14, color: const Color(0xFF64748B)),
+                        size: 14, color: const Color(0xFF64748B)),
                     const SizedBox(width: 6),
                     Text(item.time,
                         style: TextStyle(
-                            fontSize: isElderly ? 16 : 13,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF475569))),
                   ],
                 ),
-                if (ApiService.currentRole != 'elderly')
+                if (true)
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -919,12 +903,11 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _cancelledCard(AppointmentItem item) {
-    final isElderly = ApiService.currentRole == 'elderly';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isElderly ? 24 : 20),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -933,18 +916,18 @@ class _AppointmentScreenState extends State<AppointmentScreen>
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(isElderly ? 18 : 16),
+        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  width: isElderly ? 48 : 44,
-                  height: isElderly ? 48 : 44,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.block_rounded,
                       color: Color(0xFFEF4444), size: 22),
@@ -956,12 +939,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     children: [
                       Text(item.hospital,
                           style: TextStyle(
-                              fontSize: isElderly ? 18 : 14,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
                           style: TextStyle(
-                              fontSize: isElderly ? 15 : 12, color: const Color(0xFF64748B))),
+                              fontSize: 12, color: const Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -993,13 +976,13 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   children: [
                     Text('Lý do hủy:',
                         style: TextStyle(
-                            fontSize: isElderly ? 13 : 11,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF64748B))),
                     const SizedBox(height: 4),
                     Text(item.cancelReason,
                         style: TextStyle(
-                            fontSize: isElderly ? 16 : 13, color: const Color(0xFF475569))),
+                            fontSize: 13, color: const Color(0xFF475569))),
                   ],
                 ),
               ),
@@ -1011,16 +994,15 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Widget _completedCard(AppointmentItem item) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor = isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final themeBg = isElderly ? const Color(0xFFEBFDFB) : const Color(0xFFF0F9FF);
-    final themeBorder = isElderly ? const Color(0xFF99F6E4) : const Color(0xFFBAE6FD);
+    final themeColor = const Color(0xFF0EA5E9);
+    final themeBg = const Color(0xFFF0F9FF);
+    final themeBorder = const Color(0xFFBAE6FD);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isElderly ? 24 : 20),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -1029,18 +1011,18 @@ class _AppointmentScreenState extends State<AppointmentScreen>
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(isElderly ? 18 : 16),
+        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Container(
-                  width: isElderly ? 48 : 44,
-                  height: isElderly ? 48 : 44,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: const Color(0xFFDCFCE7),
-                    borderRadius: BorderRadius.circular(isElderly ? 14 : 12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.check_circle_rounded,
                       color: Color(0xFF16A34A), size: 22),
@@ -1052,12 +1034,12 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                     children: [
                       Text(item.hospital,
                           style: TextStyle(
-                              fontSize: isElderly ? 18 : 14,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF1E293B))),
                       Text('${item.doctor} · ${_fmtDate(item.date)}',
                           style: TextStyle(
-                              fontSize: isElderly ? 15 : 12, color: const Color(0xFF64748B))),
+                              fontSize: 12, color: const Color(0xFF64748B))),
                     ],
                   ),
                 ),
@@ -1091,20 +1073,20 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                   children: [
                     Text('Kết quả khám:',
                         style: TextStyle(
-                            fontSize: isElderly ? 13 : 11,
+                            fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: themeColor)),
                     const SizedBox(height: 4),
                     Text(item.result,
                         style: TextStyle(
-                            fontSize: isElderly ? 15 : 13,
+                            fontSize: 13,
                             color: const Color(0xFF1E293B),
                             height: 1.4)),
                   ],
                 ),
               ),
             ],
-            if (ApiService.currentRole != 'elderly') ...[
+            if (true) ...[
               const SizedBox(height: 10),
               GestureDetector(
                 onTap: () => _showResultSheet(item),

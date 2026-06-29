@@ -1,29 +1,25 @@
 import 'package:flutter/material.dart';
-import 'personal_profile_screen.dart';
-import 'login_screen.dart';
-import 'change_password_screen.dart';
-import 'manage_profiles_screen.dart';
-import 'admin_backup_screen.dart';
-import 'health_dashboard_screen.dart';
-import 'add_elderly_screen.dart';
-import 'elderly_list_screen.dart';
-import '../utils/api_service.dart';
+import 'elderly_emergency_contacts_screen.dart';
+import '../login_screen.dart';
+import 'elderly_change_password_screen.dart';
+import 'elderly_manage_profiles_screen.dart';
+import '../../utils/api_service.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+class ElderlyProfileScreen extends StatefulWidget {
+  const ElderlyProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ElderlyProfileScreen> createState() => _ElderlyProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
   // ─── SOS Bottom Sheet ───────────────────────────────────────────────────────
   void _showSOSSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => const _SOSBottomSheet(),
+      builder: (_) => const _ElderlySOSBottomSheet(),
     );
   }
 
@@ -33,7 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 32),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -41,28 +37,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEB),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: const Icon(Icons.logout_rounded,
-                    color: Color(0xFFC81E1E), size: 28),
+                    color: Color(0xFFC81E1E), size: 32),
               ),
               const SizedBox(height: 16),
               const Text(
-                'Đăng xuất?',
+                'Đăng xuất tài khoản?',
                 style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E293B)),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Bạn có chắc muốn thoát khỏi tài khoản?',
+                'Bác có chắc chắn muốn đăng xuất khỏi tài khoản không ạ?',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                style: TextStyle(fontSize: 15, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 24),
               Row(
@@ -72,14 +68,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onPressed: () => Navigator.of(ctx).pop(),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Hủy',
+                      child: const Text('Quay lại',
                           style: TextStyle(
                               color: Color(0xFF64748B),
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600)),
                     ),
                   ),
@@ -96,7 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFC81E1E),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
@@ -104,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: const Text('Đăng xuất',
                           style: TextStyle(
                               color: Colors.white,
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.bold)),
                     ),
                   ),
@@ -124,61 +120,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: const Color(0xFFF3F7FA),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildElderlyHeader(),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSOSButton(),
+                  _buildElderlySOSButton(),
                   const SizedBox(height: 24),
 
-                  _sectionLabel('HỒ SƠ & THÔNG TIN CÁ NHÂN'),
+                  _sectionLabel('LIÊN LẠC & AN TOÀN'),
                   const SizedBox(height: 8),
                   _menuGroup([
                     _MenuItem(
-                      icon: Icons.person_outline_rounded,
-                      iconBg: const Color(0xFFEBF3FF),
-                      iconColor: const Color(0xFF0EA5E9),
-                      title: 'Hồ sơ cá nhân',
-                      subtitle: 'Tên, ngày sinh, địa chỉ, ảnh đại diện',
-                      onTap: () => _navigate(const PersonalProfileScreen()),
-                    ),
-                    _MenuItem(
-                      icon: Icons.health_and_safety_outlined,
-                      iconBg: const Color(0xFFE6FBF3),
-                      iconColor: const Color(0xFF16A34A),
-                      title: 'Hồ sơ sức khỏe',
-                      subtitle: 'Tổng quan, toa thuốc, giấy tờ và lịch khám',
-                      onTap: () => _navigate(const HealthDashboardScreen()),
-                    ),
-                  ]),
-                  const SizedBox(height: 24),
-
-                  // ── QUẢN LÝ NGƯỜI CAO TUỔI (caregiver only)
-                  _sectionLabel('QUẢN LÝ NGƯỜI CAO TUỔI'),
-                  const SizedBox(height: 8),
-                  _menuGroup([
-                    _MenuItem(
-                      icon: Icons.person_add_rounded,
-                      iconBg: const Color(0xFFF3E8FF),
-                      iconColor: const Color(0xFF7C3AED),
-                      title: 'Thêm người cao tuổi',
-                      subtitle: 'Tạo hồ sơ mới & sinh mã QR đăng nhập',
-                      onTap: () => _navigate(const AddElderlyScreen()),
-                    ),
-                    _MenuItem(
-                      icon: Icons.qr_code_scanner_rounded,
-                      iconBg: const Color(0xFFF3E8FF),
-                      iconColor: const Color(0xFF7C3AED),
-                      title: 'Xem danh sách người cao tuổi',
-                      subtitle: 'Quản lý, xem và sửa hồ sơ đã tạo',
-                      onTap: () => _navigate(const ElderlyListScreen()),
+                      icon: Icons.contact_phone_outlined,
+                      iconBg: const Color(0xFFFFEBEB),
+                      iconColor: const Color(0xFFDC2626),
+                      title: 'Người liên hệ khẩn cấp',
+                      subtitle: 'Số điện thoại của người thân khi cần hỗ trợ',
+                      onTap: () => _navigate(const ElderlyEmergencyContactsScreen()),
                     ),
                   ]),
                   const SizedBox(height: 24),
@@ -190,39 +154,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.lock_outline_rounded,
                       iconBg: const Color(0xFFF3EEFF),
                       iconColor: const Color(0xFF7C3AED),
-                      title: 'Đổi mật khẩu',
-                      subtitle: 'Bảo mật tài khoản của bạn',
-                      onTap: () => _navigate(const ChangePasswordScreen()),
+                      title: 'Đổi mật khẩu bảo mật',
+                      subtitle: 'Đổi mật khẩu đăng nhập của bác',
+                      onTap: () => _navigate(const ElderlyChangePasswordScreen()),
                     ),
                   ]),
 
-                  if (ApiService.currentRole == 'admin') ...[
-                    const SizedBox(height: 24),
-                    _sectionLabel('QUẢN TRỊ HỆ THỐNG'),
-                    const SizedBox(height: 8),
-                    _menuGroup([
-                      _MenuItem(
-                        icon: Icons.switch_account_rounded,
-                        iconBg: const Color(0xFFE0F2FE),
-                        iconColor: const Color(0xFF0284C7),
-                        title: 'Quản lý người dùng',
-                        subtitle: 'Thêm, xóa, phân quyền (F02)',
-                        onTap: () => _navigate(const ManageProfilesScreen()),
-                      ),
-                      _MenuItem(
-                        icon: Icons.storage_rounded,
-                        iconBg: const Color(0xFFF3EEFF),
-                        iconColor: const Color(0xFF7C3AED),
-                        title: 'Sao lưu & Phục hồi CSDL',
-                        subtitle: 'Xuất / nhập dữ liệu toàn bộ hệ thống',
-                        onTap: () => _navigate(const AdminBackupScreen()),
-                      ),
-                    ]),
-                  ],
-
                   const SizedBox(height: 16),
-                  _buildLogoutButton(),
-                  const SizedBox(height: 24),
+                  _buildElderlyLogoutButton(),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -232,20 +172,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ─── Header ─────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  // ─── Elderly Header ─────────────────────────────────────────────────────────
+  Widget _buildElderlyHeader() {
     final displayName = ApiService.currentFullname.isNotEmpty
         ? ApiService.currentFullname
         : ApiService.currentUsername;
-    final avatar = displayName.isNotEmpty ? displayName.substring(0, displayName.length >= 2 ? 2 : 1).toUpperCase() : 'ND';
-    final roleText = ApiService.currentRole == 'admin' ? 'Quản trị viên' : 'Người chăm sóc';
-    final phoneText = ApiService.currentPhone.isNotEmpty ? ApiService.currentPhone : ApiService.currentUsername;
+    final avatar = displayName.isNotEmpty
+        ? displayName.substring(0, displayName.length >= 2 ? 2 : 1).toUpperCase()
+        : 'ND';
+    final phoneText = ApiService.currentPhone.isNotEmpty
+        ? ApiService.currentPhone
+        : ApiService.currentUsername;
 
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+          colors: [Color(0xFF0F605A), Color(0xFF1B8E85)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -255,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         boxShadow: [
           BoxShadow(
-              color: Color(0x332563EB),
+              color: Color(0x220F605A),
               blurRadius: 16,
               offset: Offset(0, 8))
         ],
@@ -264,71 +207,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Hồ sơ của bạn',
+          const Text('Chào bác,',
               style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 18,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500)),
+          const SizedBox(height: 2),
+          Text(displayName,
+              style: const TextStyle(
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
-          const SizedBox(height: 4),
-          const Text('Hệ thống theo dõi sức khỏe người cao tuổi',
-              style: TextStyle(fontSize: 13, color: Colors.white70)),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
+              color: Colors.white.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white.withValues(alpha: 0.25),
+                    shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(avatar,
                       style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white)),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(displayName,
                           style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white)),
-                      const SizedBox(height: 3),
-                      Text('$phoneText · $roleText',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.white70),
+                      const SizedBox(height: 4),
+                      Text('SĐT: $phoneText · Tài khoản bác',
+                          style: const TextStyle(
+                              fontSize: 15, color: Colors.white70),
                           overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.25),
+                          color: const Color(0xFFEBF3FF).withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.verified_outlined,
-                                color: Colors.white, size: 13),
+                                color: Colors.white, size: 14),
                             SizedBox(width: 4),
-                            Text('Đã xác minh',
+                            Text('Đã bảo mật',
                                 style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600)),
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -339,10 +285,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const ManageProfilesScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const ElderlyManageProfilesScreen()),
                     );
                   },
-                  icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white),
+                  icon: const Icon(Icons.swap_horiz_rounded,
+                      color: Colors.white, size: 28),
                   tooltip: 'Chuyển đổi hồ sơ',
                 ),
               ],
@@ -353,42 +301,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ─── SOS Button ─────────────────────────────────────────────────────────────
-  Widget _buildSOSButton() {
-    return Material(
-      color: const Color(0xFFC81E1E),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: _showSOSSheet,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.phone_callback_rounded,
-                  color: Colors.white, size: 22),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SOS — Gọi người thân',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    SizedBox(height: 2),
-                    Text('Gọi ngay cho người liên hệ khẩn cấp',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.white70)),
-                  ],
+  // ─── Elderly SOS Button ─────────────────────────────────────────────────────
+  Widget _buildElderlySOSButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFDC2626),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: _showSOSSheet,
+          child: Container(
+            width: double.infinity,
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Row(
+              children: [
+                const Icon(Icons.phone_callback_rounded,
+                    color: Colors.white, size: 26),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('GỌI KHẨN CẤP (SOS)',
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5)),
+                      SizedBox(height: 3),
+                      Text('Nhấn vào đây để gọi nhanh cho con cháu',
+                          style: TextStyle(
+                              fontSize: 14, color: Colors.white70)),
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white70, size: 20),
-            ],
+                Icon(Icons.arrow_forward_ios_rounded,
+                    color: Colors.white.withValues(alpha: 0.7), size: 16),
+              ],
+            ),
           ),
         ),
       ),
@@ -399,7 +361,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _sectionLabel(String label) {
     return Text(label,
         style: const TextStyle(
-            fontSize: 11.5,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
             color: Colors.grey,
             letterSpacing: 0.6));
@@ -413,7 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 3))
         ],
@@ -450,13 +412,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               Text(item.title,
                                   style: const TextStyle(
-                                      fontSize: 14.5,
+                                      fontSize: 16.5,
                                       fontWeight: FontWeight.w600,
                                       color: Color(0xFF1E293B))),
                               const SizedBox(height: 2),
                               Text(item.subtitle,
                                   style: const TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 14,
                                       color: Color(0xFF94A3B8))),
                             ],
                           ),
@@ -478,60 +440,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ─── Logout Button ───────────────────────────────────────────────────────────
-  Widget _buildLogoutButton() {
+  // ─── Elderly Logout Button ──────────────────────────────────────────────────
+  Widget _buildElderlyLogoutButton() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3))
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
         ],
+        border: Border.all(color: const Color(0xFFFFEBEB), width: 1.5),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           onTap: _showLogoutDialog,
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFEBEB),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
                   child: const Icon(Icons.logout_rounded,
-                      color: Color(0xFFC81E1E), size: 22),
+                      color: Color(0xFFDC2626), size: 24),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
+                const SizedBox(width: 16),
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Đăng xuất',
+                    children: [
+                      Text('Đăng xuất tài khoản',
                           style: TextStyle(
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFC81E1E))),
+                              fontSize: 17.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFDC2626))),
                       SizedBox(height: 2),
-                      Text('Thoát khỏi tài khoản hiện tại',
+                      Text('Thoát khỏi ứng dụng',
                           style: TextStyle(
-                              fontSize: 12, color: Color(0xFF94A3B8))),
+                              fontSize: 14, color: Color(0xFF94A3B8))),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: Color(0xFFCBD5E1), size: 20),
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFFCBD5E1), size: 14),
               ],
             ),
           ),
@@ -541,9 +503,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// ─── SOS Bottom Sheet ─────────────────────────────────────────────────────────
-class _SOSBottomSheet extends StatelessWidget {
-  const _SOSBottomSheet();
+// ─── Elderly SOS Bottom Sheet ─────────────────────────────────────────────────
+class _ElderlySOSBottomSheet extends StatelessWidget {
+  const _ElderlySOSBottomSheet();
 
   static const _contacts = [
     _SOSContact(
@@ -568,9 +530,10 @@ class _SOSBottomSheet extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+          20, 0, 20, 32 + MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -587,28 +550,28 @@ class _SOSBottomSheet extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFEBEB),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.phone_callback_rounded,
-                    color: Color(0xFFC81E1E), size: 22),
+                    color: Color(0xFFC81E1E), size: 24),
               ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('SOS — Gọi người thân',
+                    Text('Gọi điện khẩn cấp cho con cháu',
                         style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1E293B))),
-                    Text('Chọn người để gọi ngay',
-                        style:
-                            TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                    Text('Bác chọn người muốn gọi điện dưới đây',
+                        style: TextStyle(
+                            fontSize: 13, color: Color(0xFF94A3B8))),
                   ],
                 ),
               ),
@@ -624,17 +587,17 @@ class _SOSBottomSheet extends StatelessWidget {
   Widget _buildContactRow(BuildContext context, _SOSContact c) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               color: c.isEmergency
                   ? const Color(0xFFFFEBEB)
@@ -645,9 +608,11 @@ class _SOSBottomSheet extends StatelessWidget {
             child: Text(
               c.isEmergency ? '🚑' : c.name[0],
               style: TextStyle(
-                fontSize: c.isEmergency ? 20 : 16,
+                fontSize: c.isEmergency ? 22 : 18,
                 fontWeight: FontWeight.bold,
-                color: c.isEmergency ? const Color(0xFFC81E1E) : const Color(0xFF0F605A),
+                color: c.isEmergency
+                    ? const Color(0xFFC81E1E)
+                    : const Color(0xFF0F605A),
               ),
             ),
           ),
@@ -658,13 +623,13 @@ class _SOSBottomSheet extends StatelessWidget {
               children: [
                 Text(c.name,
                     style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B))),
                 const SizedBox(height: 2),
                 Text('${c.role} · ${c.phone}',
                     style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B))),
+                        fontSize: 13.5, color: Color(0xFF64748B))),
               ],
             ),
           ),
@@ -678,14 +643,14 @@ class _SOSBottomSheet extends StatelessWidget {
               ));
             },
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: const Color(0xFF16A34A),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.phone_rounded,
-                  color: Colors.white, size: 20),
+                  color: Colors.white, size: 22),
             ),
           ),
         ],

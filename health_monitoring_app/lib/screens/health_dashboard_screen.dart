@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'medical_profile_screen.dart';
 import 'medical_documents_screen.dart';
 import 'appointment_screen.dart';
-import '../utils/api_service.dart';
 
 class HealthDashboardScreen extends StatefulWidget {
   const HealthDashboardScreen({super.key});
@@ -29,22 +28,17 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor =
-        isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final gradientColors = isElderly
-        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
-        : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
+    const themeColor = Color(0xFF0EA5E9);
+    const gradientColors = [Color(0xFF0284C7), Color(0xFF38BDF8)];
 
     return Scaffold(
-      backgroundColor:
-          isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
+      backgroundColor: const Color(0xFFF0F4FB),
       body: Column(
         children: [
           // ── Header & TabBar ────────────────────────────────────────────────
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: gradientColors,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,

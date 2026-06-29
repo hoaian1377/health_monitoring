@@ -5,7 +5,10 @@ import 'screens/history_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/notifications_screen.dart';
+// ── Elderly-specific screens ────────────────────────────────────────────────
+import 'screens/elderly/elderly_profile_screen.dart';
+import 'screens/elderly/elderly_notifications_screen.dart';
+import 'screens/elderly/elderly_checklist_screen.dart';
 import 'utils/api_service.dart';
 
 void main() {
@@ -54,13 +57,14 @@ class _MainNavigatorState extends State<MainNavigator> {
 
   Widget _buildBody() {
     if (ApiService.currentRole == 'elderly') {
+      // Elderly role uses dedicated screens — no shared caregiver screens
       return IndexedStack(
         index: _currentIndex,
         children: const [
-          HomeScreen(),
-          MedicineManagementScreen(),
-          NotificationsScreen(),
-          ProfileScreen(),
+          HomeScreen(),           // routes to ElderlyHomeScreen internally
+          ElderlyChecklistScreen(),
+          ElderlyNotificationsScreen(),
+          ElderlyProfileScreen(),
         ],
       );
     } else {
@@ -86,9 +90,9 @@ class _MainNavigatorState extends State<MainNavigator> {
           label: 'Trang chủ',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.medication_outlined),
-          activeIcon: Icon(Icons.medication_rounded),
-          label: 'Thuốc',
+          icon: Icon(Icons.checklist_rounded),
+          activeIcon: Icon(Icons.checklist_rounded),
+          label: 'Việc cần làm',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.notifications_outlined),

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
-import '../appointment_screen.dart';
+import 'elderly_appointment_screen.dart';
 
 class ElderlyHomeScreen extends StatefulWidget {
   const ElderlyHomeScreen({super.key});
@@ -841,7 +841,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const AppointmentScreen()),
+                  MaterialPageRoute(builder: (_) => const ElderlyAppointmentScreen()),
                 );
               },
               child: const Text(

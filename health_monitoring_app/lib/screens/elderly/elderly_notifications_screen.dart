@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
+
+class ElderlyNotificationsScreen extends StatefulWidget {
+  const ElderlyNotificationsScreen({super.key});
+
+  @override
+  State<ElderlyNotificationsScreen> createState() =>
+      _ElderlyNotificationsScreenState();
+}
 
 class NotificationItem {
   final String id;
   final String title;
   final String description;
   final String time;
-  final String dateGroup; // 'Hôm nay' | 'Hôm qua'
+  final String dateGroup;
   final IconData icon;
   final Color themeColor;
   final Color bgColor;
@@ -27,16 +35,10 @@ class NotificationItem {
   });
 }
 
-class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
-
-  @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
-}
-
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _ElderlyNotificationsScreenState
+    extends State<ElderlyNotificationsScreen> {
   List<NotificationItem> _notifications = [];
-  String _filter = 'all'; // 'all' | 'unread'
+  String _filter = 'all';
   bool _isLoading = true;
 
   @override
@@ -50,33 +52,38 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final data = await ApiService.getNotifications();
       List<NotificationItem> loaded = [];
       for (var item in data) {
-        final notifDetail = item['details'] != null && item['details'].isNotEmpty ? item['details'][0] : null;
+        final notifDetail = item['details'] != null && item['details'].isNotEmpty
+            ? item['details'][0]
+            : null;
         bool isRead = notifDetail != null ? notifDetail['is_read'] : false;
-        String id = notifDetail != null ? notifDetail['notification_detailid'].toString() : item['notificationid'].toString();
-        
+        String id = notifDetail != null
+            ? notifDetail['notification_detailid'].toString()
+            : item['notificationid'].toString();
+
         String title = item['title'] ?? 'Thông báo';
         String desc = item['message'] ?? '';
-        
+
         IconData icon = Icons.notifications_active_rounded;
-        Color themeColor = const Color(0xFF0284C7);
-        Color bgColor = const Color(0xFFE0F2FE);
-        
+        Color themeColor = const Color(0xFF0F605A);
+        Color bgColor = const Color(0xFFE6FBF3);
+
         if (title.toLowerCase().contains('khám')) {
           icon = Icons.calendar_month_rounded;
           themeColor = const Color(0xFFD97706);
           bgColor = const Color(0xFFFEF3C7);
-        } else if (title.toLowerCase().contains('thuốc') || title.toLowerCase().contains('nhắc nhở')) {
+        } else if (title.toLowerCase().contains('thuốc') ||
+            title.toLowerCase().contains('nhắc nhở')) {
           icon = Icons.medication_rounded;
           themeColor = const Color(0xFFE11D48);
           bgColor = const Color(0xFFFFE4E6);
         }
 
-        // Simple time formatting
         String timeStr = '';
         if (item['created_at'] != null) {
           try {
             final dt = DateTime.parse(item['created_at']).toLocal();
-            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}, ${dt.day}/${dt.month}';
+            timeStr =
+                '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}, ${dt.day}/${dt.month}';
           } catch (_) {}
         }
 
@@ -99,7 +106,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
       }
     } catch (e) {
-      print("ERROR LOADING NOTIFICATIONS: $e");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -116,7 +122,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        backgroundColor: Color(0xFF0EA5E9),
+        backgroundColor: Color(0xFF0F605A),
         content: Text('Đã đánh dấu đọc tất cả thông báo.'),
         duration: Duration(milliseconds: 1000),
       ),
@@ -128,20 +134,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    // Lọc thông báo
+
     final filteredList = _notifications.where((item) {
       if (_filter == 'unread') return !item.isRead;
       return true;
     }).toList();
 
-    // Phân nhóm thông báo theo ngày
-    final todayNotifications = filteredList.where((item) => item.dateGroup == 'Hôm nay' || item.dateGroup == 'Gần đây').toList();
-    final yesterdayNotifications = filteredList.where((item) => item.dateGroup == 'Hôm qua').toList();
+    final todayNotifications = filteredList
+        .where((item) =>
+            item.dateGroup == 'Hôm nay' || item.dateGroup == 'Gần đây')
+        .toList();
+    final yesterdayNotifications =
+        filteredList.where((item) => item.dateGroup == 'Hôm qua').toList();
 
-    final unreadCount = _notifications.where((item) => !item.isRead).length;
+    final unreadCount =
+        _notifications.where((item) => !item.isRead).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FB),
+      backgroundColor: const Color(0xFFF3F7FA),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -149,7 +159,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             floating: true,
             title: const Text(
               'Thông Báo Sức Khỏe',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B)),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: Color(0xFF1E293B)),
             ),
             backgroundColor: Colors.white,
             elevation: 0,
@@ -159,10 +172,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (unreadCount > 0)
                 TextButton.icon(
                   onPressed: _markAllAsRead,
-                  icon: const Icon(Icons.done_all_rounded, size: 18, color: Color(0xFF0EA5E9)),
+                  icon: const Icon(Icons.done_all_rounded,
+                      size: 20, color: Color(0xFF0F605A)),
                   label: const Text(
                     'Đọc tất cả',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0EA5E9), fontSize: 14),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F605A),
+                        fontSize: 16),
                   ),
                 ),
             ],
@@ -191,13 +208,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       if (todayNotifications.isNotEmpty) ...[
                         _buildDateHeader('Hôm nay'),
                         const SizedBox(height: 10),
-                        ...todayNotifications.map((item) => _buildNotificationCard(item)),
+                        ...todayNotifications
+                            .map((item) => _buildNotificationCard(item)),
                         const SizedBox(height: 16),
                       ],
                       if (yesterdayNotifications.isNotEmpty) ...[
                         _buildDateHeader('Hôm qua'),
                         const SizedBox(height: 10),
-                        ...yesterdayNotifications.map((item) => _buildNotificationCard(item)),
+                        ...yesterdayNotifications
+                            .map((item) => _buildNotificationCard(item)),
                       ],
                     ]),
                   ),
@@ -220,7 +239,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
+          color: isSelected ? const Color(0xFF0F605A) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
@@ -229,7 +248,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
+                color: const Color(0xFF0F605A).withValues(alpha: 0.15),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -238,7 +257,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: FontWeight.bold,
             color: isSelected ? Colors.white : const Color(0xFF475569),
           ),
@@ -254,7 +273,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           width: 4,
           height: 16,
           decoration: BoxDecoration(
-            color: const Color(0xFF0EA5E9),
+            color: const Color(0xFF1B8E85),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -262,7 +281,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Text(
           text,
           style: const TextStyle(
-            fontSize: 15,
+            fontSize: 17,
             fontWeight: FontWeight.bold,
             color: Color(0xFF475569),
           ),
@@ -288,7 +307,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             )
           ],
           border: Border.all(
-            color: item.isRead ? Colors.transparent : item.themeColor.withValues(alpha: 0.15),
+            color: item.isRead
+                ? Colors.transparent
+                : item.themeColor.withValues(alpha: 0.15),
             width: 1.5,
           ),
         ),
@@ -307,30 +328,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               },
               child: Row(
                 children: [
-                  // Dải màu viền trái thể hiện phân loại
                   Container(
                     width: 6,
-                    height: 100, // Chiều cao tự giãn theo nội dung
+                    height: 100,
                     color: item.themeColor,
                   ),
                   const SizedBox(width: 14),
-
-                  // Icon đại diện
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: item.isRead ? const Color(0xFFF1F5F9) : item.bgColor,
+                      color: item.isRead
+                          ? const Color(0xFFF1F5F9)
+                          : item.bgColor,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       item.icon,
-                      color: item.isRead ? Colors.grey : item.themeColor,
-                      size: 24,
+                      color:
+                          item.isRead ? Colors.grey : item.themeColor,
+                      size: 26,
                     ),
                   ),
                   const SizedBox(width: 14),
-
-                  // Nội dung text
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -340,7 +359,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // Chấm đỏ chỉ thị "Chưa đọc"
                               if (!item.isRead) ...[
                                 Container(
                                   width: 8,
@@ -357,8 +375,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   item.title,
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: item.isRead ? const Color(0xFF64748B) : const Color(0xFF1E293B),
+                                    fontSize: 18,
+                                    color: item.isRead
+                                        ? const Color(0xFF64748B)
+                                        : const Color(0xFF1E293B),
                                   ),
                                 ),
                               ),
@@ -368,8 +388,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(
                             item.description,
                             style: TextStyle(
-                              fontSize: 14,
-                              color: item.isRead ? Colors.grey.shade400 : const Color(0xFF475569),
+                              fontSize: 16,
+                              color: item.isRead
+                                  ? Colors.grey.shade400
+                                  : const Color(0xFF475569),
                               height: 1.35,
                             ),
                           ),
@@ -377,9 +399,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           Text(
                             item.time,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: item.isRead ? Colors.grey.shade300 : const Color(0xFF94A3B8),
+                              color: item.isRead
+                                  ? Colors.grey.shade300
+                                  : const Color(0xFF94A3B8),
                             ),
                           ),
                         ],
@@ -387,13 +411,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-
-                  // Nút Xóa thông báo
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: Colors.grey.shade400, size: 20),
+                    icon: Icon(Icons.close_rounded,
+                        color: Colors.grey.shade400, size: 20),
                     onPressed: () {
                       setState(() {
-                        _notifications.removeWhere((n) => n.id == item.id);
+                        _notifications
+                            .removeWhere((n) => n.id == item.id);
                       });
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -440,13 +464,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(height: 18),
           const Text(
-            'Hộp thư đang trống!',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF1E293B)),
+            'Hộp thư của bác đang trống!',
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 19,
+                color: Color(0xFF1E293B)),
           ),
           const SizedBox(height: 6),
           const Text(
             'Không có thông báo nào cần xử lý lúc này.',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
         ],
       ),

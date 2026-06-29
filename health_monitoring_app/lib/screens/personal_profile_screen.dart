@@ -119,12 +119,8 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isElderly = ApiService.currentRole == 'elderly';
-    final themeColor =
-        isElderly ? const Color(0xFF0F605A) : const Color(0xFF0EA5E9);
-    final gradientColors = isElderly
-        ? [const Color(0xFF0F605A), const Color(0xFF1B8E85)]
-        : [const Color(0xFF0284C7), const Color(0xFF38BDF8)];
+    const themeColor = Color(0xFF0EA5E9);
+    const gradientColors = [Color(0xFF0284C7), Color(0xFF38BDF8)];
 
     final displayName = _fullnameCtrl.text.isNotEmpty
         ? _fullnameCtrl.text
@@ -136,26 +132,24 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
         : 'ND';
 
     return Scaffold(
-      backgroundColor:
-          isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F4FB),
+      backgroundColor: const Color(0xFFF0F4FB),
       body: Column(
         children: [
           // ── Header ────────────────────────────────────────────────────────
           Container(
             width: double.infinity,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: gradientColors,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius:
-                  const BorderRadius.vertical(bottom: Radius.circular(28)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
               boxShadow: [
                 BoxShadow(
-                  color: themeColor.withValues(alpha: 0.3),
+                  color: Color(0x330EA5E9),
                   blurRadius: 16,
-                  offset: const Offset(0, 6),
+                  offset: Offset(0, 6),
                 )
               ],
             ),
@@ -184,11 +178,11 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
+                    const Expanded(
                       child: Text(
-                        isElderly ? 'Hồ sơ của bác' : 'Hồ sơ cá nhân',
+                        'Hồ sơ cá nhân',
                         style: TextStyle(
-                          fontSize: isElderly ? 22 : 20,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -276,8 +270,8 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                   alignment: Alignment.center,
                   child: Text(
                     avatarText,
-                    style: TextStyle(
-                      fontSize: isElderly ? 32 : 28,
+                    style: const TextStyle(
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: themeColor,
                     ),
@@ -286,8 +280,8 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                 const SizedBox(height: 12),
                 Text(
                   displayName,
-                  style: TextStyle(
-                    fontSize: isElderly ? 24 : 20,
+                  style: const TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -308,9 +302,9 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                       const SizedBox(width: 5),
                       Text(
                         _isEditing ? 'Đang chỉnh sửa...' : 'Đã xác minh',
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: isElderly ? 14 : 12,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -353,9 +347,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                 children: [
                   // Card: Thông tin cơ bản
                   _buildCard(
-                    title: isElderly
-                        ? 'Thông tin cơ bản của bác'
-                        : 'Thông tin cơ bản',
+                    title: 'Thông tin cơ bản',
                     icon: Icons.person_rounded,
                     iconColor: themeColor,
                     children: [
@@ -363,9 +355,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                       _isEditing
                           ? _editField(
                               icon: Icons.badge_rounded,
-                              iconBg: isElderly
-                                  ? const Color(0xFFEBFDFB)
-                                  : const Color(0xFFEBF3FF),
+                              iconBg: const Color(0xFFEBF3FF),
                               iconColor: themeColor,
                               label: 'Họ và tên',
                               controller: _fullnameCtrl,
@@ -373,9 +363,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                             )
                           : _infoRow(
                               Icons.person_outline_rounded,
-                              isElderly
-                                  ? const Color(0xFFEBFDFB)
-                                  : const Color(0xFFEBF3FF),
+                              const Color(0xFFEBF3FF),
                               themeColor,
                               'Họ và tên',
                               ApiService.currentFullname.isNotEmpty
@@ -419,9 +407,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
 
                   // Card: Liên hệ
                   _buildCard(
-                    title: isElderly
-                        ? 'Thông tin liên hệ của bác'
-                        : 'Liên hệ',
+                    title: 'Liên hệ',
                     icon: Icons.contact_mail_rounded,
                     iconColor: const Color(0xFF16A34A),
                     children: [
@@ -451,9 +437,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                       _isEditing
                           ? _editField(
                               icon: Icons.email_outlined,
-                              iconBg: isElderly
-                                  ? const Color(0xFFEBFDFB)
-                                  : const Color(0xFFEBF3FF),
+                              iconBg: const Color(0xFFEBF3FF),
                               iconColor: themeColor,
                               label: 'Email liên hệ',
                               controller: _emailCtrl,
@@ -462,9 +446,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                             )
                           : _infoRow(
                               Icons.email_outlined,
-                              isElderly
-                                  ? const Color(0xFFEBFDFB)
-                                  : const Color(0xFFEBF3FF),
+                              const Color(0xFFEBF3FF),
                               themeColor,
                               'Email liên hệ',
                               ApiService.currentEmail.isNotEmpty
@@ -489,9 +471,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
 
                   // Card: Vai trò & liên kết gia đình
                   _buildCard(
-                    title: isElderly
-                        ? 'Danh sách người thân liên kết'
-                        : 'Vai trò & liên kết gia đình',
+                    title: 'Vai trò & liên kết gia đình',
                     icon: Icons.people_rounded,
                     iconColor: const Color(0xFFEA580C),
                     children: [
@@ -500,13 +480,13 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                             ? ApiService.currentFullname
                             : ApiService.currentUsername;
                         final roleText =
-                            ApiService.currentRole == 'caregiver'
-                                ? 'Người chăm sóc'
-                                : 'Người lớn tuổi';
+                            ApiService.currentRole == 'admin'
+                                ? 'Quản trị viên'
+                                : 'Người chăm sóc';
                         return _roleRow(
                           color: themeColor,
                           name: name,
-                          role: isElderly ? 'Tài khoản của bác' : roleText,
+                          role: roleText,
                           badgeText: 'Đang dùng',
                           badgeColor: const Color(0xFF16A34A),
                         );
@@ -597,12 +577,10 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                         ),
                         icon: const Icon(Icons.edit_rounded,
                             color: Colors.white, size: 18),
-                        label: Text(
-                          isElderly
-                              ? 'Chỉnh sửa thông tin của bác'
-                              : 'Chỉnh sửa thông tin',
+                        label: const Text(
+                          'Chỉnh sửa thông tin',
                           style: TextStyle(
-                            fontSize: isElderly ? 18 : 16,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -841,12 +819,11 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
     required Color iconColor,
     required List<Widget> children,
   }) {
-    final isElderly = ApiService.currentRole == 'elderly';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isElderly ? 18 : 16),
+        borderRadius: BorderRadius.circular(16),
         border: _isEditing
             ? Border.all(color: iconColor.withValues(alpha: 0.3), width: 1.5)
             : null,
@@ -862,16 +839,16 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(16, isElderly ? 18 : 16, 16, 12),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
               children: [
-                Icon(icon, color: iconColor, size: isElderly ? 20 : 18),
+                Icon(icon, color: iconColor, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: isElderly ? 17 : 14,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: iconColor,
                     ),
@@ -913,18 +890,16 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
     String value, {
     bool isEditable = true,
   }) {
-    final isElderly = ApiService.currentRole == 'elderly';
     return Padding(
-      padding: EdgeInsets.symmetric(
-          horizontal: 16, vertical: isElderly ? 15 : 13),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
           Container(
-            width: isElderly ? 40 : 34,
-            height: isElderly ? 40 : 34,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
                 color: bg, borderRadius: BorderRadius.circular(8)),
-            child: Icon(icon, color: iconColor, size: isElderly ? 19 : 17),
+            child: Icon(icon, color: iconColor, size: 17),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -932,14 +907,14 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: TextStyle(
-                        fontSize: isElderly ? 14 : 12,
-                        color: const Color(0xFF94A3B8))),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF94A3B8))),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: isElderly ? 17.5 : 15.5,
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w600,
                     color: value == 'Chưa cập nhật'
                         ? const Color(0xFFCBD5E1)
@@ -953,9 +928,9 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
             const Icon(Icons.lock_outline_rounded,
                 color: Color(0xFFCBD5E1), size: 16)
           else
-            Icon(Icons.chevron_right_rounded,
-                color: const Color(0xFFCBD5E1),
-                size: isElderly ? 20 : 18),
+            const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFFCBD5E1),
+                size: 18),
         ],
       ),
     );
@@ -969,15 +944,13 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
     required String badgeText,
     required Color badgeColor,
   }) {
-    final isElderly = ApiService.currentRole == 'elderly';
     return Padding(
-      padding:
-          EdgeInsets.symmetric(horizontal: 16, vertical: isElderly ? 15 : 13),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       child: Row(
         children: [
           Container(
-            width: isElderly ? 12 : 10,
-            height: isElderly ? 12 : 10,
+            width: 10,
+            height: 10,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
@@ -987,17 +960,17 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
               children: [
                 Text(
                   name,
-                  style: TextStyle(
-                    fontSize: isElderly ? 17.5 : 15.5,
+                  style: const TextStyle(
+                    fontSize: 15.5,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1E293B),
+                    color: Color(0xFF1E293B),
                   ),
                 ),
                 Text(
                   role,
-                  style: TextStyle(
-                    fontSize: isElderly ? 14.5 : 12.5,
-                    color: const Color(0xFF94A3B8),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFF94A3B8),
                   ),
                 ),
               ],
@@ -1013,7 +986,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
             child: Text(
               badgeText,
               style: TextStyle(
-                fontSize: isElderly ? 13 : 11.5,
+                fontSize: 11.5,
                 fontWeight: FontWeight.bold,
                 color: badgeColor,
               ),
