@@ -381,6 +381,21 @@ class ApiService {
     }
   }
 
+  // ================= GET APPOINTMENTS =================
+  static Future<List<dynamic>> getAppointments(int elderlyId) async {
+    final url = Uri.parse("$baseUrl/api/medication/appointment/list/?elderly_id=$elderlyId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
+    }
+  }
+
   // ================= GET MEDICAL DOCUMENT =================
   static Future<List<dynamic>> getMedicalDocument() async {
     final url = Uri.parse("$baseUrl/api/medication/document/");
@@ -430,6 +445,53 @@ class ApiService {
       return {"success": false, "error": err["error"] ?? "Phục hồi thất bại."};
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= GET NOTIFICATIONS =================
+  static Future<List<dynamic>> getNotifications() async {
+    final url = Uri.parse("$baseUrl/api/notification/notifications/?caregiver_id=$currentAccountId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
+    }
+  }
+
+  // ================= GENERATE MOCK NOTIFICATIONS =================
+  static Future<bool> generateMockNotifications() async {
+    final url = Uri.parse("$baseUrl/api/notification/generate-mock/?caregiver_id=$currentAccountId");
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({}),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ERROR: $e");
+      return false;
+    }
+  }
+
+  // ================= MARK NOTIFICATION READ =================
+  static Future<bool> markNotificationRead(int detailId) async {
+    final url = Uri.parse("$baseUrl/api/notification/notifications/$detailId/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({}),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      print("ERROR: $e");
+      return false;
     }
   }
 }

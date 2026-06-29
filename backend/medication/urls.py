@@ -14,4 +14,5 @@ urlpatterns = [
     path('schedule/<int:schedule_id>/delete/', views.DeleteMedicationView.as_view(), name='delete_medication'),
     path('scan-prescription/', views.ScanPrescriptionView.as_view(), name='scan_prescription'),
     path('appointment/create/', views.CreateAppointmentView.as_view(), name='create_appointment'),
+    path('appointment/list/', views.AppointmentListView.as_view(), name='list_appointment'),
 ]

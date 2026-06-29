@@ -36,86 +36,77 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late List<NotificationItem> _notifications;
+  List<NotificationItem> _notifications = [];
   String _filter = 'all'; // 'all' | 'unread'
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _notifications = [
-      NotificationItem(
-        id: '1',
-        title: 'Lịch khám Tim mạch sắp tới',
-        description: 'Bác có lịch khám định kỳ với BS. Nguyễn Thị Lan lúc 08:30 tại Bệnh viện Chợ Rẫy.',
-        time: 'Hôm nay, 08:30',
-        dateGroup: 'Hôm nay',
-        icon: Icons.calendar_month_rounded,
-        themeColor: const Color(0xFFD97706),
-        bgColor: const Color(0xFFFEF3C7),
-        isRead: false,
-        onTapAction: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AppointmentScreen()),
-          );
-        },
-      ),
-      NotificationItem(
-        id: '2',
-        title: 'Tới giờ uống thuốc Tối',
-        description: 'Bác nhớ uống 1 viên thuốc mỡ máu Atorvastatin 20mg sau khi ăn tối nhé.',
-        time: '20:00, Hôm nay',
-        dateGroup: 'Hôm nay',
-        icon: Icons.medication_rounded,
-        themeColor: const Color(0xFF0284C7),
-        bgColor: const Color(0xFFE0F2FE),
-        isRead: false,
-      ),
-      NotificationItem(
-        id: '3',
-        title: 'Bỏ lỡ thuốc Sáng',
-        description: 'Hệ thống đã tự động gửi cảnh báo tới con gái (Nguyễn Thị Bình) do bác chưa xác nhận uống Amlodipine.',
-        time: '08:00, Hôm nay',
-        dateGroup: 'Hôm nay',
-        icon: Icons.warning_amber_rounded,
-        themeColor: const Color(0xFFE11D48),
-        bgColor: const Color(0xFFFFE4E6),
-        isRead: false,
-      ),
-      NotificationItem(
-        id: '4',
-        title: 'Xác nhận: Đã uống thuốc trưa',
-        description: 'Bác đã hoàn thành việc uống thuốc tiểu đường Metformin 500mg lúc 12:05 trưa.',
-        time: '12:05, Hôm nay',
-        dateGroup: 'Hôm nay',
-        icon: Icons.check_circle_outline_rounded,
-        themeColor: const Color(0xFF059669),
-        bgColor: const Color(0xFFD1FAE5),
-        isRead: true,
-      ),
-      NotificationItem(
-        id: '5',
-        title: 'Nhắc nhở đo huyết áp',
-        description: 'Bác hãy dành ra 5 phút nghỉ ngơi rồi đo huyết áp chiều để cập nhật nhật ký sức khỏe nhé.',
-        time: '17:00, Hôm qua',
-        dateGroup: 'Hôm qua',
-        icon: Icons.favorite_rounded,
-        themeColor: const Color(0xFFE11D48),
-        bgColor: const Color(0xFFFFE4E6),
-        isRead: true,
-      ),
-      NotificationItem(
-        id: '6',
-        title: 'Nhắc nhở uống nước ấm',
-        description: 'Hãy uống một cốc nước ấm lớn để duy trì tuần hoàn máu tốt bác nhé.',
-        time: '10:00, Hôm qua',
-        dateGroup: 'Hôm qua',
-        icon: Icons.local_drink_rounded,
-        themeColor: const Color(0xFF0D9488),
-        bgColor: const Color(0xFFCCFBF1),
-        isRead: true,
-      ),
-    ];
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final data = await ApiService.getNotifications();
+      List<NotificationItem> loaded = [];
+      for (var item in data) {
+        final notifDetail = item['details'] != null && item['details'].isNotEmpty ? item['details'][0] : null;
+        bool isRead = notifDetail != null ? notifDetail['is_read'] : false;
+        String id = notifDetail != null ? notifDetail['notification_detailid'].toString() : item['notificationid'].toString();
+        
+        String title = item['title'] ?? 'Thông báo';
+        String desc = item['message'] ?? '';
+        
+        IconData icon = Icons.notifications_active_rounded;
+        Color themeColor = const Color(0xFF0284C7);
+        Color bgColor = const Color(0xFFE0F2FE);
+        
+        if (title.toLowerCase().contains('khám')) {
+          icon = Icons.calendar_month_rounded;
+          themeColor = const Color(0xFFD97706);
+          bgColor = const Color(0xFFFEF3C7);
+        } else if (title.toLowerCase().contains('thuốc') || title.toLowerCase().contains('nhắc nhở')) {
+          icon = Icons.medication_rounded;
+          themeColor = const Color(0xFFE11D48);
+          bgColor = const Color(0xFFFFE4E6);
+        }
+
+        // Simple time formatting
+        String timeStr = '';
+        if (item['created_at'] != null) {
+          try {
+            final dt = DateTime.parse(item['created_at']).toLocal();
+            timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}, ${dt.day}/${dt.month}';
+          } catch (_) {}
+        }
+
+        loaded.add(NotificationItem(
+          id: id,
+          title: title,
+          description: desc,
+          time: timeStr,
+          dateGroup: 'Gần đây',
+          icon: icon,
+          themeColor: themeColor,
+          bgColor: bgColor,
+          isRead: isRead,
+        ));
+      }
+      if (mounted) {
+        setState(() {
+          _notifications = loaded;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("ERROR LOADING NOTIFICATIONS: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _markAllAsRead() {
@@ -135,6 +126,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final isElderly = ApiService.currentRole == 'elderly';
     // Lọc thông báo
     final filteredList = _notifications.where((item) {
@@ -143,7 +137,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }).toList();
 
     // Phân nhóm thông báo theo ngày
-    final todayNotifications = filteredList.where((item) => item.dateGroup == 'Hôm nay').toList();
+    final todayNotifications = filteredList.where((item) => item.dateGroup == 'Hôm nay' || item.dateGroup == 'Gần đây').toList();
     final yesterdayNotifications = filteredList.where((item) => item.dateGroup == 'Hôm qua').toList();
 
     final unreadCount = _notifications.where((item) => !item.isRead).length;

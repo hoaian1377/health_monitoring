@@ -41,50 +41,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  final List<AppointmentItem> _appointments = [
-    AppointmentItem(
-      id: '1',
-      hospital: 'Bệnh viện Chợ Rẫy',
-      doctor: 'BS. Nguyễn Thị Lan',
-      specialty: 'Tim mạch',
-      date: DateTime.now().add(const Duration(days: 3)),
-      time: '08:30',
-      notes: 'Tái khám huyết áp định kỳ 3 tháng',
-    ),
-    AppointmentItem(
-      id: '2',
-      hospital: 'Phòng khám đa khoa Thành Đô',
-      doctor: 'BS. Trần Văn Minh',
-      specialty: 'Nội tiết',
-      date: DateTime.now().add(const Duration(days: 15)),
-      time: '14:00',
-      notes: 'Kiểm tra đường huyết định kỳ',
-    ),
-    AppointmentItem(
-      id: '3',
-      hospital: 'Bệnh viện Chợ Rẫy',
-      doctor: 'BS. Nguyễn Thị Lan',
-      specialty: 'Tim mạch',
-      date: DateTime(2026, 3, 1),
-      time: '08:30',
-      isCompleted: true,
-      notes: 'Tái khám huyết áp',
-      result:
-          'Huyết áp ổn định 125/80. Tiếp tục Amlodipine 5mg. Tái khám sau 3 tháng.',
-    ),
-    AppointmentItem(
-      id: '4',
-      hospital: 'Phòng khám đa khoa Thành Đô',
-      doctor: 'BS. Trần Văn Minh',
-      specialty: 'Nội tiết',
-      date: DateTime(2025, 11, 15),
-      time: '14:00',
-      isCompleted: true,
-      notes: 'Kiểm tra đường huyết',
-      result:
-          'Đường huyết 5.8 mmol/L - bình thường. Tiếp tục Metformin 500mg. Tái khám sau 6 tháng.',
-    ),
-  ];
+  List<AppointmentItem> _appointments = [];
+  bool _isLoading = true;
 
   final _hospitalCtrl = TextEditingController();
   final _doctorCtrl = TextEditingController();
@@ -97,6 +55,31 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadAppointments();
+  }
+
+  Future<void> _loadAppointments() async {
+    if (ApiService.currentAccountId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    final data = await ApiService.getAppointments(ApiService.currentAccountId!);
+    List<AppointmentItem> loaded = [];
+    for (var item in data) {
+      loaded.add(AppointmentItem(
+        id: item['appointmentid'].toString(),
+        hospital: item['location'] ?? 'Chưa xác định',
+        doctor: item['doctor_name'] ?? 'Chưa xác định',
+        specialty: 'Khám bệnh',
+        date: DateTime.tryParse(item['appointment_date'] ?? '') ?? DateTime.now(),
+        time: item['appointment_time']?.toString().substring(0, 5) ?? '00:00',
+        notes: item['note'] ?? '',
+      ));
+    }
+    setState(() {
+      _appointments = loaded;
+      _isLoading = false;
+    });
   }
 
   @override
@@ -556,6 +539,11 @@ class _AppointmentScreenState extends State<AppointmentScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final isElderly = ApiService.currentRole == 'elderly';
     return Scaffold(
       backgroundColor: isElderly ? const Color(0xFFF3F7FA) : const Color(0xFFF0F9FF),

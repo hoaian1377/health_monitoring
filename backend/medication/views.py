@@ -3,10 +3,10 @@ from django.http import JsonResponse
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Medication, MedicationSchedule, MedicalDocument, Appointment
-from .serializers import MedicationSerializer, MedicationScheduleSerializer, MedicalDocumentSerializer
+from .serializers import MedicationSerializer, MedicationScheduleSerializer, MedicalDocumentSerializer, AppointmentSerializer
 from users.models import Elderly
 from datetime import datetime
-
+from PIL import Image, ImageFilter, ImageOps
 # ================= LEGACY VIEWS =================
 def getmedication(request):
     if request.method == "GET":
@@ -143,44 +143,158 @@ class DeleteMedicationView(generics.DestroyAPIView):
 class ScanPrescriptionView(generics.CreateAPIView):
     """POST /api/medication/scan-prescription/"""
     def post(self, request):
-        import time
+        import os, json, tempfile, re
+        import pytesseract
+        from PIL import Image
+
+        # Đường dẫn Tesseract trên Windows
+        tesseract_paths = [
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        ]
+        for p in tesseract_paths:
+            if os.path.exists(p):
+                pytesseract.pytesseract.tesseract_cmd = p
+                break
 
         image_file = request.FILES.get('image')
         if not image_file:
             return Response({"error": "Vui lòng tải lên hình ảnh đơn thuốc (image field)"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Mocking processing delay to simulate AI OCR analysis
-        time.sleep(1.5)
+        suffix = '.' + (image_file.name.split('.')[-1] if '.' in image_file.name else 'jpg')
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            for chunk in image_file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
 
-        # Mocking exact OCR process from the provided prescription image
-        # In real OCR: parse medicines, time-of-day sessions, appointment info
-        medications = [
-            # Buổi sáng (08:00)
-            {"name": "ACEMUC 100 mg", "dosage": "1 gói", "instruction": "Uống sau ăn", "time": "08:00", "frequency": "Sáng"},
-            {"name": "PROPANOLOL 40 mg", "dosage": "1/2 viên", "instruction": "Uống sau ăn", "time": "08:00", "frequency": "Sáng"},
-            {"name": "AUGMENTIN 320MG", "dosage": "1 gói", "instruction": "Uống sau ăn", "time": "08:00", "frequency": "Sáng"},
-            # Buổi chiều (19:00)
-            {"name": "ACEMUC 100 mg", "dosage": "1 gói", "instruction": "Uống sau ăn", "time": "19:00", "frequency": "Chiều"},
-            {"name": "PROPANOLOL 40 mg", "dosage": "1/2 viên", "instruction": "Uống sau ăn", "time": "19:00", "frequency": "Chiều"},
-            {"name": "AUGMENTIN 320MG", "dosage": "1 gói", "instruction": "Uống sau ăn", "time": "19:00", "frequency": "Chiều"},
-        ]
+        try:
+            img = Image.open(tmp_path)
+            # Xoay ảnh đúng chiều
+            img = ImageOps.exif_transpose(img)
+            # Chuyển sang ảnh xám
+            img = img.convert("L")
+            # Làm nét
+            img = img.filter(ImageFilter.SHARPEN)
+            # Tăng độ tương phản
+            img = img.point(lambda x: 255 if x > 150 else 0)
+            try:
+                text = pytesseract.image_to_string(
+                    img,
+                    lang="vie+eng",
+                    config="--oem 3 --psm 6"
+                )
+            except Exception:
+                text = pytesseract.image_to_string(
+                    img,
+                    lang="eng",
+                    config="--oem 3 --psm 6"
+                )
 
-        appointment = {
-            "doctor_name": "Bs. Chi Đinh",
-            "clinic": "Phòng Khám Nội BS.CKI ĐÌNH CHI",
-            "address": "120 Nguyễn Xiển, Long Bình, Thủ Đức",
-            "phone": "0962.831.327",
-            "appointment_date": "2024-01-18",
-            "appointment_time": "08:00",
-            "note": "Ăn nóng uống sôi. Tái khám nhớ mang theo toa, phiếm, hồ sơ cũ.",
-            "working_hours": "Thứ 2 - Thứ 6: 17:00-20:00. Thứ 7, CN từ 08:00-12:00"
-        }
+            # Làm sạch dữ liệu OCR
+            text = text.replace("|", "I")
+            text = text.replace("—", "-")
+            text = text.replace("§", "5")
 
-        return Response({
-            "message": "Quét thành công",
-            "medications": medications,
-            "appointment": appointment
-        }, status=status.HTTP_200_OK)
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+
+            # --- Phân tích thuốc ---
+            medications = []
+            med_keywords = ['mg', 'ml', 'gói', 'viên', 'tab', 'cap', 'syr', 'AUGMENTIN',
+                           'AMOX', 'PARA', 'DEXA', 'OMEP', 'CEFI', 'AZIT', 'CIPRO']
+            dose_map = {'sang': ('08:00', 'Sáng'), 'trua': ('12:00', 'Trưa'),
+                        'chieu': ('16:00', 'Chiều'), 'toi': ('20:00', 'Tối'),
+                        'sáng': ('08:00', 'Sáng'), 'trưa': ('12:00', 'Trưa'),
+                        'chiều': ('16:00', 'Chiều'), 'tối': ('20:00', 'Tối')}
+
+            current_time = '08:00'
+            current_freq = 'Sáng'
+            for line in lines:
+                low = line.lower()
+                # Detect time section headers
+                for kw, (t, f) in dose_map.items():
+                    if kw in low and len(line) < 30:
+                        current_time = t
+                        current_freq = f
+                        break
+                # Detect medication lines
+                is_med = any(kw.lower() in low for kw in med_keywords) or re.search(r'\d+\s*mg|\d+\s*ml', low)
+                if is_med and len(line) > 3:
+                    # Extract dosage
+                    dosage_match = re.search(r'(\d+[/\d]*\s*(?:viên|gói|ml|tab|cap))', line, re.IGNORECASE)
+                    dosage = dosage_match.group(1) if dosage_match else '1 viên'
+                    # Clean name
+                    name = re.sub(r'\s+', ' ', line).strip()
+                    # Avoid duplicate names
+                    if not any(m['name'] == name for m in medications):
+                        medications.append({
+                            "name": name,
+                            "dosage": dosage,
+                            "instruction": "Uống sau ăn",
+                            "time": current_time,
+                            "frequency": current_freq,
+                        })
+
+            # --- Phân tích thông tin tái khám ---
+            appointment = None
+            full_text = text.lower()
+            doctor = None
+            clinic = None
+            address = None
+            phone = None
+            appt_date = None
+            appt_time = None
+            note_lines = []
+
+            for line in lines:
+                low = line.lower()
+                if any(k in low for k in ['bs.', 'bác sĩ', 'dr.', 'ths.', 'pkđk', 'phòng khám', 'bệnh viện', 'clinic']):
+                    if not clinic:
+                        clinic = line
+                if any(k in low for k in ['bs.', 'bác sĩ', 'dr.', 'ths.', 'b.s']):
+                    if not doctor:
+                        doctor = line
+                if re.search(r'\b0\d{9}\b', line):
+                    phone = re.search(r'\b0\d{9}\b', line).group(0)
+                if re.search(r'\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}', line):
+                    date_match = re.search(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})', line)
+                    if date_match:
+                        d, m, y = date_match.groups()
+                        y = y if len(y) == 4 else '20' + y
+                        appt_date = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
+                if re.search(r'\b\d{1,2}:\d{2}\b', line):
+                    appt_time = re.search(r'\b(\d{1,2}:\d{2})\b', line).group(1)
+                if any(k in low for k in ['tái khám', 'tai kham', 'lưu ý', 'ăn nóng', 'ghi chú', 'note']):
+                    note_lines.append(line)
+
+            if any([doctor, clinic, phone, appt_date]):
+                appointment = {
+                    "doctor_name": doctor,
+                    "clinic": clinic,
+                    "address": address,
+                    "phone": phone,
+                    "appointment_date": appt_date,
+                    "appointment_time": appt_time or '08:00',
+                    "note": ' '.join(note_lines) if note_lines else None
+                }
+
+            # Nếu không nhận diện được thuốc nào, báo lỗi
+            if not medications:
+                return Response({"error": "Không nhận ra thuốc trong ảnh. Vui lòng chụp rõ hơn hoặc nhập thủ công."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+            return Response({
+                "message": "Quét thành công",
+                "medications": medications,
+                "appointment": appointment,
+                "raw_text": text[:500]  # debug
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": f"Lỗi phân tích ảnh: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 class CreateAppointmentView(generics.CreateAPIView):
@@ -217,7 +331,37 @@ class CreateAppointmentView(generics.CreateAPIView):
             note=request.data.get('note', ''),
         )
         
+        # Create notification for caregivers
+        from notification.models import Notification, NotificationDetail
+        from users.models import CaregiverElderly
+        from django.utils import timezone
+        
+        caregivers = CaregiverElderly.objects.filter(elderlyid=elderly)
+        for ce in caregivers:
+            if ce.caregiverid:
+                notif = Notification.objects.create(
+                    caregiverid=ce.caregiverid,
+                    title="Lịch khám bệnh mới",
+                    message=f"Đã thêm lịch khám cho {elderly.fullname} vào ngày {appointment_date} lúc {appointment_time}.",
+                    created_at=timezone.now()
+                )
+                NotificationDetail.objects.create(
+                    notificationid=notif,
+                    is_read=False
+                )
+
+        
         return Response({
             "message": "Tạo lịch khám thành công",
             "appointment_id": appointment.appointmentid
         }, status=status.HTTP_201_CREATED)
+
+class AppointmentListView(generics.ListAPIView):
+    """GET /api/medication/appointment/list/?elderly_id=<id>"""
+    serializer_class = AppointmentSerializer
+
+    def get_queryset(self):
+        elderly_id = self.request.query_params.get('elderly_id')
+        if elderly_id:
+            return Appointment.objects.filter(elderlyid=elderly_id).order_by('appointment_date')
+        return Appointment.objects.all().order_by('appointment_date')
