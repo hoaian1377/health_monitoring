@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'elderly_emergency_contacts_screen.dart';
 import '../login_screen.dart';
 import 'elderly_change_password_screen.dart';
@@ -188,7 +188,7 @@ class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0F605A), Color(0xFF1B8E85)],
+          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -198,7 +198,7 @@ class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
         ),
         boxShadow: [
           BoxShadow(
-              color: Color(0x220F605A),
+              color: Color(0x220284C7),
               blurRadius: 16,
               offset: Offset(0, 8))
         ],
@@ -601,7 +601,7 @@ class _ElderlySOSBottomSheet extends StatelessWidget {
             decoration: BoxDecoration(
               color: c.isEmergency
                   ? const Color(0xFFFFEBEB)
-                  : const Color(0xFFEBFDFB),
+                  : const Color(0xFFE0F2FE),
               borderRadius: BorderRadius.circular(25),
             ),
             alignment: Alignment.center,
@@ -612,7 +612,7 @@ class _ElderlySOSBottomSheet extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: c.isEmergency
                     ? const Color(0xFFC81E1E)
-                    : const Color(0xFF0F605A),
+                    : const Color(0xFF0284C7),
               ),
             ),
           ),

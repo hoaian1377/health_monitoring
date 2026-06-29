@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
 
 // Re-export AppointmentItem so elderly_home_screen can still use it if needed
@@ -27,8 +27,8 @@ class _State extends State<ElderlyAppointmentScreen> with SingleTickerProviderSt
   List<AppointmentItem> _appts = [];
   bool _loading = true;
 
-  static const _teal = Color(0xFF0F605A);
-  static const _tealLight = Color(0xFFEBFDFB);
+  static const _teal = Color(0xFF0284C7);
+  static const _tealLight = Color(0xFFE0F2FE);
 
   @override
   void initState() {
@@ -150,9 +150,9 @@ class _State extends State<ElderlyAppointmentScreen> with SingleTickerProviderSt
   Widget _header() {
     return Container(
       decoration: widget.isEmbedded ? null : const BoxDecoration(
-        gradient: LinearGradient(colors: [_teal, Color(0xFF1B8E85)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        gradient: LinearGradient(colors: [_teal, Color(0xFF38BDF8)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
-        boxShadow: [BoxShadow(color: Color(0x220F605A), blurRadius: 20, offset: Offset(0, 8))],
+        boxShadow: [BoxShadow(color: Color(0x220284C7), blurRadius: 20, offset: Offset(0, 8))],
       ),
       padding: EdgeInsets.fromLTRB(4, widget.isEmbedded ? 16 : 52, 20, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -267,7 +267,7 @@ class _State extends State<ElderlyAppointmentScreen> with SingleTickerProviderSt
     margin: const EdgeInsets.only(bottom: 12),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 3))]),
     child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-      Container(width: 46, height: 46, decoration: BoxDecoration(color: const Color(0xFFE6FBF3), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24)),
+      Container(width: 46, height: 46, decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 24)),
       const SizedBox(width: 12),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(item.hospital, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),

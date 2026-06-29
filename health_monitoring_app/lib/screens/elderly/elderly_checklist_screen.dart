@@ -32,6 +32,26 @@ class ElderlyTaskItem {
   });
 }
 
+enum TimeSlot { morning, afternoon, evening, flexible }
+
+class TimeSlotGroup {
+  final TimeSlot slot;
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Color bgColor;
+  final List<ElderlyTaskItem> tasks;
+
+  TimeSlotGroup({
+    required this.slot,
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    required this.tasks,
+  });
+}
+
 class ElderlyChecklistScreen extends StatefulWidget {
   const ElderlyChecklistScreen({super.key});
 
@@ -56,22 +76,6 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
       endDate: '30/06/2026',
     ),
     ElderlyTaskItem(
-      id: '2',
-      title: 'Đo huyết áp buổi sáng',
-      type: 'measurement',
-      time: '08:00',
-      details: 'Nghỉ ngơi 5p trước khi đo',
-      isCompleted: true,
-    ),
-    ElderlyTaskItem(
-      id: '3',
-      title: 'Uống nước ấm',
-      type: 'habit',
-      time: '10:00',
-      details: 'Ly nước ấm thứ 2 trong ngày (250ml)',
-      isCompleted: true,
-    ),
-    ElderlyTaskItem(
       id: '4',
       title: 'Uống thuốc tiểu đường Metformin 500mg',
       type: 'medication',
@@ -85,14 +89,6 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
       endDate: '30/06/2026',
     ),
     ElderlyTaskItem(
-      id: '5',
-      title: 'Đi bộ công viên',
-      type: 'habit',
-      time: '17:00',
-      details: 'Vận động nhẹ nhàng 30 phút',
-      isCompleted: false,
-    ),
-    ElderlyTaskItem(
       id: '6',
       title: 'Uống thuốc mỡ máu Atorvastatin 20mg',
       type: 'medication',
@@ -104,14 +100,6 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
       dosesPerDay: 1,
       startDate: '01/06/2026',
       endDate: '15/06/2026',
-    ),
-    ElderlyTaskItem(
-      id: '7',
-      title: 'Ghi lại triệu chứng chóng mặt',
-      type: 'symptom',
-      time: 'Tùy lúc',
-      details: 'Ghi chú cho bác sĩ lần khám tới',
-      isCompleted: false,
     ),
     ElderlyTaskItem(
       id: 'doc_1',
@@ -155,7 +143,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     ),
   ];
 
-  String _selectedCategory = 'all';
+  String _selectedCategory = 'medication';
 
   @override
   void initState() {
@@ -191,17 +179,117 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     }
   }
 
+  TimeSlot _getTimeSlot(ElderlyTaskItem task) {
+    if (task.time == 'Tùy lúc' || task.time == 'Trước khám' || task.time == 'Cả ngày') {
+      return TimeSlot.flexible;
+    }
+    try {
+      final parts = task.time.split(':');
+      if (parts.isNotEmpty) {
+        final hour = int.parse(parts[0]);
+        if (hour >= 5 && hour < 11) {
+          return TimeSlot.morning;
+        } else if (hour >= 11 && hour < 17) {
+          return TimeSlot.afternoon;
+        } else {
+          return TimeSlot.evening;
+        }
+      }
+    } catch (_) {}
+    return TimeSlot.flexible;
+  }
+
+  List<TimeSlotGroup> _groupTasks(List<ElderlyTaskItem> tasks) {
+    final morningTasks = <ElderlyTaskItem>[];
+    final afternoonTasks = <ElderlyTaskItem>[];
+    final eveningTasks = <ElderlyTaskItem>[];
+    final flexibleTasks = <ElderlyTaskItem>[];
+
+    for (var task in tasks) {
+      switch (_getTimeSlot(task)) {
+        case TimeSlot.morning:
+          morningTasks.add(task);
+          break;
+        case TimeSlot.afternoon:
+          afternoonTasks.add(task);
+          break;
+        case TimeSlot.evening:
+          eveningTasks.add(task);
+          break;
+        case TimeSlot.flexible:
+          flexibleTasks.add(task);
+          break;
+      }
+    }
+
+    int compareTime(ElderlyTaskItem a, ElderlyTaskItem b) {
+      if (a.time == b.time) return 0;
+      if (a.time == 'Tùy lúc' || a.time == 'Trước khám' || a.time == 'Cả ngày') return 1;
+      if (b.time == 'Tùy lúc' || b.time == 'Trước khám' || b.time == 'Cả ngày') return -1;
+      return a.time.compareTo(b.time);
+    }
+
+    morningTasks.sort(compareTime);
+    afternoonTasks.sort(compareTime);
+    eveningTasks.sort(compareTime);
+    flexibleTasks.sort(compareTime);
+
+    final groups = <TimeSlotGroup>[];
+    if (morningTasks.isNotEmpty) {
+      groups.add(TimeSlotGroup(
+        slot: TimeSlot.morning,
+        title: 'Buổi Sáng',
+        icon: Icons.light_mode_rounded,
+        color: const Color(0xFFEA580C),
+        bgColor: const Color(0xFFFFF7ED),
+        tasks: morningTasks,
+      ));
+    }
+    if (afternoonTasks.isNotEmpty) {
+      groups.add(TimeSlotGroup(
+        slot: TimeSlot.afternoon,
+        title: 'Buổi Trưa & Chiều',
+        icon: Icons.wb_sunny_rounded,
+        color: const Color(0xFF0284C7),
+        bgColor: const Color(0xFFF0F9FF),
+        tasks: afternoonTasks,
+      ));
+    }
+    if (eveningTasks.isNotEmpty) {
+      groups.add(TimeSlotGroup(
+        slot: TimeSlot.evening,
+        title: 'Buổi Tối',
+        icon: Icons.dark_mode_rounded,
+        color: const Color(0xFF4F46E5),
+        bgColor: const Color(0xFFEEF2FF),
+        tasks: eveningTasks,
+      ));
+    }
+    if (flexibleTasks.isNotEmpty) {
+      groups.add(TimeSlotGroup(
+        slot: TimeSlot.flexible,
+        title: 'Linh hoạt & Giấy tờ',
+        icon: Icons.assignment_rounded,
+        color: const Color(0xFFD97706),
+        bgColor: const Color(0xFFFEF3C7),
+        tasks: flexibleTasks,
+      ));
+    }
+    return groups;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final totalCount = _tasks.length;
-    final completedCount = _tasks.where((t) => t.isCompleted).length;
+    final filteredTasks = _tasks.where((task) {
+      return task.type == _selectedCategory;
+    }).toList();
+
+    final totalCount = filteredTasks.length;
+    final completedCount = filteredTasks.where((t) => t.isCompleted).length;
     final completionRate =
         totalCount == 0 ? 0.0 : completedCount / totalCount;
 
-    final filteredTasks = _tasks.where((task) {
-      if (_selectedCategory == 'all') return true;
-      return task.type == _selectedCategory;
-    }).toList();
+    final groups = _groupTasks(filteredTasks);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F7FA),
@@ -236,7 +324,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       content: const Text(
-                        'Danh sách giúp bác theo dõi việc uống thuốc, đo chỉ số sức khỏe và duy trì các thói quen tốt mỗi ngày để cơ thể luôn khỏe mạnh.',
+                        'Danh sách giúp bác theo dõi việc uống thuốc và chuẩn bị các giấy tờ cần thiết cho buổi khám bệnh tiếp theo.',
                         style: TextStyle(
                             fontSize: 15, height: 1.4, color: Colors.black87),
                       ),
@@ -256,11 +344,13 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
           ),
           SliverToBoxAdapter(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildElderlySummaryProgressCard(
                     completedCount, totalCount, completionRate),
+                const SizedBox(height: 8),
                 _buildElderlyCategoryFilters(),
-                const SizedBox(height: 4),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -271,13 +361,14 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                 )
               : SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        return _buildElderlyChecklistItemCard(
-                            filteredTasks[index]);
-                      },
-                      childCount: filteredTasks.length,
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: List.generate(groups.length, (index) {
+                        return _buildTimelineGroup(
+                          groups[index],
+                          index == groups.length - 1,
+                        );
+                      }),
                     ),
                   ),
                 ),
@@ -307,14 +398,14 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0F605A), Color(0xFF1B8E85)],
+          colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F605A).withValues(alpha: 0.15),
+            color: const Color(0xFF0284C7).withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 6),
           )
@@ -387,23 +478,11 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
 
   Widget _buildElderlyCategoryFilters() {
     final categories = [
-      {'key': 'all', 'label': 'Tất cả', 'icon': Icons.list_rounded},
       {
         'key': 'medication',
         'label': 'Uống thuốc',
         'icon': Icons.medication_rounded
       },
-      {
-        'key': 'measurement',
-        'label': 'Đo chỉ số',
-        'icon': Icons.favorite_rounded
-      },
-      {
-        'key': 'habit',
-        'label': 'Thói quen',
-        'icon': Icons.directions_run_rounded
-      },
-      {'key': 'symptom', 'label': 'Triệu chứng', 'icon': Icons.sick_rounded},
       {
         'key': 'document',
         'label': 'Giấy tờ khám',
@@ -413,19 +492,8 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        padding: EdgeInsets.zero,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 2.8,
-        ),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final cat = categories[index];
+      child: Row(
+        children: categories.map((cat) {
           final isSelected = _selectedCategory == cat['key'];
 
           Color typeColor;
@@ -434,15 +502,6 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
           if (cat['key'] == 'medication') {
             typeColor = const Color(0xFF0284C7);
             typeBg = const Color(0xFFE0F2FE);
-          } else if (cat['key'] == 'measurement') {
-            typeColor = const Color(0xFFE11D48);
-            typeBg = const Color(0xFFFFE4E6);
-          } else if (cat['key'] == 'habit') {
-            typeColor = const Color(0xFF059669);
-            typeBg = const Color(0xFFD1FAE5);
-          } else if (cat['key'] == 'symptom') {
-            typeColor = const Color(0xFF8B5CF6);
-            typeBg = const Color(0xFFF3E8FF);
           } else if (cat['key'] == 'document') {
             typeColor = const Color(0xFFD97706);
             typeBg = const Color(0xFFFEF3C7);
@@ -451,81 +510,201 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
             typeBg = const Color(0xFFF1F5F9);
           }
 
-          int count = cat['key'] == 'all'
-              ? _tasks.length
-              : _tasks.where((t) => t.type == cat['key']).length;
+          int count = _tasks.where((t) => t.type == cat['key']).length;
 
-          return InkWell(
-            onTap: () {
-              setState(() {
-                _selectedCategory = cat['key'] as String;
-              });
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? typeColor : typeBg,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  if (isSelected)
-                    BoxShadow(
-                      color: typeColor.withValues(alpha: 0.2),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    )
-                ],
-                border: Border.all(
-                  color: isSelected
-                      ? Colors.transparent
-                      : typeColor.withValues(alpha: 0.15),
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    cat['icon'] as IconData,
-                    size: 20,
-                    color: isSelected ? Colors.white : typeColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      cat['label'] as String,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : typeColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = cat['key'] as String;
+                  });
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected ? typeColor : typeBg,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      if (isSelected)
+                        BoxShadow(
+                          color: typeColor.withValues(alpha: 0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        )
+                    ],
+                    border: Border.all(
                       color: isSelected
-                          ? Colors.white24
-                          : typeColor.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                          ? Colors.transparent
+                          : typeColor.withValues(alpha: 0.15),
+                      width: 1.5,
                     ),
-                    child: Text(
-                      '$count',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        cat['icon'] as IconData,
+                        size: 18,
                         color: isSelected ? Colors.white : typeColor,
                       ),
-                    ),
-                  )
-                ],
+                      const SizedBox(width: 8),
+                      Text(
+                        cat['label'] as String,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : typeColor,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white24
+                              : typeColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : typeColor,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
               ),
             ),
           );
-        },
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTimelineGroup(TimeSlotGroup group, bool isLast) {
+    final completedCount = group.tasks.where((t) => t.isCompleted).length;
+    final totalCount = group.tasks.length;
+    final isAllDone = completedCount == totalCount;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Cột bên trái: Timeline (Icon + Đường nối)
+          SizedBox(
+            width: 44,
+            child: Column(
+              children: [
+                // Icon tròn biểu thị buổi
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isAllDone ? const Color(0xFFD1FAE5) : group.bgColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isAllDone ? const Color(0xFF059669) : group.color,
+                      width: 2.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isAllDone ? const Color(0xFF059669) : group.color)
+                            .withValues(alpha: 0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
+                  ),
+                  child: Icon(
+                    isAllDone ? Icons.check_rounded : group.icon,
+                    color: isAllDone ? const Color(0xFF059669) : group.color,
+                    size: 20,
+                  ),
+                ),
+                // Đường kết nối đi xuống
+                Expanded(
+                  child: isLast
+                      ? const SizedBox.shrink()
+                      : Container(
+                          width: 3,
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isAllDone
+                                ? const Color(0xFF34D399)
+                                : Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(1.5),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Cột bên phải: Tiêu đề buổi + Danh sách card
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nhãn buổi (ví dụ: Buổi Sáng)
+                  Row(
+                    children: [
+                      Text(
+                        group.title,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isAllDone
+                              ? const Color(0xFF065F46)
+                              : const Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isAllDone
+                              ? const Color(0xFFD1FAE5)
+                              : group.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$completedCount/$totalCount xong',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: isAllDone
+                                ? const Color(0xFF059669)
+                                : group.color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Render các checklist item card trong buổi này
+                  Column(
+                    children: group.tasks
+                        .map((task) => _buildElderlyChecklistItemCard(task))
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -574,12 +753,12 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: task.isCompleted ? const Color(0xFFF8FAFC) : Colors.white,
           borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
               offset: const Offset(0, 4),
             )
           ],
@@ -658,8 +837,10 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
@@ -692,7 +873,6 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 10),
                               Text(
                                 task.time == 'Trước khám'
                                     ? 'Trước khám'

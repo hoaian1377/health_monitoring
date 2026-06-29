@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
 
 class ElderlyNotificationsScreen extends StatefulWidget {
@@ -64,8 +64,8 @@ class _ElderlyNotificationsScreenState
         String desc = item['message'] ?? '';
 
         IconData icon = Icons.notifications_active_rounded;
-        Color themeColor = const Color(0xFF0F605A);
-        Color bgColor = const Color(0xFFE6FBF3);
+        Color themeColor = const Color(0xFF0284C7);
+        Color bgColor = const Color(0xFFE0F2FE);
 
         if (title.toLowerCase().contains('khám')) {
           icon = Icons.calendar_month_rounded;
@@ -122,7 +122,7 @@ class _ElderlyNotificationsScreenState
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        backgroundColor: Color(0xFF0F605A),
+        backgroundColor: Color(0xFF0284C7),
         content: Text('Đã đánh dấu đọc tất cả thông báo.'),
         duration: Duration(milliseconds: 1000),
       ),
@@ -173,12 +173,12 @@ class _ElderlyNotificationsScreenState
                 TextButton.icon(
                   onPressed: _markAllAsRead,
                   icon: const Icon(Icons.done_all_rounded,
-                      size: 20, color: Color(0xFF0F605A)),
+                      size: 20, color: Color(0xFF0284C7)),
                   label: const Text(
                     'Đọc tất cả',
                     style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F605A),
+                        color: Color(0xFF0284C7),
                         fontSize: 16),
                   ),
                 ),
@@ -239,7 +239,7 @@ class _ElderlyNotificationsScreenState
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0F605A) : Colors.white,
+          color: isSelected ? const Color(0xFF0284C7) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
@@ -248,7 +248,7 @@ class _ElderlyNotificationsScreenState
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF0F605A).withValues(alpha: 0.15),
+                color: const Color(0xFF0284C7).withValues(alpha: 0.15),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -273,7 +273,7 @@ class _ElderlyNotificationsScreenState
           width: 4,
           height: 16,
           decoration: BoxDecoration(
-            color: const Color(0xFF1B8E85),
+            color: const Color(0xFF38BDF8),
             borderRadius: BorderRadius.circular(2),
           ),
         ),

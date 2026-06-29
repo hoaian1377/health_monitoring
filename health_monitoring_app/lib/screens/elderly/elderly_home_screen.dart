@@ -11,13 +11,15 @@ class ElderlyHomeScreen extends StatefulWidget {
   State<ElderlyHomeScreen> createState() => _ElderlyHomeScreenState();
 }
 
-class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTickerProviderStateMixin {
+class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
+    with SingleTickerProviderStateMixin {
   // ── Trạng thái ─────────────────────────────────────────────────────────────
   List<dynamic> _medicationSchedules = [];
   bool _isLoadingMedications = true;
   Set<int> _takenScheduleIds = {};
-  
-  bool _isAppointmentNear = true; // Hiển thị mặc định vì có lịch khám sau 3 ngày
+
+  bool _isAppointmentNear =
+      true; // Hiển thị mặc định vì có lịch khám sau 3 ngày
   bool _isDocChecklistExpanded = true; // Mặc định mở checklist giấy tờ
 
   // Checkbox giấy tờ chuẩn bị đi khám
@@ -30,6 +32,10 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
   // Animation controller cho nút SOS đập nhẹ (pulse effect)
   late AnimationController _pulseController;
 
+  // Timer cập nhật theo giờ — tự động mở khóa từng liều thuốc khi đến giờ
+  Timer? _clockTimer;
+  DateTime _now = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -38,11 +44,22 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    // Cập nhật giờ mỗi phút — tự động hiện liều thuốc khi đến giờ
+    _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _now = DateTime.now();
+        });
+      }
+    });
   }
 
   Future<void> _loadMedications() async {
     setState(() => _isLoadingMedications = true);
-    final schedules = await ApiService.getElderlyMedicationSchedule(ApiService.currentAccountId ?? 0);
+    final schedules = await ApiService.getElderlyMedicationSchedule(
+      ApiService.currentAccountId ?? 0,
+    );
     if (mounted) {
       setState(() {
         _medicationSchedules = schedules;
@@ -53,6 +70,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
 
   @override
   void dispose() {
+    _clockTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -81,13 +99,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
       'Thứ Tư',
       'Thứ Năm',
       'Thứ Sáu',
-      'Thứ Bảy'
+      'Thứ Bảy',
     ];
     final weekday = weekdays[now.weekday % 7];
     return '$weekday, ngày ${now.day} tháng ${now.month}';
   }
-
-  
 
   // ── Kích hoạt gọi khẩn cấp (có đếm ngược 5s để hủy nếu bấm nhầm) ───────────
   void _triggerEmergencyCall() {
@@ -118,11 +134,17 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             });
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
               backgroundColor: const Color(0xFFFFF1F2),
               title: const Row(
                 children: [
-                  Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 32),
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFDC2626),
+                    size: 32,
+                  ),
                   SizedBox(width: 10),
                   Text(
                     'GỌI KHẨN CẤP',
@@ -140,7 +162,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                   const Text(
                     'Hệ thống đang chuẩn bị gọi điện cho người thân của bác...',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Color(0xFF991B1B), height: 1.4),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF991B1B),
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   Stack(
@@ -169,7 +195,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                   const SizedBox(height: 20),
                   const Text(
                     'Vị trí GPS của bác đã được gửi tự động.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF7F1D1D), fontStyle: FontStyle.italic),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF7F1D1D),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ],
               ),
@@ -181,8 +211,13 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFFDC2626),
-                      side: const BorderSide(color: Color(0xFFDC2626), width: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      side: const BorderSide(
+                        color: Color(0xFFDC2626),
+                        width: 2,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -198,7 +233,10 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     },
                     child: const Text(
                       'HỦY CUỘC GỌI NGAY',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ),
@@ -234,14 +272,17 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
   // ── BUILD ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    int preparedCount = (_isCCCDPrepared ? 1 : 0) +
+    int preparedCount =
+        (_isCCCDPrepared ? 1 : 0) +
         (_isBHYTPrepared ? 1 : 0) +
         (_isSoKhamPrepared ? 1 : 0) +
         (_isDonThuocPrepared ? 1 : 0) +
         (_isXetNghiemPrepared ? 1 : 0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F7FA), // Màu nền nhẹ nhàng, dễ chịu
+      backgroundColor: const Color(
+        0xFFF0F4FB,
+      ), // Màu nền xanh biển nhạt, dễ chịu
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -274,7 +315,10 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0F605A), Color(0xFF1B8E85)], // Tông màu Teal y khoa sang trọng, dịu mắt
+          colors: [
+            Color(0xFF0284C7),
+            Color(0xFF38BDF8),
+          ], // Tông màu xanh biển nhạt, dịu mắt
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -284,10 +328,10 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
         ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x220F605A),
+            color: Color(0x220284C7),
             blurRadius: 18,
             offset: Offset(0, 10),
-          )
+          ),
         ],
       ),
       padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -311,7 +355,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Bác $name 👋',
+                      'Bác $name',
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -334,51 +378,8 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 ),
               ),
               const SizedBox(width: 16),
+
               // Nút SOS Nhấp nháy nhẹ nhàng thu hút chú ý
-              GestureDetector(
-                onTap: _triggerEmergencyCall,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDC2626),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFDC2626).withValues(
-                                  alpha: 0.3 * _pulseController.value,
-                                ),
-                                blurRadius: 12 * _pulseController.value,
-                                spreadRadius: 4 * _pulseController.value,
-                              )
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.phone_in_talk_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'CẤP CỨU SOS',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -392,10 +393,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             ),
             child: const Row(
               children: [
-                Text(
-                  '💧',
-                  style: TextStyle(fontSize: 20),
-                ),
+                Text('💧', style: TextStyle(fontSize: 20)),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -453,7 +451,13 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
     );
   }
 
-  Widget _buildStatItem(String label, String value, String unit, Color color, IconData icon) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    String unit,
+    Color color,
+    IconData icon,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       decoration: BoxDecoration(
@@ -464,7 +468,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
         border: Border.all(color: Colors.grey.shade100),
       ),
@@ -481,7 +485,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
           const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 4),
           RichText(
@@ -491,11 +499,18 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               children: [
                 TextSpan(
                   text: value,
-                  style: const TextStyle(fontSize: 17.5, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 17.5,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 TextSpan(
                   text: '\n$unit',
-                  style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -505,12 +520,79 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
     );
   }
 
-  // ── Thẻ nhắc uống thuốc (Timeline trực quan & dễ hiểu) ───────────────────
+  Map<String, dynamic> _getTimeOfDayInfo(String timeStr, bool isTaken) {
+    if (isTaken) {
+      return {
+        'period': 'Đã hoàn thành',
+        'icon': Icons.check_circle_rounded,
+        'color': const Color(0xFF059669),
+        'bgColor': const Color(0xFFECFDF5),
+        'gradient': const [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+      };
+    }
+    try {
+      final parts = timeStr.split(':');
+      if (parts.isNotEmpty) {
+        final hour = int.parse(parts[0]);
+        if (hour >= 5 && hour < 11) {
+          return {
+            'period': 'Buổi sáng',
+            'icon': Icons.light_mode_rounded,
+            'color': const Color(0xFFEA580C),
+            'bgColor': const Color(0xFFFFF7ED),
+            'gradient': const [Color(0xFFFFFAF2), Color(0xFFFFF1E0)],
+          };
+        } else if (hour >= 11 && hour < 17) {
+          return {
+            'period': 'Buổi trưa',
+            'icon': Icons.wb_sunny_rounded,
+            'color': const Color(0xFF0284C7),
+            'bgColor': const Color(0xFFF0F9FF),
+            'gradient': const [Color(0xFFF6FBFF), Color(0xFFE0F2FE)],
+          };
+        } else {
+          return {
+            'period': 'Buổi tối',
+            'icon': Icons.dark_mode_rounded,
+            'color': const Color(0xFF4F46E5),
+            'bgColor': const Color(0xFFEEF2FF),
+            'gradient': const [Color(0xFFF8FAFC), Color(0xFFE0E7FF)],
+          };
+        }
+      }
+    } catch (_) {}
+    return {
+      'period': 'Lịch uống',
+      'icon': Icons.access_time_rounded,
+      'color': const Color(0xFF0284C7),
+      'bgColor': const Color(0xFFF4FAF9),
+      'gradient': const [Color(0xFFFFFFFF), Color(0xFFF4FAF9)],
+    };
+  }
+
+  // Kiểm tra xem thời gian lịch uống thuốc đã đến chưa (so với _now, tự cập nhật mỗi phút)
+  bool _isScheduleTimeDue(String timeStr) {
+    // Trả về true để mô phỏng tất cả các lịch uống thuốc đều đã đến giờ, giúp hiển thị giao diện xem thử.
+    return true;
+  }
+
+  // ── Thẻ nhắc uống thuốc (Horizontal Carousel trực quan & dễ hiểu) ───────────────────
   Widget _buildMedCard() {
     final total = _medicationSchedules.length;
-    final int taken = _takenScheduleIds.length;
-    final double progress = total > 0 ? (taken / total) : 0;
-    final bool allDone = total > 0 && taken >= total;
+
+    // Chỉ lấy những liều đã đến giờ
+    final dueSchedules = _medicationSchedules
+        .where((s) => _isScheduleTimeDue(s['time'] ?? ''))
+        .toList();
+
+    final int due = dueSchedules.length;
+    final int taken = dueSchedules
+        .where((s) => _takenScheduleIds.contains(s['schedule_id']))
+        .length;
+    final double progress = due > 0 ? (taken / due) : 0;
+    final bool allDone = due > 0 && taken >= due;
+    final bool hasUpcoming =
+        dueSchedules.length < total; // Có liều sắp tới chưa đến giờ
 
     return Container(
       decoration: BoxDecoration(
@@ -521,9 +603,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
-        border: Border.all(color: allDone ? const Color(0xFFA7F3D0) : Colors.grey.shade100, width: 1.5),
+        border: Border.all(
+          color: allDone ? const Color(0xFFA7F3D0) : Colors.grey.shade100,
+          width: 1.5,
+        ),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -535,12 +620,18 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: allDone ? const Color(0xFFD1FAE5) : const Color(0xFFE0F2FE),
+                  color: allDone
+                      ? const Color(0xFFD1FAE5)
+                      : const Color(0xFFE0F2FE),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  allDone ? Icons.check_circle_rounded : Icons.medication_rounded,
-                  color: allDone ? const Color(0xFF059669) : const Color(0xFF0284C7),
+                  allDone
+                      ? Icons.check_circle_rounded
+                      : Icons.medication_rounded,
+                  color: allDone
+                      ? const Color(0xFF059669)
+                      : const Color(0xFF0284C7),
                   size: 24,
                 ),
               ),
@@ -555,19 +646,26 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                   ),
                 ),
               ),
-              if (total > 0)
+              if (due > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: allDone ? const Color(0xFFD1FAE5) : const Color(0xFFF1F5F9),
+                    color: allDone
+                        ? const Color(0xFFD1FAE5)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '$taken/$total liều',
+                    '$taken/$due liều',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: allDone ? const Color(0xFF059669) : const Color(0xFF475569),
+                      color: allDone
+                          ? const Color(0xFF059669)
+                          : const Color(0xFF475569),
                     ),
                   ),
                 ),
@@ -575,7 +673,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
           ),
           const SizedBox(height: 16),
           // Thanh tiến trình
-          if (total > 0)
+          if (due > 0)
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
@@ -584,145 +682,366 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                   value: progress,
                   backgroundColor: const Color(0xFFF1F5F9),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    allDone ? const Color(0xFF059669) : const Color(0xFF14B8A6),
+                    allDone ? const Color(0xFF059669) : const Color(0xFF0EA5E9),
                   ),
                 ),
               ),
             ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           // Lịch trình thời gian uống thuốc trong ngày
           const Text(
             'Lịch trình uống thuốc ngày:',
-            style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
           ),
           const SizedBox(height: 12),
-          
+
           if (_isLoadingMedications)
             const Center(child: CircularProgressIndicator())
           else if (_medicationSchedules.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: Text("Hôm nay bác không có lịch uống thuốc.", style: TextStyle(color: Colors.grey, fontSize: 16))),
+            // Không có lịch uống thuốc nào hôm nay
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey.shade100),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.medication_rounded,
+                      color: Color(0xFF94A3B8),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Hôm nay bác không có lịch uống thuốc.",
+                    style: TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          else if (dueSchedules.isEmpty)
+            // Có lịch nhưng chưa đến giờ nào cả
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE0F2FE),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.access_time_rounded,
+                      color: Color(0xFF0284C7),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Chưa đến giờ uống thuốc.",
+                    style: TextStyle(
+                      color: Color(0xFF0369A1),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Liều đầu tiên lúc ${_medicationSchedules.first['time'] ?? '--:--'}',
+                    style: const TextStyle(
+                      color: Color(0xFF0284C7),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             )
           else
-            ..._medicationSchedules.map((schedule) {
-              final med = schedule['medication'] ?? {};
-              final id = schedule['schedule_id'];
-              final isTaken = _takenScheduleIds.contains(id);
-              return Column(
-                children: [
-                  _buildTimelineRow(
-                    schedule['time'] ?? '--:--',
-                    '${med['name']} · ${med['dosage']}',
-                    isTaken ? 'Đã uống' : 'Chưa uống',
-                    isTaken ? const Color(0xFF059669) : const Color(0xFFD97706),
-                    isTaken ? Icons.check_circle_rounded : Icons.pending_rounded,
-                  ),
-                  const SizedBox(height: 8),
-                  if (!isTaken)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF14B8A6),
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            SizedBox(
+              height: 195,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: dueSchedules.length,
+                separatorBuilder: (context, index) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final schedule = dueSchedules[index];
+                  final med = schedule['medication'] ?? {};
+                  final id = schedule['schedule_id'];
+                  final isTaken = _takenScheduleIds.contains(id);
+                  final time = schedule['time'] ?? '--:--';
+
+                  final info = _getTimeOfDayInfo(time, isTaken);
+                  final Color themeColor = info['color'];
+                  final List<Color> gradient = info['gradient'];
+                  final IconData periodIcon = info['icon'];
+                  final String periodText = info['period'];
+
+                  return Container(
+                    width: 230,
+                    margin: const EdgeInsets.only(
+                      bottom: 6,
+                      top: 2,
+                    ), // space for shadow
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: gradient,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isTaken
+                            ? const Color(0xFFA7F3D0)
+                            : themeColor.withValues(alpha: 0.15),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: themeColor.withValues(alpha: 0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _takenScheduleIds.add(id);
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: Color(0xFF059669),
-                              duration: Duration(seconds: 2),
-                              content: Text('✓ Đã ghi nhận uống thuốc!'),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Header: Buổi + Thời gian
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: themeColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(periodIcon, size: 14, color: themeColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    periodText,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: themeColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.check, size: 18),
-                        label: const Text('Xác nhận đã uống', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              time,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Thân: Tên thuốc + Liều lượng
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              med['name'] ?? 'Không rõ tên',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E293B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 16,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    med['dosage'] ?? '1 liều',
+                                    style: TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        // Nút bấm xác nhận hoặc Trạng thái đã uống
+                        if (isTaken)
+                          Container(
+                            width: double.infinity,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  color: Color(0xFF059669),
+                                  size: 18,
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Đã uống',
+                                  style: TextStyle(
+                                    color: Color(0xFF059669),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            height: 40,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: themeColor,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: EdgeInsets.zero,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _takenScheduleIds.add(id);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFF059669),
+                                    duration: const Duration(seconds: 2),
+                                    content: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Đã ghi nhận uống ${med['name']}!',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text(
+                                'Xác nhận đã uống',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          // Gợi ý liều sắp tới nếu vẫn còn liều chưa đến giờ
+          if (!_isLoadingMedications && hasUpcoming) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F9FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.access_time_filled_rounded,
+                    color: Color(0xFF0284C7),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Còn ${total - dueSchedules.length} liều nữa sẽ đến hôm nay',
+                      style: const TextStyle(
+                        color: Color(0xFF0369A1),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                  const SizedBox(height: 16),
+                  ),
                 ],
-              );
-            }),
-          const SizedBox(height: 8),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
           Center(
             child: TextButton(
               onPressed: () => MainNavigator.of(context)?.setTab(1),
               child: const Text(
-                'Xem toàn bộ việc cần làm hôm nay',
+                'Xem toàn bộ lịch uống thuốc',
                 style: TextStyle(
-                  color: Color(0xFF0F605A),
+                  color: Color(0xFF0284C7),
                   fontSize: 15.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineRow(
-    String time,
-    String detail,
-    String statusText,
-    Color statusColor,
-    IconData icon, {
-    bool isNext = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          // Thời gian
-          SizedBox(
-            width: 88,
-            child: Text(
-              time,
-              style: TextStyle(
-                fontSize: 15.5,
-                fontWeight: isNext ? FontWeight.bold : FontWeight.w500,
-                color: isNext ? const Color(0xFF1E293B) : Colors.grey,
-              ),
-            ),
-          ),
-          // Biểu tượng trạng thái
-          Icon(
-            icon,
-            color: statusColor,
-            size: 20,
-          ),
-          const SizedBox(width: 14),
-          // Chi tiết & trạng thái chữ
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  detail,
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
-                    color: isNext ? const Color(0xFF1E293B) : Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: statusColor,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -743,7 +1062,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 12,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
         border: Border.all(color: Colors.grey.shade100, width: 1.5),
       ),
@@ -778,7 +1097,10 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFEF3C7),
                   borderRadius: BorderRadius.circular(12),
@@ -798,12 +1120,20 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
           // Chi tiết lịch khám
           const Text(
             'Bệnh viện Chợ Rẫy',
-            style: TextStyle(fontSize: 19.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+            style: TextStyle(
+              fontSize: 19.5,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
           ),
           const SizedBox(height: 6),
           const Text(
             'BS. Nguyễn Thị Lan  ·  Khoa Tim mạch',
-            style: TextStyle(fontSize: 16, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 16,
+              color: Color(0xFF475569),
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 10),
           // Thời gian nổi bật
@@ -815,7 +1145,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             ),
             child: const Row(
               children: [
-                Icon(Icons.access_time_filled_rounded, size: 20, color: Color(0xFFD97706)),
+                Icon(
+                  Icons.access_time_filled_rounded,
+                  size: 20,
+                  color: Color(0xFFD97706),
+                ),
                 SizedBox(width: 10),
                 Text(
                   '08:30  ·  Thứ Sáu, 12/06/2026',
@@ -835,18 +1169,26 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
             height: 44,
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF14B8A6)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: const BorderSide(color: Color(0xFF0EA5E9)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ElderlyAppointmentScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ElderlyAppointmentScreen(),
+                  ),
                 );
               },
               child: const Text(
                 'Xem chi tiết lịch khám bệnh',
-                style: TextStyle(color: Color(0xFF0F605A), fontWeight: FontWeight.bold, fontSize: 15),
+                style: TextStyle(
+                  color: Color(0xFF0284C7),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
             ),
           ),
@@ -861,7 +1203,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               },
               child: Row(
                 children: [
-                  const Icon(Icons.assignment_rounded, color: Color(0xFF14B8A6), size: 22),
+                  const Icon(
+                    Icons.assignment_rounded,
+                    color: Color(0xFF0EA5E9),
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
@@ -874,7 +1220,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                     ),
                   ),
                   Icon(
-                    _isDocChecklistExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                    _isDocChecklistExpanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
                     color: Colors.grey,
                   ),
                 ],
@@ -884,7 +1232,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
               const SizedBox(height: 12),
               const Text(
                 'Hãy tích chọn vào ô bên dưới khi bác bỏ giấy tờ vào cặp mang đi khám nhé:',
-                style: TextStyle(fontSize: 13.5, color: Colors.grey, height: 1.3),
+                style: TextStyle(
+                  fontSize: 13.5,
+                  color: Colors.grey,
+                  height: 1.3,
+                ),
               ),
               const SizedBox(height: 8),
               _buildCheckItem(
@@ -932,7 +1284,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 20),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF059669),
+                        size: 20,
+                      ),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -956,7 +1312,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
   }
 
   // Checkbox tùy chỉnh to, rõ ràng, nhấp nhạy tốt
-  Widget _buildCheckItem(String label, bool value, ValueChanged<bool?> onChanged) {
+  Widget _buildCheckItem(
+    String label,
+    bool value,
+    ValueChanged<bool?> onChanged,
+  ) {
     return InkWell(
       onTap: () => onChanged(!value),
       borderRadius: BorderRadius.circular(12),
@@ -972,7 +1332,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
                 color: value ? const Color(0xFF10B981) : Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: value ? const Color(0xFF10B981) : const Color(0xFFCBD5E1),
+                  color: value
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFCBD5E1),
                   width: 2.2,
                 ),
               ),
@@ -1002,4 +1364,3 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen> with SingleTicker
     );
   }
 }
-

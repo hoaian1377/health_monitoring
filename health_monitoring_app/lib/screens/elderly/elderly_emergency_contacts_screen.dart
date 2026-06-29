@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class ElderlyEmergencyContactsScreen extends StatefulWidget {
   const ElderlyEmergencyContactsScreen({super.key});
@@ -35,7 +35,7 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
           padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.of(ctx).padding.bottom),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(existing == null ? 'Thêm người thân khẩn cấp' : 'Sửa thông tin liên lạc',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F605A))),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
             const SizedBox(height: 16),
             _field(nameC, 'Họ và tên người thân', Icons.person_outline_rounded),
             const SizedBox(height: 12),
@@ -60,7 +60,7 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
                   Navigator.pop(ctx);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F605A),
+                  backgroundColor: const Color(0xFF0284C7),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -82,10 +82,10 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontSize: 15, color: Color(0xFF94A3B8)),
-        prefixIcon: Icon(icon, color: const Color(0xFF0F605A), size: 22),
+        prefixIcon: Icon(icon, color: const Color(0xFF0284C7), size: 22),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0F605A), width: 1.5)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
       ),
     );
   }
@@ -97,7 +97,7 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
       body: Column(children: [
         Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFF0F605A), Color(0xFF1B8E85)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            gradient: LinearGradient(colors: [Color(0xFF0284C7), Color(0xFF38BDF8)], begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 52, 20, 24),
@@ -131,9 +131,9 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 18, 16, 12),
                   child: Row(children: [
-                    Icon(Icons.people_rounded, color: Color(0xFF0F605A), size: 20),
+                    Icon(Icons.people_rounded, color: Color(0xFF0284C7), size: 20),
                     SizedBox(width: 8),
-                    Text('Người thân liên lạc chính', style: TextStyle(fontSize: 17.5, fontWeight: FontWeight.bold, color: Color(0xFF0F605A))),
+                    Text('Người thân liên lạc chính', style: TextStyle(fontSize: 17.5, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
                   ]),
                 ),
                 const Divider(height: 1, color: Color(0xFFF1F5F9)),
@@ -165,7 +165,7 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
               icon: const Icon(Icons.person_add_alt_1_rounded, size: 22, color: Colors.white),
               label: const Text('Thêm người thân khẩn cấp'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F605A),
+                backgroundColor: const Color(0xFF0284C7),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 54),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -190,9 +190,9 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
           child: Row(children: [
             Container(
               width: 50, height: 50,
-              decoration: BoxDecoration(color: const Color(0xFFEBFDFB), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(12)),
               alignment: Alignment.center,
-              child: Text(initials, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F605A))),
+              child: Text(initials, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
             ),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -202,12 +202,12 @@ class _State extends State<ElderlyEmergencyContactsScreen> {
             ])),
             GestureDetector(
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFF16A34A), content: Text('Đang gọi ${c.phone}...'), duration: const Duration(seconds: 2))),
-              child: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFE6FBF3), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.phone_rounded, color: Color(0xFF16A34A), size: 20)),
+              child: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.phone_rounded, color: Color(0xFF16A34A), size: 20)),
             ),
             const SizedBox(width: 8),
             GestureDetector(
               onTap: () => _showSheet(existing: c),
-              child: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFEBFDFB), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.edit_rounded, color: Color(0xFF0F605A), size: 20)),
+              child: Container(width: 42, height: 42, decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.edit_rounded, color: Color(0xFF0284C7), size: 20)),
             ),
             const SizedBox(width: 6),
             ReorderableDragStartListener(index: idx, child: const Icon(Icons.drag_handle_rounded, color: Color(0xFFCBD5E1), size: 24)),

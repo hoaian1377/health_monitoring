@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../utils/global_state.dart';
 import '../../utils/api_service.dart';
@@ -10,8 +10,8 @@ class ElderlyManageProfilesScreen extends StatefulWidget {
 }
 
 class _State extends State<ElderlyManageProfilesScreen> {
-  static const _teal = Color(0xFF0F605A);
-  static const _tealLight = Color(0xFFE6F5F4);
+  static const _teal = Color(0xFF0284C7);
+  static const _tealLight = Color(0xFFE0F2FE);
 
   void _switchActive(int index) {
     globalState.switchActiveProfile(index);
@@ -192,7 +192,7 @@ class _State extends State<ElderlyManageProfilesScreen> {
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [_teal, Color(0xFF1B8E85)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            gradient: LinearGradient(colors: [_teal, Color(0xFF38BDF8)], begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class ElderlyChangePasswordScreen extends StatefulWidget {
   const ElderlyChangePasswordScreen({super.key});
@@ -43,7 +43,7 @@ class _State extends State<ElderlyChangePasswordScreen> {
         Container(
           width: double.infinity,
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Color(0xFF0F605A), Color(0xFF1B8E85)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            gradient: LinearGradient(colors: [Color(0xFF0284C7), Color(0xFF38BDF8)], begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
           ),
           padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),
@@ -72,16 +72,16 @@ class _State extends State<ElderlyChangePasswordScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFEBFDFB),
+                color: const Color(0xFFE0F2FE),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF99F6E4)),
+                border: Border.all(color: const Color(0xFFBAE6FD)),
               ),
               child: const Row(children: [
-                Icon(Icons.info_outline_rounded, color: Color(0xFF0F605A), size: 20),
+                Icon(Icons.info_outline_rounded, color: Color(0xFF0284C7), size: 20),
                 SizedBox(width: 10),
                 Expanded(child: Text(
                   'Mật khẩu mới của bác phải có ít nhất 6 ký tự và khác mật khẩu hiện tại.',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF0F605A), fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 14, color: Color(0xFF0284C7), fontWeight: FontWeight.w600),
                 )),
               ]),
             ),
@@ -118,7 +118,7 @@ class _State extends State<ElderlyChangePasswordScreen> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F605A),
+                  backgroundColor: const Color(0xFF0284C7),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                   elevation: 0,
@@ -135,7 +135,7 @@ class _State extends State<ElderlyChangePasswordScreen> {
   }
 
   Widget _label(String text) => Text(text,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F605A)));
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)));
 
   Widget _passField({
     required TextEditingController controller,
@@ -152,7 +152,7 @@ class _State extends State<ElderlyChangePasswordScreen> {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 15),
-        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0F605A), size: 22),
+        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF0284C7), size: 22),
         suffixIcon: IconButton(
           icon: Icon(show ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: const Color(0xFF94A3B8), size: 22),
           onPressed: onToggle,
@@ -161,7 +161,7 @@ class _State extends State<ElderlyChangePasswordScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF0F605A), width: 1.5)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF0284C7), width: 1.5)),
         errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDC2626))),
         focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5)),
       ),
