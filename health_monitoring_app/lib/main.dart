@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
-import 'screens/checklist_screen.dart';
+import 'screens/medicine_management_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
@@ -58,7 +58,7 @@ class _MainNavigatorState extends State<MainNavigator> {
         index: _currentIndex,
         children: const [
           HomeScreen(),
-          ChecklistScreen(),
+          MedicineManagementScreen(),
           NotificationsScreen(),
           ProfileScreen(),
         ],
@@ -68,7 +68,7 @@ class _MainNavigatorState extends State<MainNavigator> {
         index: _currentIndex,
         children: const [
           HomeScreen(),
-          ChecklistScreen(),
+          MedicineManagementScreen(),
           HistoryScreen(),
           DashboardScreen(),
           ProfileScreen(),
@@ -86,9 +86,9 @@ class _MainNavigatorState extends State<MainNavigator> {
           label: 'Trang chủ',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.check_box_outlined),
-          activeIcon: Icon(Icons.check_box_rounded),
-          label: 'Việc làm',
+          icon: Icon(Icons.medication_outlined),
+          activeIcon: Icon(Icons.medication_rounded),
+          label: 'Thuốc',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.notifications_outlined),
@@ -109,9 +109,9 @@ class _MainNavigatorState extends State<MainNavigator> {
           label: 'Trang chủ',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.check_box_outlined),
-          activeIcon: Icon(Icons.check_box_rounded),
-          label: 'Công việc',
+          icon: Icon(Icons.medication_outlined),
+          activeIcon: Icon(Icons.medication_rounded),
+          label: 'Quản lý thuốc',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.history_rounded),
