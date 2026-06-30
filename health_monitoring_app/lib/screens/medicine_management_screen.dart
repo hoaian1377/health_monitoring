@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/api_service.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
@@ -1026,10 +1027,20 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
         prefixIcon:
             const Icon(Icons.search_rounded, color: Color(0xFF0EA5E9), size: 20),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.document_scanner_rounded, color: Color(0xFF7C3AED), size: 22),
-          tooltip: 'Quét đơn thuốc (OCR)',
-          onPressed: _showScanPrescriptionDialog,
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF0EA5E9), size: 22),
+              tooltip: 'Quét mã vạch thuốc',
+              onPressed: _showBarcodeScanner,
+            ),
+            IconButton(
+              icon: const Icon(Icons.document_scanner_rounded, color: Color(0xFF7C3AED), size: 22),
+              tooltip: 'Quét đơn thuốc (OCR)',
+              onPressed: _showScanPrescriptionDialog,
+            ),
+          ],
         ),
         filled: true,
         fillColor: Colors.white,
@@ -2897,16 +2908,18 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                             name: name,
                             category: cat,
                             dosage: dosage,
-                            unit: 'viên',
-                            frequency: '1 lần/ngày',
+                            unit: item['unit'] ?? 'viên',
+                            frequency: item['frequency'] ?? '1 lần/ngày',
                             times: [time],
                             instruction: instruction,
                             startDate: DateTime.now(),
-                            endDate: DateTime.now().add(const Duration(days: 30)),
-                            stockRemaining: 30,
-                            stockTotal: 30,
-                            prescribedBy: 'Quét OCR đơn thuốc',
+                            endDate: DateTime.now().add(Duration(days: item['duration_days'] ?? 30)),
+                            stockRemaining: item['stock'] ?? 30,
+                            stockTotal: item['stock'] ?? 30,
+                            prescribedBy: item['doctor'] ?? 'Quét OCR đơn thuốc',
                             color: catColors[cat] ?? '#0EA5E9',
+                            notes: item['notes'],
+                            sideEffects: item['side_effects'],
                           ));
                         }
                         _buildTodaySlots();
@@ -2944,6 +2957,98 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
           child: Text(value, style: const TextStyle(fontSize: 12, color: Color(0xFF7C2D12))),
         ),
       ],
+    );
+  }
+
+  void _showBarcodeScanner() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF0EA5E9)),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('Quét mã vạch / QR thuốc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                child: MobileScanner(
+                  onDetect: (capture) {
+                    final List<Barcode> barcodes = capture.barcodes;
+                    if (barcodes.isNotEmpty) {
+                      final String code = barcodes.first.rawValue ?? '';
+                      if (code.isNotEmpty) {
+                        Navigator.pop(ctx);
+                        _handleBarcodeResult(code);
+                      }
+                    }
+                  },
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Hướng camera về phía mã vạch hoặc mã QR trên hộp thuốc.',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBarcodeResult(String code) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A)),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Đã quét thành công', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          ],
+        ),
+        content: Text('Mã tìm thấy: $code\n\nHệ thống sẽ điền thông tin dựa trên mã này.', style: const TextStyle(fontSize: 14)),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0EA5E9)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showAddMedicineSheet();
+              _nameCtrl.text = "Thuốc (Mã: $code)";
+              _formCategory = 'khac';
+              _notesCtrl.text = "Thêm từ mã vạch: $code";
+            },
+            child: const Text('Tiếp tục'),
+          ),
+        ],
+      ),
     );
   }
 }
