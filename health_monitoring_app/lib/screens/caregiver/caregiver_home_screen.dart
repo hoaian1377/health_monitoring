@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -22,11 +23,19 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   List<dynamic> _medicationSchedules = [];
   bool _isLoadingMedications = false;
   String _selectedMedFilter = 'Tất cả';
+  late final ScrollController _medListScrollController;
 
   @override
   void initState() {
     super.initState();
+    _medListScrollController = ScrollController();
     _loadElderlyData();
+  }
+
+  @override
+  void dispose() {
+    _medListScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadElderlyData() async {
@@ -784,7 +793,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 constraints: const BoxConstraints(maxHeight: 280),
                 child: Scrollbar(
                   thumbVisibility: true,
+                  controller: _medListScrollController,
                   child: SingleChildScrollView(
+                    controller: _medListScrollController,
+                    primary: false,
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
                       padding: const EdgeInsets.only(right: 8.0),
@@ -2172,11 +2184,48 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   }
 
   void _showScanPrescriptionDialog() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final bool isWeb = kIsWeb;
+    final ImageSource? imageSource = isWeb
+        ? ImageSource.gallery
+        : await showModalBottomSheet<ImageSource>(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            builder: (ctx) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  const Text('Chọn ảnh đơn thuốc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0284C7)),
+                    title: const Text('Chụp ảnh mới', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Sử dụng camera để chụp đơn thuốc'),
+                    onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF10B981)),
+                    title: const Text('Chọn từ thư viện', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Chọn ảnh đã có trong điện thoại'),
+                    onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
 
-    if (image == null) return;
-    if (!mounted) return;
+    if (imageSource == null) return;
+    if (isWeb && imageSource == ImageSource.camera) {
+      _showScanErrorDialog('Không thể chụp ảnh trực tiếp trên Web. Vui lòng chọn ảnh từ thư viện.');
+      return;
+    }
+
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: imageSource, imageQuality: 80);
+    if (image == null || !mounted) return;
 
     showDialog(
       context: context,
@@ -2192,9 +2241,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               child: const Icon(Icons.document_scanner_rounded, color: Color(0xFF0284C7), size: 40),
             ),
             const SizedBox(height: 20),
-            const Text("Đang phân tích đơn thuốc...", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text("Đang quét đơn thuốc...", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
-            const Text("AI đang đọc thông tin thuốc và lịch khám", style: TextStyle(color: Colors.grey, fontSize: 13)),
+            const Text("Vui lòng giữ máy ổn định và chờ trong giây lát", style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
             const SizedBox(height: 20),
             const LinearProgressIndicator(color: Color(0xFF0F605A)),
           ],
@@ -2202,39 +2251,103 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       ),
     );
 
-    final res = await ApiService.scanPrescription(image.path);
+    final res = await ApiService.scanPrescription(image);
     if (!mounted) return;
     Navigator.pop(context);
 
-    // Support both old key 'results' and new key 'medications'
+    if (res['error'] != null) {
+      _showScanErrorDialog(res['error'] as String);
+      return;
+    }
+
     final medications = (res['medications'] ?? res['results']) as List?;
     final appointment = res['appointment'] as Map<String, dynamic>?;
 
     if ((medications != null && medications.isNotEmpty) || appointment != null) {
       _showScannedResultsDialog(medications ?? [], appointment: appointment);
-    } else if (res['error'] != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res['error'] ?? 'Lỗi quét ảnh, vui lòng nhập thủ công.')),
-      );
-      _showAddMedicationDialog();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không tìm thấy thông tin trong ảnh.')),
-      );
+      _showScanErrorDialog('Không tìm thấy thông tin trong ảnh. Vui lòng thử chụp lại hoặc nhập thủ công.');
+    }
+  }
+
+  void _showScanErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Quét đơn thuốc không thành công', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F605A)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showScanPrescriptionDialog();
+            },
+            child: const Text('Thử lại'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _sessionLabelForTime(String time) {
+    if (time.startsWith('07') || time.startsWith('08') || time.startsWith('09') || time.startsWith('10') || time.startsWith('11')) {
+      return 'Sáng';
+    }
+    if (time.startsWith('12') || time.startsWith('13') || time.startsWith('14') || time.startsWith('15') || time.startsWith('16')) {
+      return 'Trưa';
+    }
+    if (time.startsWith('17') || time.startsWith('18') || time.startsWith('19') || time.startsWith('20')) {
+      return 'Chiều';
+    }
+    return 'Tối';
+  }
+
+  String _defaultTimeForSession(String session) {
+    switch (session) {
+      case 'Sáng':
+        return '08:00';
+      case 'Trưa':
+        return '12:00';
+      case 'Chiều':
+        return '18:00';
+      case 'Tối':
+      default:
+        return '20:00';
     }
   }
 
   void _showScannedResultsDialog(List results, {Map<String, dynamic>? appointment}) {
-    // Group medications by time (Buổi)
-    final Map<String, List<dynamic>> groupedResults = {};
-    for (var item in results) {
-      final t = item['time'] ?? '08:00';
-      if (!groupedResults.containsKey(t)) groupedResults[t] = [];
-      groupedResults[t]!.add(item);
-    }
-    
-    // Sort times
-    final sortedTimes = groupedResults.keys.toList()..sort();
+    final List<Map<String, dynamic>> editableResults = results.map<Map<String, dynamic>>((item) {
+      final originalTime = item['time']?.toString() ?? '';
+      final session = _sessionLabelForTime(originalTime);
+      return {
+        'nameController': TextEditingController(text: item['name'] ?? ''),
+        'dosageController': TextEditingController(text: item['dosage'] ?? ''),
+        'frequencyController': TextEditingController(text: item['frequency']?.toString() ?? item['times_per_day']?.toString() ?? ''),
+        'time': originalTime.isNotEmpty ? originalTime : _defaultTimeForSession(session),
+        'session': session,
+        'daysController': TextEditingController(text: item['days']?.toString() ?? ''),
+        'noteController': TextEditingController(text: item['note'] ?? item['instruction'] ?? ''),
+      };
+    }).toList();
+
+    final Map<String, TextEditingController>? appointmentFields = appointment != null
+        ? <String, TextEditingController>{
+            'clinicController': TextEditingController(text: appointment['clinic'] ?? ''),
+            'doctorController': TextEditingController(text: appointment['doctor_name'] ?? ''),
+            'addressController': TextEditingController(text: appointment['address'] ?? ''),
+            'phoneController': TextEditingController(text: appointment['phone'] ?? ''),
+            'dateController': TextEditingController(text: appointment['appointment_date'] ?? ''),
+            'timeController': TextEditingController(text: appointment['appointment_time'] ?? ''),
+            'noteController': TextEditingController(text: appointment['note'] ?? ''),
+          }
+        : null;
 
     showDialog(
       context: context,
@@ -2243,72 +2356,185 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         bool isSaving = false;
         return StatefulBuilder(
           builder: (context, setStateModal) {
+            Widget buildSessionChips(int index) {
+              final sessionOptions = ['Sáng', 'Trưa', 'Chiều', 'Tối'];
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: sessionOptions.map((option) {
+                  final isSelected = editableResults[index]['session'] == option;
+                  return ChoiceChip(
+                    label: Text(option),
+                    selected: isSelected,
+                    selectedColor: const Color(0xFFDCFCE7),
+                    backgroundColor: const Color(0xFFF8FAFC),
+                    labelStyle: TextStyle(color: isSelected ? const Color(0xFF047857) : const Color(0xFF475569), fontWeight: FontWeight.w600),
+                    onSelected: (selected) {
+                      if (selected) {
+                        setStateModal(() {
+                          editableResults[index]['session'] = option;
+                          editableResults[index]['time'] = _defaultTimeForSession(option);
+                        });
+                      }
+                    },
+                  );
+                }).toList(),
+              );
+            }
 
-            Widget buildMedicationCard(dynamic item) => Card(
-              elevation: 0,
-              color: const Color(0xFFEFF6FF),
-              margin: const EdgeInsets.only(bottom: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(color: Color(0xFFBFDBFE), shape: BoxShape.circle),
-                      child: const Icon(Icons.medication_rounded, color: Color(0xFF1D4ED8), size: 22),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E3A5F))),
-                          const SizedBox(height: 3),
-                          Text('${item['dosage'] ?? ''} · ${item['instruction'] ?? ''}', style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-
-            Widget buildAppointmentCard() {
-              if (appointment == null) return const SizedBox.shrink();
+            Widget buildMedicationCard(int index) {
+              final item = editableResults[index];
               return Card(
                 elevation: 0,
-                color: const Color(0xFFFFF7ED),
-                margin: const EdgeInsets.only(bottom: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: Color(0xFFFED7AA), width: 1.5),
-                ),
+                color: const Color(0xFFEFF6FF),
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(children: [
-                        const Icon(Icons.calendar_month_rounded, color: Color(0xFFEA580C), size: 20),
-                        const SizedBox(width: 8),
-                        const Text('Lịch tái khám', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFEA580C))),
-                      ]),
-                      const Divider(height: 16, color: Color(0xFFFED7AA)),
-                      _infoRow(Icons.local_hospital_rounded, 'Phòng khám', appointment['clinic'] ?? ''),
-                      const SizedBox(height: 6),
-                      _infoRow(Icons.person_rounded, 'Bác sĩ', appointment['doctor_name'] ?? ''),
-                      const SizedBox(height: 6),
-                      _infoRow(Icons.location_on_rounded, 'Địa chỉ', appointment['address'] ?? ''),
-                      const SizedBox(height: 6),
-                      _infoRow(Icons.phone_rounded, 'SĐT', appointment['phone'] ?? ''),
-                      const SizedBox(height: 6),
-                      _infoRow(Icons.event_rounded, 'Ngày', '${appointment['appointment_date'] ?? ''} lúc ${appointment['appointment_time'] ?? ''}'),
-                      if ((appointment['note'] ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        _infoRow(Icons.info_outline_rounded, 'Lưu ý', appointment['note'] ?? ''),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(color: Color(0xFFBFDBFE), shape: BoxShape.circle),
+                            child: const Icon(Icons.medication_rounded, color: Color(0xFF1D4ED8), size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: item['nameController'],
+                              decoration: const InputDecoration(
+                                labelText: 'Tên thuốc',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: item['dosageController'],
+                              decoration: const InputDecoration(
+                                labelText: 'Liều lượng mỗi lần',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: item['frequencyController'],
+                              decoration: const InputDecoration(
+                                labelText: 'Số lần/ngày',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: item['daysController'],
+                        decoration: const InputDecoration(
+                          labelText: 'Số ngày dùng thuốc',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: item['noteController'],
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Ghi chú cách dùng',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text('Buổi uống', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                      const SizedBox(height: 8),
+                      buildSessionChips(index),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            Widget buildAppointmentCard() {
+              if (appointmentFields == null) {
+                return Card(
+                  elevation: 0,
+                  color: const Color(0xFFFFFBEB),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('Lịch tái khám', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF92400E))),
+                        SizedBox(height: 10),
+                        Text('Không phát hiện lịch tái khám trong đơn. Bạn có thể thêm sau.', style: TextStyle(color: Color(0xFF7C2D12))),
                       ],
+                    ),
+                  ),
+                );
+              }
+
+              return Card(
+                elevation: 0,
+                color: const Color(0xFFFFF7ED),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Lịch tái khám', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF92400E))),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: appointmentFields['clinicController'],
+                        decoration: const InputDecoration(
+                          labelText: 'Phòng khám / Bệnh viện',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: appointmentFields['doctorController'],
+                        decoration: const InputDecoration(
+                          labelText: 'Bác sĩ',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: appointmentFields['dateController'],
+                        decoration: const InputDecoration(
+                          labelText: 'Ngày tái khám',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: appointmentFields['timeController'],
+                        decoration: const InputDecoration(
+                          labelText: 'Giờ tái khám',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: appointmentFields['noteController'],
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Ghi chú lịch khám',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -2321,11 +2547,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               title: Row(children: [
                 const Icon(Icons.document_scanner_rounded, color: Color(0xFF0F605A)),
                 const SizedBox(width: 10),
-                const Expanded(child: Text('Kết quả nhận diện', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F605A)))),
+                const Expanded(child: Text('Kết quả quét đơn thuốc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F605A)))),
               ]),
               content: SizedBox(
                 width: double.maxFinite,
-                height: 480,
+                height: 520,
                 child: isSaving
                     ? const Center(
                         child: Column(
@@ -2333,36 +2559,20 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           children: [
                             CircularProgressIndicator(color: Color(0xFF0F605A)),
                             SizedBox(height: 16),
-                            Text('Đang lưu thuốc và lịch khám...', style: TextStyle(fontWeight: FontWeight.w600)),
+                            Text('Đang lưu thông tin...', style: TextStyle(fontWeight: FontWeight.w600)),
                           ],
                         ),
                       )
                     : ListView(
+                        padding: const EdgeInsets.only(bottom: 12),
                         children: [
-                          if (results.isNotEmpty)
-                            ...sortedTimes.map((t) {
-                              String sessionName = t == '08:00' ? 'Buổi sáng' : (t == '12:00' ? 'Buổi trưa' : (t == '19:00' ? 'Buổi chiều' : 'Khác'));
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 8, bottom: 8),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.schedule, size: 16, color: Color(0xFF059669)),
-                                        const SizedBox(width: 6),
-                                        Text('$sessionName ($t)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF059669))),
-                                      ],
-                                    ),
-                                  ),
-                                  ...groupedResults[t]!.map((item) => buildMedicationCard(item)),
-                                ],
-                              );
+                          if (editableResults.isNotEmpty)
+                            ...editableResults.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              return buildMedicationCard(idx);
                             }),
-                          if (appointment != null) ...[
-                            const SizedBox(height: 12),
-                            buildAppointmentCard(),
-                          ],
+                          const SizedBox(height: 8),
+                          buildAppointmentCard(),
                         ],
                       ),
               ),
@@ -2390,44 +2600,53 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       setStateModal(() => isSaving = true);
 
                       int successCount = 0;
-                      for (var item in results) {
+                      for (var item in editableResults) {
+                        final name = item['nameController']?.text.trim() ?? '';
+                        if (name.isEmpty) continue;
+                        final dosage = item['dosageController']?.text.trim() ?? '';
+                        final instruction = item['noteController']?.text.trim() ?? '';
+                        final time = item['time']?.toString() ?? '08:00';
+                        final frequency = item['frequencyController']?.text.trim() ?? '';
+
                         final success = await ApiService.addMedication(
                           elderlyId: _selectedElderlyId!,
-                          name: item['name'] ?? '',
-                          dosage: item['dosage'] ?? '',
-                          instruction: item['instruction'] ?? '',
-                          time: item['time'] ?? '08:00',
-                          frequency: 'Hàng ngày', // Unified frequency for the session
+                          name: name,
+                          dosage: dosage,
+                          instruction: instruction,
+                          time: time,
+                          frequency: frequency.isNotEmpty ? frequency : 'Hàng ngày',
                         );
                         if (success) successCount++;
                       }
 
                       bool appointmentSaved = false;
-                      if (appointment != null) {
-                        final loc = '${appointment['clinic'] ?? ''} - ${appointment['address'] ?? ''}';
+                      if (appointmentFields != null) {
                         appointmentSaved = await ApiService.createAppointment(
                           elderlyId: _selectedElderlyId!,
-                          doctorName: appointment['doctor_name'] ?? '',
-                          location: loc,
-                          appointmentDate: appointment['appointment_date'] ?? '',
-                          appointmentTime: appointment['appointment_time'] ?? '08:00',
-                          note: appointment['note'] ?? '',
+                          doctorName: appointmentFields['doctorController']?.text.trim() ?? '',
+                          location: appointmentFields['clinicController']?.text.trim() ?? '',
+                          appointmentDate: appointmentFields['dateController']?.text.trim() ?? '',
+                          appointmentTime: appointmentFields['timeController']?.text.trim().isNotEmpty == true ? appointmentFields['timeController']?.text.trim() ?? '08:00' : '08:00',
+                          note: appointmentFields['noteController']?.text.trim() ?? '',
                         );
                       }
 
                       if (!ctx.mounted) return;
                       Navigator.pop(ctx);
 
-                      final apptMsg = appointmentSaved ? ' + Lịch tái khám' : '';
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF10B981),
-                          content: Text('✓ Đã lưu $successCount thuốc$apptMsg!'),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-
+                      if (successCount == 0 && !appointmentSaved) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không có dữ liệu hợp lệ để lưu.')));
+                      } else {
+                        final apptMsg = appointmentSaved ? ' + Lịch tái khám' : '';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF10B981),
+                            content: Text('✓ Đã lưu $successCount thuốc$apptMsg!'),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        );
+                      }
                       _loadMedicationSchedule();
                     },
                     icon: const Icon(Icons.save_rounded, size: 20),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:image_picker/image_picker.dart';
@@ -2575,11 +2576,56 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   }
 
   void _showScanPrescriptionDialog() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    final bool isWeb = kIsWeb;
+    final ImageSource? imageSource = isWeb
+        ? ImageSource.gallery
+        : await showModalBottomSheet<ImageSource>(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            builder: (ctx) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 12),
+                  const Text('Chọn nguồn ảnh đơn thuốc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0284C7)),
+                    title: const Text('Chụp ảnh mới', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Sử dụng camera để chụp đơn thuốc'),
+                    onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF10B981)),
+                    title: const Text('Chọn từ thư viện', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Chọn ảnh đã có trong máy'),
+                    onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
 
-    if (image == null) return;
-    if (!mounted) return;
+    if (imageSource == null) return;
+
+    if (isWeb && imageSource == ImageSource.camera) {
+      _showScanError('Không thể chụp ảnh trực tiếp trên Web. Vui lòng chọn ảnh từ thư viện.');
+      return;
+    }
+
+    final ImagePicker picker = ImagePicker();
+    XFile? image;
+    try {
+      image = await picker.pickImage(source: imageSource, imageQuality: 80);
+    } catch (e) {
+      _showScanError('Không thể mở nguồn ảnh. Vui lòng kiểm tra quyền truy cập máy ảnh và thư viện.');
+      return;
+    }
+
+    if (image == null || !mounted) return;
 
     showDialog(
       context: context,
@@ -2595,9 +2641,9 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
               child: const Icon(Icons.document_scanner_rounded, color: Color(0xFF0284C7), size: 40),
             ),
             const SizedBox(height: 20),
-            const Text("Đang phân tích đơn thuốc...", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text('Đang quét đơn thuốc...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 8),
-            const Text("AI đang đọc thông tin thuốc và lịch khám", style: TextStyle(color: Colors.grey, fontSize: 13)),
+            const Text('Vui lòng giữ máy ổn định và chờ trong giây lát', style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
             const SizedBox(height: 20),
             const LinearProgressIndicator(color: Color(0xFF0EA5E9)),
           ],
@@ -2606,30 +2652,53 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     );
 
     try {
-      final res = await ApiService.scanPrescription(image.path);
+      final res = await ApiService.scanPrescription(image);
       if (!mounted) return;
       Navigator.pop(context);
+
+      if (res['error'] != null) {
+        _showScanError(res['error'] as String);
+        return;
+      }
 
       final medications = (res['medications'] ?? res['results']) as List?;
       final appointment = res['appointment'] as Map<String, dynamic>?;
 
       if ((medications != null && medications.isNotEmpty) || appointment != null) {
         _showScannedResultsDialog(medications ?? [], appointment: appointment);
-      } else if (res['error'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res['error'] ?? 'Lỗi quét ảnh, vui lòng nhập thủ công.')),
-        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không tìm thấy thông tin trong ảnh.')),
-        );
+        _showScanError('Không tìm thấy thông tin trong ảnh. Vui lòng thử lại với ảnh rõ hơn.');
       }
     } catch (e) {
-      if (mounted) Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Có lỗi xảy ra: $e')),
-      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      _showScanError('Có lỗi xảy ra khi quét: $e');
     }
+  }
+
+  void _showScanError(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Quét không thành công', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0EA5E9)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showScanPrescriptionDialog();
+            },
+            child: const Text('Thử lại'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showScannedResultsDialog(List results, {Map<String, dynamic>? appointment}) {

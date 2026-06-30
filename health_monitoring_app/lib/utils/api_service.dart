@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 class ApiService {
   static String get baseUrl => kIsWeb ? "http://localhost:8000" : "http://192.168.1.7:8000";
@@ -337,20 +338,30 @@ class ApiService {
   }
 
   // ================= SCAN PRESCRIPTION (OCR Mock) =================
-  static Future<Map<String, dynamic>> scanPrescription(String imagePath) async {
+  static Future<Map<String, dynamic>> scanPrescription(XFile imageFile) async {
     final url = Uri.parse("$baseUrl/api/medication/scan-prescription/");
     try {
-      var request = http.MultipartRequest('POST', url);
-      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
-      var streamedResponse = await request.send();
-      var res = await http.Response.fromStream(streamedResponse);
-      
+      final request = http.MultipartRequest('POST', url);
+      if (kIsWeb) {
+        final imageBytes = await imageFile.readAsBytes();
+        final filename = imageFile.name.isNotEmpty ? imageFile.name : 'prescription.jpg';
+        request.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: filename));
+      } else {
+        request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+      }
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
+
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
       }
+      final payload = res.body.isNotEmpty ? jsonDecode(res.body) : null;
+      if (payload is Map<String, dynamic> && payload['error'] != null) {
+        return {"error": payload['error']};
+      }
       return {"error": "Lỗi quét ảnh (status ${res.statusCode})"};
     } catch (e) {
-      return {"error": "Lỗi kết nối máy chủ."};
+      return {"error": "Lỗi kết nối máy chủ: $e"};
     }
   }
 
