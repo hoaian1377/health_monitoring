@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'package:image_picker/image_picker.dart';
+import '../utils/api_service.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 class MedicineItem {
@@ -1023,6 +1025,11 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
         prefixIcon:
             const Icon(Icons.search_rounded, color: Color(0xFF0EA5E9), size: 20),
+        suffixIcon: IconButton(
+          icon: const Icon(Icons.document_scanner_rounded, color: Color(0xFF7C3AED), size: 22),
+          tooltip: 'Quét đơn thuốc (OCR)',
+          onPressed: _showScanPrescriptionDialog,
+        ),
         filled: true,
         fillColor: Colors.white,
         contentPadding:
@@ -2564,6 +2571,310 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                   color: Color(0xFF94A3B8), fontSize: 14)),
         ],
       ),
+    );
+  }
+
+  void _showScanPrescriptionDialog() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image == null) return;
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(color: Color(0xFFE0F2FE), shape: BoxShape.circle),
+              child: const Icon(Icons.document_scanner_rounded, color: Color(0xFF0284C7), size: 40),
+            ),
+            const SizedBox(height: 20),
+            const Text("Đang phân tích đơn thuốc...", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            const Text("AI đang đọc thông tin thuốc và lịch khám", style: TextStyle(color: Colors.grey, fontSize: 13)),
+            const SizedBox(height: 20),
+            const LinearProgressIndicator(color: Color(0xFF0EA5E9)),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final res = await ApiService.scanPrescription(image.path);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      final medications = (res['medications'] ?? res['results']) as List?;
+      final appointment = res['appointment'] as Map<String, dynamic>?;
+
+      if ((medications != null && medications.isNotEmpty) || appointment != null) {
+        _showScannedResultsDialog(medications ?? [], appointment: appointment);
+      } else if (res['error'] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['error'] ?? 'Lỗi quét ảnh, vui lòng nhập thủ công.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không tìm thấy thông tin trong ảnh.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Có lỗi xảy ra: $e')),
+      );
+    }
+  }
+
+  void _showScannedResultsDialog(List results, {Map<String, dynamic>? appointment}) {
+    final Map<String, List<dynamic>> groupedResults = {};
+    for (var item in results) {
+      final t = item['time'] ?? '08:00';
+      if (!groupedResults.containsKey(t)) groupedResults[t] = [];
+      groupedResults[t]!.add(item);
+    }
+    
+    final sortedTimes = groupedResults.keys.toList()..sort();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+
+            Widget buildMedicationCard(dynamic item) => Card(
+              elevation: 0,
+              color: const Color(0xFFEFF6FF),
+              margin: const EdgeInsets.only(bottom: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(color: Color(0xFFBFDBFE), shape: BoxShape.circle),
+                      child: const Icon(Icons.medication_rounded, color: Color(0xFF1D4ED8), size: 22),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E3A5F))),
+                          const SizedBox(height: 3),
+                          Text('${item['dosage'] ?? ''} · ${item['instruction'] ?? ''}', style: const TextStyle(color: Color(0xFF475569), fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+
+            Widget buildAppointmentCard() {
+              if (appointment == null) return const SizedBox.shrink();
+              return Card(
+                elevation: 0,
+                color: const Color(0xFFFFF7ED),
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFFFED7AA), width: 1.5),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.calendar_month_rounded, color: Color(0xFFEA580C), size: 20),
+                        const SizedBox(width: 8),
+                        const Text('Lịch tái khám', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFFEA580C))),
+                      ]),
+                      const Divider(height: 16, color: Color(0xFFFED7AA)),
+                      _infoRow(Icons.local_hospital_rounded, 'Phòng khám', appointment['clinic'] ?? ''),
+                      const SizedBox(height: 6),
+                      _infoRow(Icons.person_rounded, 'Bác sĩ', appointment['doctor_name'] ?? ''),
+                      const SizedBox(height: 6),
+                      _infoRow(Icons.location_on_rounded, 'Địa chỉ', appointment['address'] ?? ''),
+                      const SizedBox(height: 6),
+                      _infoRow(Icons.phone_rounded, 'SĐT', appointment['phone'] ?? ''),
+                      const SizedBox(height: 6),
+                      _infoRow(Icons.event_rounded, 'Ngày', '${appointment['appointment_date'] ?? ''} lúc ${appointment['appointment_time'] ?? ''}'),
+                      if ((appointment['note'] ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _infoRow(Icons.info_outline_rounded, 'Lưu ý', appointment['note'] ?? ''),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              title: Row(children: [
+                const Icon(Icons.document_scanner_rounded, color: Color(0xFF0EA5E9)),
+                const SizedBox(width: 10),
+                const Expanded(child: Text('Kết quả nhận diện', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0EA5E9)))),
+              ]),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
+                child: isSaving
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: Color(0xFF0EA5E9)),
+                            SizedBox(height: 16),
+                            Text('Đang lưu thuốc...', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      )
+                    : ListView(
+                        children: [
+                          if (results.isNotEmpty)
+                            ...sortedTimes.map((t) {
+                              String sessionName = t.startsWith('05') || t.startsWith('06') || t.startsWith('07') || t.startsWith('08') || t.startsWith('09') || t.startsWith('10') || t.startsWith('11')
+                                  ? 'Buổi sáng'
+                                  : (t.startsWith('12') || t.startsWith('13') || t.startsWith('14') || t.startsWith('15') || t.startsWith('16') || t.startsWith('17')
+                                      ? 'Buổi trưa/chiều'
+                                      : 'Buổi tối');
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.schedule, size: 16, color: Color(0xFF059669)),
+                                        const SizedBox(width: 6),
+                                        Text('$sessionName ($t)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF059669))),
+                                      ],
+                                    ),
+                                  ),
+                                  ...groupedResults[t]!.map((item) => buildMedicationCard(item)),
+                                ],
+                              );
+                            }),
+                          if (appointment != null) ...[
+                            const SizedBox(height: 12),
+                            buildAppointmentCard(),
+                          ],
+                        ],
+                      ),
+              ),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                if (!isSaving)
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Hủy', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                  ),
+                if (!isSaving)
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0EA5E9),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    onPressed: () async {
+                      setStateModal(() => isSaving = true);
+                      
+                      await Future.delayed(const Duration(milliseconds: 600));
+
+                      setState(() {
+                        for (var item in results) {
+                          final name = item['name'] ?? 'Không tên';
+                          final time = item['time'] ?? '08:00';
+                          final dosage = item['dosage'] ?? '1 viên';
+                          final instruction = item['instruction'] ?? 'Sau ăn';
+                          
+                          String cat = 'khac';
+                          final nameL = name.toLowerCase();
+                          if (nameL.contains('amlodipine') || nameL.contains('áp') || nameL.contains('huyết áp')) {
+                            cat = 'huyet_ap';
+                          } else if (nameL.contains('metformin') || nameL.contains('đường')) {
+                            cat = 'tieu_duong';
+                          } else if (nameL.contains('atorvastatin') || nameL.contains('aspirin') || nameL.contains('tim')) {
+                            cat = 'tim_mach';
+                          } else if (nameL.contains('vitamin') || nameL.contains('d3')) {
+                            cat = 'vitamin';
+                          }
+
+                          final catColors = {
+                            'huyet_ap': '#DC2626',
+                            'tieu_duong': '#0284C7',
+                            'tim_mach': '#E11D48',
+                            'vitamin': '#16A34A',
+                            'khac': '#7C3AED',
+                          };
+
+                          _medicines.add(MedicineItem(
+                            id: DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(100).toString(),
+                            name: name,
+                            category: cat,
+                            dosage: dosage,
+                            unit: 'viên',
+                            frequency: '1 lần/ngày',
+                            times: [time],
+                            instruction: instruction,
+                            startDate: DateTime.now(),
+                            endDate: DateTime.now().add(const Duration(days: 30)),
+                            stockRemaining: 30,
+                            stockTotal: 30,
+                            prescribedBy: 'Quét OCR đơn thuốc',
+                            color: catColors[cat] ?? '#0EA5E9',
+                          ));
+                        }
+                        _buildTodaySlots();
+                      });
+
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF16A34A),
+                          content: Text('✓ Đã thêm thành công ${results.length} loại thuốc từ đơn quét!'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.save_rounded, size: 16),
+                    label: const Text('Lưu vào danh sách', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFFEA580C).withOpacity(0.7)),
+        const SizedBox(width: 6),
+        Text('$label: ', style: const TextStyle(fontSize: 12, color: Color(0xFF9A3412), fontWeight: FontWeight.bold)),
+        Expanded(
+          child: Text(value, style: const TextStyle(fontSize: 12, color: Color(0xFF7C2D12))),
+        ),
+      ],
     );
   }
 }

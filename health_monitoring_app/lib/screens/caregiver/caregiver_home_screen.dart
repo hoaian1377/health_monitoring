@@ -21,6 +21,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   int? _selectedElderlyId;
   List<dynamic> _medicationSchedules = [];
   bool _isLoadingMedications = false;
+  String _selectedMedFilter = 'Tất cả';
 
   @override
   void initState() {
@@ -528,6 +529,94 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     );
   }
 
+  Widget _buildMedFilterTabs(Map<String, List<dynamic>> groupedMeds) {
+    final int allCount = _medicationSchedules.length;
+    final int morningCount = groupedMeds['Buổi sáng']!.length;
+    final int afternoonCount = groupedMeds['Buổi trưa/chiều']!.length;
+    final int eveningCount = groupedMeds['Buổi tối']!.length;
+
+    final filters = [
+      {'label': 'Tất cả', 'count': allCount},
+      {'label': 'Sáng', 'count': morningCount},
+      {'label': 'Trưa/Chiều', 'count': afternoonCount},
+      {'label': 'Tối', 'count': eveningCount},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: filters.map((f) {
+          final label = f['label'] as String;
+          final count = f['count'] as int;
+          final isSelected = _selectedMedFilter == label;
+
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedMedFilter = label;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                      ),
+                    ),
+                    if (count > 0) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : const Color(0xFF475569),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   // ── Thẻ Quản lý lịch uống thuốc ──────────────────────────────────────────
   Widget _buildMedicationManagementCard() {
     // Group schedules by time
@@ -561,6 +650,15 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     final int takenMeds = groupedMeds['Buổi sáng']!.length;
     final double progress = totalMeds > 0 ? (takenMeds / totalMeds) : 0;
     final bool allDone = totalMeds > 0 && takenMeds >= totalMeds;
+
+    final filteredGroups = groupedMeds.entries.where((e) {
+      if (e.value.isEmpty) return false;
+      if (_selectedMedFilter == 'Tất cả') return true;
+      if (_selectedMedFilter == 'Sáng') return e.key == 'Buổi sáng';
+      if (_selectedMedFilter == 'Trưa/Chiều') return e.key == 'Buổi trưa/chiều';
+      if (_selectedMedFilter == 'Tối') return e.key == 'Buổi tối';
+      return false;
+    }).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -660,6 +758,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               const SizedBox(height: 24),
             ],
 
+            // Filter Tabs
+            _buildMedFilterTabs(groupedMeds),
+            const SizedBox(height: 16),
+
             // Medication List
             if (_elderlyList.isEmpty)
               const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có người cao tuổi nào.", style: TextStyle(color: Colors.grey))))
@@ -667,99 +769,155 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
             else if (_medicationSchedules.isEmpty)
               const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("Chưa có lịch uống thuốc.", style: TextStyle(color: Colors.grey))))
+            else if (filteredGroups.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    "Không có lịch uống thuốc trong buổi này.",
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                ),
+              )
             else
-              ...groupedMeds.entries.where((e) => e.value.isNotEmpty).map((entry) {
-                final groupName = entry.key;
-                final meds = entry.value;
-                IconData groupIcon;
-                Color groupColor;
-                if (groupName == 'Buổi sáng') {
-                  groupIcon = Icons.wb_sunny_rounded;
-                  groupColor = const Color(0xFFD97706);
-                } else if (groupName == 'Buổi trưa/chiều') {
-                  groupIcon = Icons.wb_cloudy_rounded;
-                  groupColor = const Color(0xFF0EA5E9);
-                } else if (groupName == 'Buổi tối') {
-                  groupIcon = Icons.nights_stay_rounded;
-                  groupColor = const Color(0xFF4F46E5);
-                } else {
-                  groupIcon = Icons.access_time_rounded;
-                  groupColor = const Color(0xFF64748B);
-                }
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: filteredGroups.map((entry) {
+                          final groupName = entry.key;
+                          final meds = entry.value;
+                          IconData groupIcon;
+                          Color groupColor;
+                          if (groupName == 'Buổi sáng') {
+                            groupIcon = Icons.wb_sunny_rounded;
+                            groupColor = const Color(0xFFD97706);
+                          } else if (groupName == 'Buổi trưa/chiều') {
+                            groupIcon = Icons.wb_cloudy_rounded;
+                            groupColor = const Color(0xFF0EA5E9);
+                          } else if (groupName == 'Buổi tối') {
+                            groupIcon = Icons.nights_stay_rounded;
+                            groupColor = const Color(0xFF4F46E5);
+                          } else {
+                            groupIcon = Icons.access_time_rounded;
+                            groupColor = const Color(0xFF64748B);
+                          }
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(groupIcon, color: groupColor, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          groupName,
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: groupColor),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Divider(color: groupColor.withValues(alpha: 0.2))),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ...meds.map((schedule) {
-                      final med = schedule['medication'] ?? {};
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Text(
-                                schedule['time'] ?? '--:--',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF475569)),
-                              ),
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(med['name'] ?? 'Không tên', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                  const SizedBox(height: 2),
-                                  Text('${med['instruction'] ?? ''} · ${med['dosage'] ?? ''}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            InkWell(
-                              onTap: () => _showEditDeleteMedicationDialog(schedule),
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                                  child: Row(
+                                    children: [
+                                      Icon(groupIcon, color: groupColor, size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        groupName,
+                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: groupColor),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: groupColor.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '${meds.length} liều',
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: groupColor),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                child: const Icon(Icons.edit_rounded, color: Color(0xFF64748B), size: 18),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 8),
-                  ],
-                );
-              }),
+                                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                                ...meds.asMap().entries.map((medEntry) {
+                                  final idx = medEntry.key;
+                                  final schedule = medEntry.value;
+                                  final med = schedule['medication'] ?? {};
+                                  final time = schedule['time'] ?? '--:--';
 
+                                  return Column(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(10),
+                                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.02),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Text(
+                                                time,
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: groupColor),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(med['name'] ?? 'Không tên', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                                                  const SizedBox(height: 2),
+                                                  Text('${med['instruction'] ?? ''} · ${med['dosage'] ?? ''}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            InkWell(
+                                              onTap: () => _showEditDeleteMedicationDialog(schedule),
+                                              borderRadius: BorderRadius.circular(8),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                                ),
+                                                child: const Icon(Icons.edit_rounded, color: Color(0xFF64748B), size: 16),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (idx < meds.length - 1)
+                                        const Divider(height: 1, color: Color(0xFFE2E8F0), indent: 14, endIndent: 14),
+                                    ],
+                                  );
+                                }),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -785,7 +943,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    onPressed: _elderlyList.isEmpty ? null : _showMedicationChoiceDialog,
+                    onPressed: _elderlyList.isEmpty ? null : _showAddMedicationDialog,
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('Thêm lịch', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),

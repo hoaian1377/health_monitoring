@@ -1,8 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.17:8000";
+  static String get baseUrl => kIsWeb ? "http://localhost:8000" : "http://192.168.1.7:8000";
   static int? currentAccountId;
   static String currentUsername = 'Người dùng';
   static String currentRole = 'caregiver';
