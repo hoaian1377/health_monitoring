@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 class ApiService {
-  static String get baseUrl => kIsWeb ? "http://localhost:8000" : "http://192.168.1.7:8000";
+  static String get baseUrl => kIsWeb ? "http://localhost:8000" : "http://192.168.123.4:8000";
   static int? currentAccountId;
   static String currentUsername = 'Người dùng';
   static String currentRole = 'caregiver';
@@ -504,6 +504,47 @@ class ApiService {
     } catch (e) {
       print("ERROR: $e");
       return false;
+    }
+  }
+
+  // ================= ADD HEALTH METRIC =================
+  static Future<bool> addHealthMetric({
+    required int elderlyId,
+    int? heartRate,
+    String? bloodPressure,
+    double? bloodSugar,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/healthmetrics/create/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "elderlyid": elderlyId,
+          "heart_rate": heartRate,
+          "blood_pressure": bloodPressure,
+          "blood_sugar": bloodSugar,
+        }),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ERROR: $e");
+      return false;
+    }
+  }
+
+  // ================= GET HEALTH METRICS =================
+  static Future<List<dynamic>> getHealthMetrics(int elderlyId) async {
+    final url = Uri.parse("$baseUrl/api/healthmetrics/list/?elderly_id=$elderlyId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return [];
+    } catch (e) {
+      print("ERROR: $e");
+      return [];
     }
   }
 }

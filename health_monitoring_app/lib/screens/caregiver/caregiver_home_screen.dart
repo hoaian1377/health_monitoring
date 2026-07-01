@@ -25,11 +25,18 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   String _selectedMedFilter = 'Tất cả';
   late final ScrollController _medListScrollController;
 
+  // Chỉ số sức khoẻ
+  String _bpSys = '--';
+  String _bpDia = '--';
+  String _heartRate = '--';
+  String _bloodSugar = '--';
+  String _temperature = '--';
+
   @override
   void initState() {
     super.initState();
     _medListScrollController = ScrollController();
-    _loadElderlyData();
+    _loadElderlyList();
   }
 
   @override
@@ -38,7 +45,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadElderlyData() async {
+  Future<void> _loadElderlyList() async {
     final result = await ApiService.getElderlyList();
     if (mounted && result['success'] == true) {
       final list = (result['elderly_list'] as List).cast<Map<String, dynamic>>();
@@ -46,20 +53,50 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         _elderlyList = list;
         if (list.isNotEmpty) {
           _selectedElderlyId = list.first['id'] as int;
-          _loadMedicationSchedule();
+          _loadElderlyDetails();
         }
       });
     }
   }
 
-  Future<void> _loadMedicationSchedule() async {
+  Future<void> _loadElderlyDetails() async {
     if (_selectedElderlyId == null) return;
     setState(() => _isLoadingMedications = true);
+    
     final schedules = await ApiService.getElderlyMedicationSchedule(_selectedElderlyId!);
+    final data = await ApiService.getHealthMetrics(_selectedElderlyId!);
+
     if (mounted) {
       setState(() {
         _medicationSchedules = schedules;
         _isLoadingMedications = false;
+
+        // Reset metrics first
+        _bpSys = '--';
+        _bpDia = '--';
+        _heartRate = '--';
+        _bloodSugar = '--';
+        _temperature = '--';
+        
+        if (data.isNotEmpty) {
+          final latest = data[0];
+          if (latest['heart_rate'] != null) {
+            _heartRate = latest['heart_rate'].toString();
+          }
+          if (latest['blood_pressure'] != null) {
+            final bp = latest['blood_pressure'].toString().split('/');
+            if (bp.length == 2) {
+              _bpSys = bp[0];
+              _bpDia = bp[1];
+            }
+          }
+          if (latest['blood_sugar'] != null) {
+            _bloodSugar = latest['blood_sugar'].toString();
+          }
+          if (latest['temperature'] != null) {
+            _temperature = latest['temperature'].toString();
+          }
+        }
       });
     }
   }
@@ -733,7 +770,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       onChanged: (val) {
                         if (val != null) {
                           setState(() => _selectedElderlyId = val);
-                          _loadMedicationSchedule();
+                          _loadElderlyDetails();
                         }
                       },
                     ),
@@ -1188,11 +1225,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     icon: Icons.heart_broken_rounded,
                     iconColor: Colors.red,
                     label: 'Huyết áp',
-                    value: '128/82',
+                    value: '$_bpSys/$_bpDia',
                     unit: ' mmHg',
-                    status: 'Hơi cao',
-                    statusColor: const Color(0xFFD97706),
-                    statusBg: const Color(0xFFFEF3C7),
+                    status: _bpSys == '--' ? 'Chưa đo' : (int.tryParse(_bpSys) != null && int.parse(_bpSys) > 130 ? 'Hơi cao' : 'Bình thường'),
+                    statusColor: _bpSys == '--' ? Colors.grey : (int.tryParse(_bpSys) != null && int.parse(_bpSys) > 130 ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
+                    statusBg: _bpSys == '--' ? Colors.grey.shade200 : (int.tryParse(_bpSys) != null && int.parse(_bpSys) > 130 ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1201,11 +1238,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     icon: Icons.water_drop_rounded,
                     iconColor: Colors.blue,
                     label: 'Đường huyết',
-                    value: '5.8',
+                    value: _bloodSugar,
                     unit: ' mmol/L',
-                    status: 'Ổn định',
-                    statusColor: const Color(0xFF16A34A),
-                    statusBg: const Color(0xFFDCFCE7),
+                    status: _bloodSugar == '--' ? 'Chưa đo' : 'Ổn định',
+                    statusColor: _bloodSugar == '--' ? Colors.grey : const Color(0xFF16A34A),
+                    statusBg: _bloodSugar == '--' ? Colors.grey.shade200 : const Color(0xFFDCFCE7),
                   ),
                 ),
               ],
@@ -1218,11 +1255,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     icon: Icons.favorite_rounded,
                     iconColor: Colors.pinkAccent,
                     label: 'Nhịp tim',
-                    value: '76',
+                    value: _heartRate,
                     unit: ' bpm',
-                    status: 'Bình thường',
-                    statusColor: const Color(0xFF16A34A),
-                    statusBg: const Color(0xFFDCFCE7),
+                    status: _heartRate == '--' ? 'Chưa đo' : 'Bình thường',
+                    statusColor: _heartRate == '--' ? Colors.grey : const Color(0xFF16A34A),
+                    statusBg: _heartRate == '--' ? Colors.grey.shade200 : const Color(0xFFDCFCE7),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1231,11 +1268,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     icon: Icons.thermostat_rounded,
                     iconColor: Colors.orange,
                     label: 'Nhiệt độ',
-                    value: '36.5',
+                    value: _temperature,
                     unit: ' °C',
-                    status: 'Bình thường',
-                    statusColor: const Color(0xFF16A34A),
-                    statusBg: const Color(0xFFDCFCE7),
+                    status: _temperature == '--' ? 'Chưa đo' : 'Bình thường',
+                    statusColor: _temperature == '--' ? Colors.grey : const Color(0xFF16A34A),
+                    statusBg: _temperature == '--' ? Colors.grey.shade200 : const Color(0xFFDCFCE7),
                   ),
                 ),
               ],
@@ -2647,7 +2684,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           ),
                         );
                       }
-                      _loadMedicationSchedule();
+                      _loadElderlyDetails();
                     },
                     icon: const Icon(Icons.save_rounded, size: 20),
                     label: const Text('Lưu tất cả', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -2772,7 +2809,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   Navigator.pop(ctx);
                   if (ok) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFF10B981), content: Text('Đã thêm thuốc thành công!')));
-                    _loadMedicationSchedule();
+                    _loadElderlyDetails();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi thêm thuốc.')));
                   }
@@ -2848,7 +2885,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   Navigator.pop(ctx);
                   if (ok) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa thành công.')));
-                    _loadMedicationSchedule();
+                    _loadElderlyDetails();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi xóa.')));
                   }

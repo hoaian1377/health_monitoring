@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'users',
     'medication',
     'notification',
+    'healthmetric',
 ]
 
 REST_FRAMEWORK = {
@@ -87,7 +88,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'Heal',
+        'NAME': 'Healthmonitoring',
         'USER':'',
         'PASSWORD':'',
         'HOST':'localhost',

@@ -18,6 +18,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   bool _isLoadingMedications = true;
   Set<int> _takenScheduleIds = {};
 
+  // Chỉ số sức khoẻ
+  String _bpSys = '--';
+  String _bpDia = '--';
+  String _heartRate = '--';
+  String _bloodSugar = '--';
+
   bool _isAppointmentNear =
       true; // Hiển thị mặc định vì có lịch khám sau 3 ngày
   bool _isDocChecklistExpanded = true; // Mặc định mở checklist giấy tờ
@@ -57,13 +63,35 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
 
   Future<void> _loadMedications() async {
     setState(() => _isLoadingMedications = true);
-    final schedules = await ApiService.getElderlyMedicationSchedule(
-      ApiService.currentAccountId ?? 0,
-    );
+    final accountId = ApiService.currentAccountId ?? 0;
+    
+    // Load medications
+    final schedules = await ApiService.getElderlyMedicationSchedule(accountId);
+    
+    // Load health metrics
+    final data = await ApiService.getHealthMetrics(accountId);
+    
     if (mounted) {
       setState(() {
         _medicationSchedules = schedules;
         _isLoadingMedications = false;
+        
+        if (data.isNotEmpty) {
+          final latest = data[0];
+          if (latest['heart_rate'] != null) {
+            _heartRate = latest['heart_rate'].toString();
+          }
+          if (latest['blood_pressure'] != null) {
+            final bp = latest['blood_pressure'].toString().split('/');
+            if (bp.length == 2) {
+              _bpSys = bp[0];
+              _bpDia = bp[1];
+            }
+          }
+          if (latest['blood_sugar'] != null) {
+            _bloodSugar = latest['blood_sugar'].toString();
+          }
+        }
       });
     }
   }
@@ -421,7 +449,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         Expanded(
           child: _buildStatItem(
             'Huyết áp',
-            '120/80',
+            '$_bpSys/$_bpDia',
             'mmHg',
             const Color(0xFF0284C7),
             Icons.favorite_rounded,
@@ -431,7 +459,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         Expanded(
           child: _buildStatItem(
             'Đường huyết',
-            '5.8',
+            _bloodSugar,
             'mmol/L',
             const Color(0xFF059669),
             Icons.water_drop_rounded,
@@ -441,7 +469,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         Expanded(
           child: _buildStatItem(
             'Nhịp tim',
-            '72',
+            _heartRate,
             'l/phút',
             const Color(0xFFE11D48),
             Icons.monitor_heart_rounded,

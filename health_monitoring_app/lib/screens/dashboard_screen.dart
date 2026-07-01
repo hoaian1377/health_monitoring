@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../utils/global_state.dart';
+import '../utils/api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,6 +34,33 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     _chartTabController = TabController(length: 4, vsync: this);
+    _loadLatestMetrics();
+  }
+
+  Future<void> _loadLatestMetrics() async {
+    if (ApiService.currentAccountId != null) {
+      final data = await ApiService.getHealthMetrics(ApiService.currentAccountId!);
+      if (data.isNotEmpty) {
+        final latest = data[0];
+        if (mounted) {
+          setState(() {
+            if (latest['heart_rate'] != null) {
+              _heartRate = latest['heart_rate'].toString();
+            }
+            if (latest['blood_pressure'] != null) {
+              final bp = latest['blood_pressure'].toString().split('/');
+              if (bp.length == 2) {
+                _bpSys = bp[0];
+                _bpDia = bp[1];
+              }
+            }
+            if (latest['blood_sugar'] != null) {
+              _bloodSugar = latest['blood_sugar'].toString();
+            }
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -176,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     setState(() {
                       _bpSys = bpSysCtrl.text.isEmpty ? _bpSys : bpSysCtrl.text;
                       _bpDia = bpDiaCtrl.text.isEmpty ? _bpDia : bpDiaCtrl.text;
@@ -189,14 +217,26 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _temperature =
                           tempCtrl.text.isEmpty ? _temperature : tempCtrl.text;
                     });
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        backgroundColor: Color(0xFF10B981),
-                        content: Text('✓ Đã cập nhật chỉ số thành công!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                    
+                    if (ApiService.currentAccountId != null) {
+                      await ApiService.addHealthMetric(
+                        elderlyId: ApiService.currentAccountId!,
+                        heartRate: int.tryParse(_heartRate),
+                        bloodPressure: '$_bpSys/$_bpDia',
+                        bloodSugar: double.tryParse(_bloodSugar),
+                      );
+                    }
+
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Color(0xFF10B981),
+                          content: Text('✓ Đã cập nhật chỉ số thành công!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
                   },
                   child: const Text('Lưu Chỉ Số',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
