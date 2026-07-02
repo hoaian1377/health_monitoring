@@ -1,5 +1,12 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
 import 'package:qr_flutter/qr_flutter.dart';
 import '../utils/api_service.dart';
 
@@ -22,6 +29,7 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
   // After creation
   String? _createdQrToken;
   String? _createdName;
+  final GlobalKey _qrKey = GlobalKey();
 
   @override
   void dispose() {
@@ -87,6 +95,11 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
         _createdQrToken = result['qr_token'] as String?;
         _createdName = _fullnameCtrl.text.trim();
       });
+      // Tự động lưu ảnh QR sau khi tạo hồ sơ thành công
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) await _saveQrImage();
+      });
     } else {
       _showError(result['error'] ?? 'Có lỗi xảy ra. Vui lòng thử lại.');
     }
@@ -113,6 +126,75 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
       _selectedDob = null;
       _selectedGender = null;
     });
+  }
+
+  Future<void> _saveQrImage() async {
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lưu ảnh QR chỉ hỗ trợ trên thiết bị di động.')),
+        );
+      }
+      return;
+    }
+    if (Platform.isAndroid) {
+      final statuses = await [Permission.storage, Permission.photos].request();
+      final ok = (statuses[Permission.storage]?.isGranted ?? false) ||
+          (statuses[Permission.photos]?.isGranted ?? false);
+      if (!ok) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Quyền lưu ảnh bị từ chối.')),
+          );
+        }
+        return;
+      }
+    } else if (Platform.isIOS) {
+      final status = await Permission.photos.request();
+      if (!status.isGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Quyền ảnh bị từ chối.')),
+          );
+        }
+        return;
+      }
+    }
+    try {
+      final boundary = _qrKey.currentContext?.findRenderObject();
+      if (boundary is! RenderRepaintBoundary) {
+        throw Exception('Không thể tạo ảnh từ QR');
+      }
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Không lấy được dữ liệu ảnh');
+      final result = await ImageGallerySaver.saveImage(
+        Uint8List.fromList(byteData.buffer.asUint8List()),
+        name: 'qr_ho_so_${DateTime.now().millisecondsSinceEpoch}',
+        quality: 100,
+      );
+      if (!mounted) return;
+      if (result['isSuccess'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF16A34A),
+            content: const Text('✓ Đã lưu ảnh QR vào thư viện ảnh!'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lưu ảnh QR không thành công.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lưu ảnh QR: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -523,17 +605,20 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
             child: Column(
               children: [
                 // QR Image
-                QrImageView(
-                  data: _createdQrToken!,
-                  version: QrVersions.auto,
-                  size: 220,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: Color(0xFF7C3AED),
-                  ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.square,
-                    color: Color(0xFF1E293B),
+                RepaintBoundary(
+                  key: _qrKey,
+                  child: QrImageView(
+                    data: _createdQrToken!,
+                    version: QrVersions.auto,
+                    size: 220,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Color(0xFF7C3AED),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -601,6 +686,24 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
               'Sao chép mã token',
               style:
                   TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Save QR Image button
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF16A34A)),
+              foregroundColor: const Color(0xFF16A34A),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            onPressed: _saveQrImage,
+            icon: const Icon(Icons.save_alt_rounded, size: 16),
+            label: const Text(
+              'Lưu ảnh QR vào máy',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
           const SizedBox(height: 12),

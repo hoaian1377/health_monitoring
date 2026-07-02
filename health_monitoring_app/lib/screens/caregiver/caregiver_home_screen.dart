@@ -1,8 +1,14 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
 
@@ -15,7 +21,7 @@ class CaregiverHomeScreen extends StatefulWidget {
 
 class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   // ── Trạng thái ─────────────────────────────────────────────────────────────
-  bool _showMissedMedsAlert = true;
+  final GlobalKey _qrImageKey = GlobalKey();
 
   // Medication Management State
   List<Map<String, dynamic>> _elderlyList = [];
@@ -115,10 +121,6 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_showMissedMedsAlert) ...[
-                    _buildMissedMedsAlert(),
-                    const SizedBox(height: 16),
-                  ],
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -279,76 +281,6 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Cảnh báo bỏ lỡ thuốc (xem từ góc caregiver) ──────────────────────────
-  Widget _buildMissedMedsAlert() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFFECACA)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDC2626).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFDC2626),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Bỏ lỡ giờ uống thuốc — Đã báo người thân',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFB91C1C),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Thuốc huyết áp Amlodipine lúc 07:00 chưa được xác nhận. Hệ thống đã tự động gửi tin nhắn.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF991B1B),
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => setState(() {
-                    _showMissedMedsAlert = false;
-                  }),
-                  child: const Text(
-                    'Đóng',
-                    style: TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                 ),
               ],
@@ -691,11 +623,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       groupedMeds[group]!.add(schedule);
     }
 
-    final int totalMeds = _medicationSchedules.length;
-    // Mock progress for UI demonstration (e.g., assuming morning meds are taken)
-    final int takenMeds = groupedMeds['Buổi sáng']!.length;
-    final double progress = totalMeds > 0 ? (takenMeds / totalMeds) : 0;
-    final bool allDone = totalMeds > 0 && takenMeds >= totalMeds;
+    // Compact mode: medication counts will be derived from grouped lists when needed
 
     final filteredGroups = groupedMeds.entries.where((e) {
       if (e.value.isEmpty) return false;
@@ -779,30 +707,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             ),
             const SizedBox(height: 20),
             
-            if (totalMeds > 0) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Tiến trình hôm nay', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                  Text('$takenMeds/$totalMeds liều', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: allDone ? Color(0xFF059669) : Color(0xFF0284C7))),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  height: 8,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      allDone ? const Color(0xFF059669) : const Color(0xFF0284C7),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
+            // Compact view: hide full progress bar to save vertical space
 
             // Filter Tabs
             _buildMedFilterTabs(groupedMeds),
@@ -827,7 +732,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               )
             else
               ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 280),
+                constraints: const BoxConstraints(maxHeight: 200),
                 child: Scrollbar(
                   thumbVisibility: true,
                   controller: _medListScrollController,
@@ -894,7 +799,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                   ),
                                 ),
                                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                                ...meds.asMap().entries.map((medEntry) {
+                                ...meds.asMap().entries.take(3).map((medEntry) {
                                   final idx = medEntry.key;
                                   final schedule = medEntry.value;
                                   final med = schedule['medication'] ?? {};
@@ -903,61 +808,59 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                   return Column(
                                     children: [
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         child: Row(
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
-                                                borderRadius: BorderRadius.circular(10),
+                                                borderRadius: BorderRadius.circular(8),
                                                 border: Border.all(color: const Color(0xFFE2E8F0)),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withValues(alpha: 0.02),
-                                                    blurRadius: 4,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
                                               ),
                                               child: Text(
                                                 time,
-                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: groupColor),
+                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: groupColor),
                                               ),
                                             ),
-                                            const SizedBox(width: 12),
+                                            const SizedBox(width: 10),
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  Text(med['name'] ?? 'Không tên', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                                                  Text(med['name'] ?? 'Không tên', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                                                   const SizedBox(height: 2),
-                                                  Text('${med['instruction'] ?? ''} · ${med['dosage'] ?? ''}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                                  Text('${med['instruction'] ?? ''} · ${med['dosage'] ?? ''}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                                                 ],
                                               ),
                                             ),
-                                            const SizedBox(width: 12),
+                                            const SizedBox(width: 8),
                                             InkWell(
                                               onTap: () => _showEditDeleteMedicationDialog(schedule),
                                               borderRadius: BorderRadius.circular(8),
                                               child: Container(
-                                                padding: const EdgeInsets.all(8),
+                                                padding: const EdgeInsets.all(6),
                                                 decoration: BoxDecoration(
                                                   color: Colors.white,
                                                   borderRadius: BorderRadius.circular(8),
                                                   border: Border.all(color: const Color(0xFFE2E8F0)),
                                                 ),
-                                                child: const Icon(Icons.edit_rounded, color: Color(0xFF64748B), size: 16),
+                                                child: const Icon(Icons.edit_rounded, color: Color(0xFF64748B), size: 14),
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
                                       if (idx < meds.length - 1)
-                                        const Divider(height: 1, color: Color(0xFFE2E8F0), indent: 14, endIndent: 14),
+                                        const Divider(height: 1, color: Color(0xFFE2E8F0), indent: 12, endIndent: 12),
                                     ],
                                   );
                                 }),
+                                if (meds.length > 3)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    child: Text('+ ${meds.length - 3} thuốc khác', style: const TextStyle(color: Color(0xFF475569), fontSize: 12)),
+                                  ),
                               ],
                             ),
                           );
@@ -1874,17 +1777,20 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    QrImageView(
-                      data: qrToken,
-                      version: QrVersions.auto,
-                      size: 200,
-                      eyeStyle: const QrEyeStyle(
-                        eyeShape: QrEyeShape.square,
-                        color: Color(0xFF7C3AED),
-                      ),
-                      dataModuleStyle: const QrDataModuleStyle(
-                        dataModuleShape: QrDataModuleShape.square,
-                        color: Color(0xFF1E293B),
+                    RepaintBoundary(
+                      key: _qrImageKey,
+                      child: QrImageView(
+                        data: qrToken,
+                        version: QrVersions.auto,
+                        size: 200,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: Color(0xFF7C3AED),
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: Color(0xFF1E293B),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -1924,7 +1830,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Copy token button
+              // Save QR image button
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFF7C3AED)),
@@ -1937,19 +1843,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     vertical: 10,
                   ),
                 ),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: qrToken));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✓ Đã sao chép mã QR vào clipboard'),
-                      backgroundColor: Color(0xFF7C3AED),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.copy_rounded, size: 16),
+                onPressed: () => _saveQrAsImage(qrToken),
+                icon: const Icon(Icons.save_alt_rounded, size: 16),
                 label: const Text(
-                  'Sao chép mã token',
+                  'Lưu ảnh QR về máy',
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ),
@@ -1967,9 +1864,14 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
                   ),
-                  onPressed: () => Navigator.pop(ctx),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    // Tự động lưu ảnh QR vào máy sau khi tạo hồ sơ
+                    await Future.delayed(const Duration(milliseconds: 300));
+                    if (mounted) await _saveQrAsImage(qrToken);
+                  },
                   child: const Text(
-                    'Hoàn tất',
+                    'Hoàn tất & Lưu QR',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -1982,6 +1884,70 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _saveQrAsImage(String qrToken) async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tính năng lưu ảnh QR chỉ hỗ trợ trên thiết bị di động.')),
+      );
+      return;
+    }
+
+    // Request platform-appropriate permissions
+    if (Platform.isAndroid) {
+      final statuses = await [Permission.storage, Permission.photos].request();
+      final storageGranted = (statuses[Permission.storage]?.isGranted ?? false);
+      final photosGranted = (statuses[Permission.photos]?.isGranted ?? false);
+      if (!storageGranted && !photosGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Quyền lưu ảnh bị từ chối. Vui lòng cho phép quyền bộ nhớ.')),
+        );
+        return;
+      }
+    } else if (Platform.isIOS) {
+      final status = await Permission.photos.request();
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Quyền lưu ảnh bị từ chối. Vui lòng cho phép quyền ảnh.')),
+        );
+        return;
+      }
+    }
+
+    try {
+      final boundary = _qrImageKey.currentContext?.findRenderObject();
+      if (boundary is! RenderRepaintBoundary) {
+        throw Exception('Không thể tạo ảnh từ QR');
+      }
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Không lấy được dữ liệu ảnh');
+      }
+
+      final result = await ImageGallerySaver.saveImage(
+        Uint8List.fromList(byteData.buffer.asUint8List()),
+        name: 'qr_${DateTime.now().millisecondsSinceEpoch}',
+        quality: 100,
+      );
+      if (result['isSuccess'] == true) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✓ Đã lưu ảnh QR về thư viện.')),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lưu ảnh QR không thành công.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi lưu ảnh QR: $e')),
+      );
+    }
   }
 
   InputDecoration _inputDecoration({
@@ -2708,6 +2674,109 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       ],
     );
   }
+  Future<void> _scanPrescriptionIntoFields({
+    required BuildContext context,
+    required TextEditingController nameCtrl,
+    required TextEditingController doseCtrl,
+    required TextEditingController instructionCtrl,
+    required Function(String) onTimeSelected,
+  }) async {
+    final ImagePicker picker = ImagePicker();
+    XFile? image;
+
+    try {
+      image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể mở thư viện ảnh: $e')),
+      );
+      return;
+    }
+
+    if (image == null || !mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(color: Color(0xFF0EA5E9)),
+            SizedBox(width: 16),
+            Expanded(child: Text('Đang quét toa thuốc...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final res = await ApiService.scanPrescription(image);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (res['error'] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['error'].toString())),
+        );
+        return;
+      }
+
+      final medications = (res['medications'] ?? res['results']) as List?;
+      if (medications == null || medications.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không tìm thấy thông tin thuốc trong ảnh.')),
+        );
+        return;
+      }
+
+      final selected = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Chọn thuốc từ ảnh', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: medications.length,
+              itemBuilder: (_, index) {
+                final item = medications[index] as Map<String, dynamic>;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    title: Text(item['name'] ?? 'Thuốc không tên', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${item['dosage'] ?? ''} · ${item['instruction'] ?? ''}'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.pop(ctx, item.cast<String, dynamic>()),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          ],
+        ),
+      );
+
+      if (selected != null) {
+        nameCtrl.text = selected['name']?.toString() ?? '';
+        doseCtrl.text = selected['dosage']?.toString() ?? '';
+        instructionCtrl.text = selected['instruction']?.toString() ?? '';
+        final timeValue = selected['time']?.toString();
+        if (timeValue != null && timeValue.isNotEmpty) {
+          onTimeSelected(timeValue);
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi quét toa thuốc: $e')),
+      );
+    }
+  }
+
   void _showAddMedicationDialog({
     String? initialName,
     String? initialDosage,
@@ -2744,6 +2813,22 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF7C3AED),
+                    side: const BorderSide(color: Color(0xFF7C3AED)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    // Đóng dialog nhập thủ công và mở quét OCR đầy đủ
+                    Navigator.pop(ctx);
+                    _showScanPrescriptionDialog();
+                  },
+                  icon: const Icon(Icons.document_scanner_rounded, size: 18),
+                  label: const Text('Quét toa thuốc (OCR) – Điền tự động'),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: nameCtrl,
                   decoration: InputDecoration(

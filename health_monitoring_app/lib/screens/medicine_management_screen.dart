@@ -606,74 +606,81 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
   Widget _buildProgressCard(int done, int total, double progress) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF0C4A6E), Color(0xFF0369A1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
               color: const Color(0xFF0EA5E9).withOpacity(0.25),
-              blurRadius: 15,
-              offset: const Offset(0, 5)),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.today_rounded, color: Colors.white70, size: 14),
-              const SizedBox(width: 6),
-              Text(
-                'Thứ ${DateTime.now().weekday == 7 ? "Chủ nhật" : "${DateTime.now().weekday + 1}"}, '
-                '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-                style:
-                    const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Big number on the left
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '$done/$total',
                 style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 40,
+                    fontSize: 30,
                     fontWeight: FontWeight.w900,
                     height: 1),
               ),
-              const SizedBox(width: 10),
-              const Padding(
-                padding: EdgeInsets.only(bottom: 6),
-                child: Text('lần uống đã xác nhận',
-                    style: TextStyle(color: Colors.white70, fontSize: 13)),
-              ),
+              const SizedBox(height: 2),
+              const Text('lần uống',
+                  style: TextStyle(color: Colors.white70, fontSize: 11)),
             ],
           ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              color: progress == 1
-                  ? const Color(0xFF34D399)
-                  : const Color(0xFF38BDF8),
-              minHeight: 8,
+          const SizedBox(width: 16),
+          // Progress + text on the right
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.today_rounded, color: Colors.white70, size: 12),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Thứ ${DateTime.now().weekday == 7 ? "Chủ nhật" : "${DateTime.now().weekday + 1}"}, '
+                        '${DateTime.now().day}/${DateTime.now().month}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    color: progress == 1
+                        ? const Color(0xFF34D399)
+                        : const Color(0xFF38BDF8),
+                    minHeight: 7,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  progress == 1
+                      ? '✓ Hoàn thành hôm nay!'
+                      : '${((1 - progress) * total).ceil()} lần uống còn lại',
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            progress == 1
-                ? '✓ Xuất sắc! Bạn đã uống đủ thuốc hôm nay!'
-                : '${((1 - progress) * total).ceil()} lần uống còn lại trong hôm nay',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
@@ -833,7 +840,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
             child: Padding(
               padding: const EdgeInsets.only(left: 10, bottom: 12),
               child: Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -882,13 +889,13 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                               color: Color(0xFFD97706), size: 20),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       '${slot.medicine.dosage} · ${slot.medicine.instruction}',
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xFF64748B)),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     if (!slot.confirmed) ...[
                       Row(
                         children: [
@@ -1108,7 +1115,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     final daysLeft = med.endDate.difference(DateTime.now()).inDays;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -1129,15 +1136,15 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
           borderRadius: BorderRadius.circular(18),
           onTap: () => _showMedicineDetail(med),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(13),

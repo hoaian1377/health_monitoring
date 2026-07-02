@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Ứng dụng cần quyền này để lưu mã QR vào Thư viện ảnh của bạn.</string>
 </dict>
 </plist>
