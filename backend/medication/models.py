@@ -52,3 +52,16 @@ class MedicationSchedule(models.Model):
     class Meta:
         managed = False
         db_table = 'Medication_schedule'
+
+    
+class UploadImage(models.Model):
+    imageid = models.AutoField(db_column='imageID', primary_key=True)  # Field name made lowercase.
+    elderlyid = models.ForeignKey(Elderly, models.DO_NOTHING, db_column='elderlyID', blank=True, null=True)  # Field name made lowercase.
+    type = models.CharField(max_length=50, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+    file_url = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+    upload_at = models.DateTimeField(blank=True, null=True)
+    status = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'Upload_image'

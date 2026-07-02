@@ -547,4 +547,247 @@ class ApiService {
       return [];
     }
   }
+
+  // ================= CHECKLIST =================
+
+  /// Lấy danh sách checklist theo elderly_id
+  static Future<List<dynamic>> getChecklists(int elderlyId) async {
+    final url = Uri.parse("$baseUrl/api/checklist/?elderly_id=$elderlyId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) return jsonDecode(res.body);
+      return [];
+    } catch (e) {
+      print("ERROR getChecklists: $e");
+      return [];
+    }
+  }
+
+  /// Lấy các items của một checklist
+  static Future<List<dynamic>> getChecklistItems(int checklistId) async {
+    final url = Uri.parse("$baseUrl/api/checklist/item/?checklist_id=$checklistId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) return jsonDecode(res.body);
+      return [];
+    } catch (e) {
+      print("ERROR getChecklistItems: $e");
+      return [];
+    }
+  }
+
+  /// Tạo checklist mới gắn với elderly
+  static Future<Map<String, dynamic>> createChecklist({
+    required int elderlyId,
+    String title = '',
+    int? appointmentId,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/checklist/create/");
+    try {
+      final body = <String, dynamic>{
+        'elderlyid': elderlyId,
+        'title': title,
+      };
+      if (appointmentId != null) body['appointmentid'] = appointmentId;
+      final res = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body));
+      if (res.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(res.body)};
+      }
+      return {'success': false, 'error': 'Tạo checklist thất bại'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Thêm item vào checklist
+  static Future<bool> createChecklistItem({
+    required int checklistId,
+    required String content,
+    String note = '',
+  }) async {
+    final url = Uri.parse("$baseUrl/api/checklist/item/create/");
+    try {
+      final res = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'checklistid': checklistId,
+            'content': content,
+            'note': note,
+            'is_complete': false,
+          }));
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ERROR createChecklistItem: $e");
+      return false;
+    }
+  }
+
+  /// Tạo nhiều items cùng lúc
+  static Future<bool> bulkCreateChecklistItems({
+    required int checklistId,
+    required List<Map<String, String>> items,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/checklist/$checklistId/items/bulk/");
+    try {
+      final res = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'items': items}));
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ERROR bulkCreate: $e");
+      return false;
+    }
+  }
+
+  /// Toggle hoàn thành / chưa hoàn thành một item
+  static Future<Map<String, dynamic>> toggleChecklistItem(int itemId) async {
+    final url = Uri.parse("$baseUrl/api/checklist/item/$itemId/toggle/");
+    try {
+      final res = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({}));
+      if (res.statusCode == 200) {
+        return {'success': true, 'data': jsonDecode(res.body)};
+      }
+      return {'success': false};
+    } catch (e) {
+      print("ERROR toggleChecklistItem: $e");
+      return {'success': false};
+    }
+  }
+
+  /// Cập nhật checklist item
+  static Future<bool> updateChecklistItem(int itemId, {
+    String? content,
+    bool? isComplete,
+    String? note,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/checklist/item/$itemId/");
+    try {
+      final body = <String, dynamic>{};
+      if (content != null) body['content'] = content;
+      if (isComplete != null) body['is_complete'] = isComplete;
+      if (note != null) body['note'] = note;
+      final res = await http.patch(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body));
+      return res.statusCode == 200;
+    } catch (e) {
+      print("ERROR updateChecklistItem: $e");
+      return false;
+    }
+  }
+
+  /// Xoá checklist item
+  static Future<bool> deleteChecklistItem(int itemId) async {
+    final url = Uri.parse("$baseUrl/api/checklist/item/$itemId/");
+    try {
+      final res = await http.delete(url);
+      return res.statusCode == 204 || res.statusCode == 200;
+    } catch (e) {
+      print("ERROR deleteChecklistItem: $e");
+      return false;
+    }
+  }
+
+  // ================= TREATMENT HISTORY =================
+
+  /// Lấy danh sách lịch sử điều trị theo elderly_id
+  static Future<List<dynamic>> getTreatmentHistory(int elderlyId, {String? status}) async {
+    String endpoint = "$baseUrl/api/treatmenthistory/?elderly_id=$elderlyId";
+    if (status != null) endpoint += "&status=$status";
+    final url = Uri.parse(endpoint);
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) return jsonDecode(res.body);
+      return [];
+    } catch (e) {
+      print("ERROR getTreatmentHistory: $e");
+      return [];
+    }
+  }
+
+  /// Tạo mới lịch sử điều trị
+  static Future<Map<String, dynamic>> createTreatmentHistory({
+    required int elderlyId,
+    required String diagnosis,
+    required String treatment,
+    String treatmentType = 'Ngoại trú',
+    String doctorName = '',
+    String hospital = '',
+    String? startDate,
+    String? endDate,
+    String result = '',
+    String notes = '',
+    String status = 'ongoing',
+  }) async {
+    final url = Uri.parse("$baseUrl/api/treatmenthistory/create/");
+    try {
+      final res = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'elderly_id': elderlyId,
+            'diagnosis': diagnosis,
+            'treatment': treatment,
+            'treatment_type': treatmentType,
+            'doctor_name': doctorName,
+            'hospital': hospital,
+            'start_date': startDate,
+            'end_date': endDate,
+            'result': result,
+            'notes': notes,
+            'status': status,
+          }));
+      if (res.statusCode == 201) {
+        return {'success': true, 'data': jsonDecode(res.body)};
+      }
+      final err = res.body.isNotEmpty ? jsonDecode(res.body) : {};
+      return {'success': false, 'error': err['error'] ?? 'Thêm thất bại'};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Cập nhật lịch sử điều trị
+  static Future<bool> updateTreatmentHistory(int id, Map<String, dynamic> data) async {
+    final url = Uri.parse("$baseUrl/api/treatmenthistory/$id/update/");
+    try {
+      final res = await http.patch(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(data));
+      return res.statusCode == 200;
+    } catch (e) {
+      print("ERROR updateTreatmentHistory: $e");
+      return false;
+    }
+  }
+
+  /// Cập nhật nhanh trạng thái (ongoing / completed / cancelled)
+  static Future<bool> updateTreatmentStatus(int id, String newStatus) async {
+    final url = Uri.parse("$baseUrl/api/treatmenthistory/$id/status/");
+    try {
+      final res = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'status': newStatus}));
+      return res.statusCode == 200;
+    } catch (e) {
+      print("ERROR updateTreatmentStatus: $e");
+      return false;
+    }
+  }
+
+  /// Xoá lịch sử điều trị
+  static Future<bool> deleteTreatmentHistory(int id) async {
+    final url = Uri.parse("$baseUrl/api/treatmenthistory/$id/delete/");
+    try {
+      final res = await http.delete(url);
+      return res.statusCode == 200 || res.statusCode == 204;
+    } catch (e) {
+      print("ERROR deleteTreatmentHistory: $e");
+      return false;
+    }
+  }
 }
+

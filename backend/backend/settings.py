@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'medication',
     'notification',
     'healthmetric',
+    'checklist',
+    'treatmenthistory',
 ]
 
 REST_FRAMEWORK = {
