@@ -9,7 +9,7 @@ class ApiService {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://192.168.1.31:8000";
+      return "http://192.168.1.7:8000";
     }
     return "http://localhost:8000";
   }

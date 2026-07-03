@@ -606,6 +606,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     };
 
     for (var schedule in _medicationSchedules) {
+      // Skip schedules without a medication name to avoid empty entries
+      final med = schedule['medication'] ?? {};
+      final medName = (med['name'] ?? '').toString().trim();
+      if (medName.isEmpty) continue;
       final timeStr = schedule['time']?.toString() ?? '';
       String group = 'Khác';
       if (timeStr.isNotEmpty && timeStr != '--:--') {
@@ -799,68 +803,106 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                   ),
                                 ),
                                 const Divider(height: 1, color: Color(0xFFE2E8F0)),
-                                ...meds.asMap().entries.take(3).map((medEntry) {
-                                  final idx = medEntry.key;
-                                  final schedule = medEntry.value;
-                                  final med = schedule['medication'] ?? {};
-                                  final time = schedule['time'] ?? '--:--';
-
-                                  return Column(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                                              ),
-                                              child: Text(
-                                                time,
-                                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: groupColor),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(med['name'] ?? 'Không tên', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                                                  const SizedBox(height: 2),
-                                                  Text('${med['instruction'] ?? ''} · ${med['dosage'] ?? ''}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            InkWell(
-                                              onTap: () => _showEditDeleteMedicationDialog(schedule),
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(6),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final maxShow = 6;
+                                      final chips = <Widget>[];
+                                      for (var i = 0; i < meds.length && i < maxShow; i++) {
+                                        final schedule = meds[i];
+                                        final med = schedule['medication'] ?? {};
+                                        final name = (med['name'] ?? 'Không tên').toString();
+                                        final time = (schedule['time'] ?? '--:--').toString();
+                                        chips.add(Container(
+                                          width: 160,
+                                          margin: const EdgeInsets.only(right: 8, bottom: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.white,
+                                                  color: groupColor.withValues(alpha: 0.08),
                                                   borderRadius: BorderRadius.circular(8),
-                                                  border: Border.all(color: const Color(0xFFE2E8F0)),
                                                 ),
-                                                child: const Icon(Icons.edit_rounded, color: Color(0xFF64748B), size: 14),
+                                                child: Text(time, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: groupColor)),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (idx < meds.length - 1)
-                                        const Divider(height: 1, color: Color(0xFFE2E8F0), indent: 12, endIndent: 12),
-                                    ],
-                                  );
-                                }),
-                                if (meds.length > 3)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    child: Text('+ ${meds.length - 3} thuốc khác', style: const TextStyle(color: Color(0xFF475569), fontSize: 12)),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              // Delete icon
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  final doDelete = await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (c) => AlertDialog(
+                                                      title: const Text('Xác nhận'),
+                                                      content: const Text('Bạn có chắc muốn xóa lịch uống thuốc này?'),
+                                                      actions: [
+                                                        TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Hủy')),
+                                                        TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Xóa', style: TextStyle(color: Color(0xFFD97706)))),
+                                                      ],
+                                                    ),
+                                                  );
+                                                  if (doDelete == true) {
+                                                    final scheduleId = schedule['id'] ?? schedule['schedule_id'] ?? schedule['scheduleId'];
+                                                    bool ok = false;
+                                                    if (scheduleId != null) {
+                                                      try {
+                                                        ok = await ApiService.deleteMedication(int.parse(scheduleId.toString()));
+                                                      } catch (_) {
+                                                        ok = false;
+                                                      }
+                                                    }
+                                                    setState(() {
+                                                      _medicationSchedules.removeWhere((s) => identical(s, schedule) || (s['id'] != null && scheduleId != null && s['id'].toString() == scheduleId.toString()));
+                                                    });
+                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Đã xóa' : 'Đã xóa (cục bộ)')));
+                                                  }
+                                                },
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(6),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFFFF1F2),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ));
+                                      }
+
+                                      if (meds.length > maxShow) {
+                                        chips.add(Container(
+                                          width: 80,
+                                          margin: const EdgeInsets.only(right: 8, bottom: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF1F5F9),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                          ),
+                                          child: Center(child: Text('+${meds.length - maxShow} thêm', style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.bold))),
+                                        ));
+                                      }
+
+                                      return SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: Row(children: chips),
+                                      );
+                                    },
                                   ),
+                                ),
                               ],
                             ),
                           );

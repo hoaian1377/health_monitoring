@@ -55,6 +55,7 @@ class MedicineItem {
     final diff = endDate.difference(DateTime.now()).inDays;
     return diff >= 0 && diff <= 7;
   }
+ 
 }
 
 class MedicineDoseRecord {
@@ -268,6 +269,8 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     for (final med in _medicines) {
       if (!med.isActive) continue;
       if (med.startDate.isAfter(today) || med.endDate.isBefore(today)) continue;
+      // Skip medicines without a valid name to avoid empty slots
+      if (med.name.trim().isEmpty) continue;
       for (final t in med.times) {
         final record = med.doseHistory.firstWhere(
           (r) =>
@@ -588,19 +591,95 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         // Alerts
         ..._buildAlertCards(),
 
-        // Timeline
+        // Compact Timeline (chips)
         _sectionLabel('LỊCH UỐNG THUỐC HÔM NAY', Icons.schedule_rounded),
         const SizedBox(height: 10),
         if (_todaySlots.isEmpty)
-          _buildEmptyState('Không có lịch uống thuốc hôm nay',
-              Icons.check_circle_outline_rounded)
+          _buildEmptyState('Không có lịch uống thuốc hôm nay', Icons.check_circle_outline_rounded)
         else
-          ..._todaySlots.asMap().entries.map((e) {
-            final idx = e.key;
-            final slot = e.value;
-            return _buildTimelineSlot(slot, idx, _todaySlots.length);
-          }),
+          _buildCompactTodayChips(),
       ],
+    );
+  }
+
+  Widget _buildCompactTodayChips() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: _todaySlots.map((slot) {
+            final med = slot.medicine;
+            final time = slot.time;
+            return Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: slot.confirmed ? const Color(0xFFDCFCE7) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: slot.confirmed ? const Color(0xFF16A34A) : const Color(0xFF0EA5E9))),
+                      const SizedBox(height: 2),
+                      SizedBox(
+                        width: 120,
+                        child: Text(med.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: slot.confirmed
+                        ? null
+                        : () {
+                            setState(() {
+                              slot.confirmed = true;
+                              final today = DateTime.now();
+                              final existing = slot.medicine.doseHistory.where((r) => r.date.year == today.year && r.date.month == today.month && r.date.day == today.day && r.time == slot.time).toList();
+                              if (existing.isEmpty) {
+                                slot.medicine.doseHistory.add(MedicineDoseRecord(date: today, time: slot.time, taken: true, takenAt: today));
+                              } else {
+                                existing.first.taken = true;
+                                existing.first.takenAt = today;
+                              }
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✓ Đã xác nhận uống ${slot.medicine.name}')));
+                          },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: slot.confirmed ? const Color(0xFFDCFCE7) : const Color(0xFFF0F9FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(slot.confirmed ? Icons.check : Icons.check_circle_outline, size: 16, color: slot.confirmed ? const Color(0xFF16A34A) : const Color(0xFF0EA5E9)),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => _showMedicineDetail(slot.medicine),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(color: const Color(0xFFF0F9FF), borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF0EA5E9)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
@@ -873,115 +952,119 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                         ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            slot.medicine.name,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Color(0xFF1E293B)),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                slot.medicine.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Color(0xFF1E293B)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${slot.medicine.dosage} · ${slot.medicine.instruction}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
                           ),
                         ),
-                        if (slot.confirmed)
-                          const Icon(Icons.check_circle_rounded,
-                              color: Color(0xFF16A34A), size: 20)
-                        else if (isPast)
-                          const Icon(Icons.warning_amber_rounded,
-                              color: Color(0xFFD97706), size: 20),
+                        const SizedBox(width: 8),
+                        // Compact status chip (tappable) + small info icon
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: slot.confirmed
+                              ? null
+                              : () {
+                                  setState(() {
+                                    slot.confirmed = true;
+                                    final today = DateTime.now();
+                                    final existing = slot.medicine.doseHistory
+                                        .where((r) =>
+                                            r.date.year == today.year &&
+                                            r.date.month == today.month &&
+                                            r.date.day == today.day &&
+                                            r.time == slot.time)
+                                        .toList();
+                                    if (existing.isEmpty) {
+                                      slot.medicine.doseHistory.add(
+                                        MedicineDoseRecord(
+                                          date: today,
+                                          time: slot.time,
+                                          taken: true,
+                                          takenAt: today,
+                                        ),
+                                      );
+                                    } else {
+                                      existing.first.taken = true;
+                                      existing.first.takenAt = today;
+                                    }
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: const Color(0xFF16A34A),
+                                      content: Text('✓ Đã xác nhận uống ${slot.medicine.name}'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: slot.confirmed
+                                  ? const Color(0xFFDCFCE7)
+                                  : isPast
+                                      ? const Color(0xFFFFF1F2)
+                                      : const Color(0xFFF0F9FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: slot.confirmed
+                                    ? const Color(0xFF16A34A)
+                                    : isPast
+                                        ? const Color(0xFFD97706)
+                                        : const Color(0xFF0EA5E9),
+                              ),
+                            ),
+                            child: Text(
+                              slot.confirmed
+                                  ? 'Đã uống'
+                                  : isPast
+                                      ? 'Quên'
+                                      : 'Chưa',
+                              style: TextStyle(
+                                  color: slot.confirmed
+                                      ? const Color(0xFF16A34A)
+                                      : isPast
+                                          ? const Color(0xFFD97706)
+                                          : const Color(0xFF0EA5E9),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => _showMedicineDetail(slot.medicine),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0F9FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.info_outline_rounded,
+                                size: 16, color: Color(0xFF0EA5E9)),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${slot.medicine.dosage} · ${slot.medicine.instruction}',
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF64748B)),
-                    ),
-                    const SizedBox(height: 8),
-                    if (!slot.confirmed) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  slot.confirmed = true;
-                                  // Also add to history
-                                  final today = DateTime.now();
-                                  final existing = slot.medicine.doseHistory
-                                      .where((r) =>
-                                          r.date.year == today.year &&
-                                          r.date.month == today.month &&
-                                          r.date.day == today.day &&
-                                          r.time == slot.time)
-                                      .toList();
-                                  if (existing.isEmpty) {
-                                    slot.medicine.doseHistory.add(MedicineDoseRecord(
-                                      date: today,
-                                      time: slot.time,
-                                      taken: true,
-                                      takenAt: today,
-                                    ));
-                                  } else {
-                                    existing.first.taken = true;
-                                    existing.first.takenAt = today;
-                                  }
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: const Color(0xFF16A34A),
-                                    content: Text(
-                                        '✓ Đã xác nhận uống ${slot.medicine.name}'),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0EA5E9),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: const Center(
-                                  child: Text('Xác nhận đã uống',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: () => _showMedicineDetail(slot.medicine),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF0F9FF),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.info_outline_rounded,
-                                  size: 16, color: Color(0xFF0EA5E9)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text('Đã uống ✓',
-                            style: TextStyle(
-                                color: Color(0xFF16A34A),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1017,12 +1100,90 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         _sectionLabel('DANH SÁCH THUỐC (${filtered.length})',
             Icons.medication_rounded),
         const SizedBox(height: 10),
-        // Cards
+        // Compact chips like Today view
         if (filtered.isEmpty)
           _buildEmptyState('Không tìm thấy thuốc', Icons.search_off_rounded)
         else
-          ...filtered.map((m) => _buildMedicineCard(m)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: filtered.map((m) => _buildMedicineChip(m)).toList(),
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _buildMedicineChip(MedicineItem med) {
+    final color = _hexColor(med.color);
+    final time = med.times.isNotEmpty ? med.times.first : '--:--';
+    return GestureDetector(
+      onTap: () => _showMedicineDetail(med),
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(_categoryIcon(med.category), color: color, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(med.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
+                  const SizedBox(height: 2),
+                  Text('$time · ${med.dosage}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () {
+                // small delete action (local)
+                showDialog<bool>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                    title: const Text('Xác nhận'),
+                    content: const Text('Xóa thuốc này?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Hủy')),
+                      TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Xóa', style: TextStyle(color: Color(0xFFD97706)))),
+                    ],
+                  ),
+                ).then((ok) async {
+                  if (ok == true) {
+                    // try delete via API if possible (no schedule id here)
+                    setState(() {
+                      _medicines.removeWhere((x) => x.id == med.id);
+                      _buildTodaySlots();
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa thuốc (cục bộ)')));
+                  }
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: const Color(0xFFF0F9FF), borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
