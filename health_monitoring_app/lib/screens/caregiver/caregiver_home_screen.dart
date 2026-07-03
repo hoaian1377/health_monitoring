@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform;
@@ -1926,7 +1926,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         throw Exception('Không lấy được dữ liệu ảnh');
       }
 
-      final result = await ImageGallerySaver.saveImage(
+      final result = await ImageGallerySaverPlus.saveImage(
         Uint8List.fromList(byteData.buffer.asUint8List()),
         name: 'qr_${DateTime.now().millisecondsSinceEpoch}',
         quality: 100,

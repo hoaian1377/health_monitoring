@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
+import '../../utils/global_state.dart';
 import 'elderly_appointment_screen.dart';
 
 class ElderlyHomeScreen extends StatefulWidget {
@@ -18,29 +19,31 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   bool _isLoadingMedications = true;
   Set<int> _takenScheduleIds = {};
 
-  // Chỉ số sức khoẻ
+  // Chỉ số sức khoẻ (giữ lại để tránh lỗi biên dịch)
   String _bpSys = '--';
   String _bpDia = '--';
   String _heartRate = '--';
   String _bloodSugar = '--';
 
-  bool _isAppointmentNear =
-      true; // Hiển thị mặc định vì có lịch khám sau 3 ngày
-  bool _isDocChecklistExpanded = true; // Mặc định mở checklist giấy tờ
+  bool _isAppointmentNear = true;
+  bool _isDocChecklistExpanded = true;
 
-  // Checkbox giấy tờ chuẩn bị đi khám
   bool _isCCCDPrepared = false;
   bool _isBHYTPrepared = false;
   bool _isSoKhamPrepared = false;
   bool _isDonThuocPrepared = false;
   bool _isXetNghiemPrepared = false;
 
-  // Animation controller cho nút SOS đập nhẹ (pulse effect)
   late AnimationController _pulseController;
-
-  // Timer cập nhật theo giờ — tự động mở khóa từng liều thuốc khi đến giờ
   Timer? _clockTimer;
   DateTime _now = DateTime.now();
+
+  // Trạng thái ngày được chọn
+  DateTime _selectedDate = DateTime.now();
+
+  // Lịch tuần cuộn ngang theo trang (PageView) để cố định 1 tuần trên màn hình
+  PageController? _pageController;
+  int _currentCalendarPage = 1000;
 
   @override
   void initState() {
@@ -51,7 +54,6 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    // Cập nhật giờ mỗi phút — tự động hiện liều thuốc khi đến giờ
     _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) {
         setState(() {
@@ -59,6 +61,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         });
       }
     });
+
+    // Khởi tạo PageController với trang mặc định là 1000 đại diện cho tuần này
+    _pageController = PageController(initialPage: 1000);
   }
 
   Future<void> _loadMedications() async {
@@ -100,40 +105,182 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   void dispose() {
     _clockTimer?.cancel();
     _pulseController.dispose();
+    _pageController?.dispose();
     super.dispose();
   }
 
-  // ── Lấy lời chào theo thời gian trong ngày ───────────────────────────────
-  String _getTimeGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 11) {
-      return 'Chào buổi sáng bác,';
-    } else if (hour >= 11 && hour < 14) {
-      return 'Chúc bác nghỉ trưa vui vẻ,';
-    } else if (hour >= 14 && hour < 18) {
-      return 'Chào buổi chiều bác,';
-    } else {
-      return 'Chúc bác buổi tối an lành,';
+  // Helper cho định dạng khoá ngày
+  String _getDateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // Chuyển thứ sang tiếng Việt viết tắt
+  String _getVietnameseWeekday(DateTime date) {
+    switch (date.weekday) {
+      case DateTime.monday:
+        return 'T2';
+      case DateTime.tuesday:
+        return 'T3';
+      case DateTime.wednesday:
+        return 'T4';
+      case DateTime.thursday:
+        return 'T5';
+      case DateTime.friday:
+        return 'T6';
+      case DateTime.saturday:
+        return 'T7';
+      case DateTime.sunday:
+        return 'CN';
+      default:
+        return '';
     }
   }
 
-  // ── Lấy ngày tiếng Việt ──────────────────────────────────────────────────
-  String _getVietnameseDate() {
-    final now = DateTime.now();
-    final weekdays = [
-      'Chủ Nhật',
-      'Thứ Hai',
-      'Thứ Ba',
-      'Thứ Tư',
-      'Thứ Năm',
-      'Thứ Sáu',
-      'Thứ Bảy',
-    ];
-    final weekday = weekdays[now.weekday % 7];
-    return '$weekday, ngày ${now.day} tháng ${now.month}';
+  // Định dạng ngày hiển thị ở tiêu đề, đã bổ sung thêm Năm theo yêu cầu (Ví dụ: 04 Th7, 2026)
+  String _formatHeaderDate(DateTime date) {
+    final dayStr = date.day.toString().padLeft(2, '0');
+    return '$dayStr Th${date.month}, ${date.year}';
   }
 
-  // ── Kích hoạt gọi khẩn cấp (có đếm ngược 5s để hủy nếu bấm nhầm) ───────────
+  // Dịch và chuẩn hoá liều lượng sang tiếng Việt
+  String _translateDosage(String dosage) {
+    if (dosage.isEmpty) return '';
+    return dosage
+        .replaceAll('milligram(s)', 'mg')
+        .replaceAll('milligram', 'mg')
+        .replaceAll('tablet(s)', 'viên')
+        .replaceAll('tablet', 'viên')
+        .replaceAll('pill(s)', 'viên')
+        .replaceAll('pill', 'viên')
+        .replaceAll('dose(s)', 'liều')
+        .replaceAll('dose', 'liều');
+  }
+
+  // Xây dựng dòng mô tả phụ hiển thị giống trên hình (Ví dụ: sau ăn · 1 lần)
+  String _buildMedicationSubtitle(Map<String, dynamic> med) {
+    final instruction = med['instruction'] ?? '';
+    final dosage = _translateDosage(med['dosage'] ?? '');
+    final frequency = med['frequency'] ?? '';
+    
+    final List<String> parts = [];
+    if (instruction.isNotEmpty) {
+      parts.add(instruction);
+    }
+    
+    if (dosage.isNotEmpty) {
+      parts.add(dosage);
+    } else if (frequency.isNotEmpty) {
+      parts.add(frequency);
+    } else {
+      parts.add('1 liều');
+    }
+    
+    return parts.join(' · ');
+  }
+
+  // Phân loại tự động biểu tượng theo tên thuốc
+  IconData _getMedicationIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('siro') || lower.contains('nước') || lower.contains('dầu') || lower.contains('giọt') || lower.contains('dung dịch')) {
+      return Icons.water_drop_rounded;
+    }
+    if (lower.contains('sữa') || lower.contains('bột') || lower.contains('gói') || lower.contains('pha')) {
+      return Icons.science_outlined;
+    }
+    if (lower.contains('tiêm') || lower.contains('insulin') || lower.contains('chích')) {
+      return Icons.vaccines_rounded;
+    }
+    return Icons.medication_rounded; // Mặc định là hộp thuốc/viên thuốc
+  }
+
+  // Phân loại tự động tông màu sắc theo tên thuốc
+  Color _getMedicationColor(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('siro') || lower.contains('nước') || lower.contains('dầu') || lower.contains('giọt') || lower.contains('dung dịch')) {
+      return const Color(0xFF0EA5E9); // Màu xanh da trời sáng
+    }
+    if (lower.contains('sữa') || lower.contains('bột') || lower.contains('gói') || lower.contains('pha')) {
+      return const Color(0xFFD97706); // Màu hổ phách/cam đậm
+    }
+    if (lower.contains('tiêm') || lower.contains('insulin') || lower.contains('chích')) {
+      return const Color(0xFFEC4899); // Màu hồng/magenta
+    }
+    return const Color(0xFF2563EB); // Màu xanh dương đậm
+  }
+
+  // Lấy 7 ngày của trang PageView cụ thể dựa trên khoảng lệch tuần
+  List<DateTime> _getDaysForPage(int pageOffset) {
+    final today = DateTime.now();
+    final centerDate = today.add(Duration(days: pageOffset * 7));
+    return List.generate(7, (index) => centerDate.subtract(Duration(days: 3 - index)));
+  }
+
+  bool _isMedicationTaken(int scheduleId, DateTime date) {
+    return globalState.isScheduleTaken(scheduleId, date);
+  }
+
+  void _toggleMedicationTaken(int scheduleId, DateTime date, String medName) {
+    setState(() {
+      globalState.toggleScheduleTaken(scheduleId, date);
+    });
+
+    final isTaken = globalState.isScheduleTaken(scheduleId, date);
+
+    if (!isTaken) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF64748B),
+          duration: const Duration(seconds: 2),
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Đã hủy ghi nhận uống thuốc $medName'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF059669),
+          duration: const Duration(seconds: 2),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Đã ghi nhận uống thuốc $medName!'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  // Gom nhóm thuốc theo thời gian
+  Map<String, List<dynamic>> _groupSchedulesByTime() {
+    final Map<String, List<dynamic>> grouped = {};
+    for (var schedule in _medicationSchedules) {
+      final String time = schedule['time'] ?? '00:00';
+      if (!grouped.containsKey(time)) {
+        grouped[time] = [];
+      }
+      grouped[time]!.add(schedule);
+    }
+    
+    final sortedKeys = grouped.keys.toList()..sort();
+    final Map<String, List<dynamic>> sortedGrouped = {};
+    for (var key in sortedKeys) {
+      sortedGrouped[key] = grouped[key]!;
+    }
+    return sortedGrouped;
+  }
+
+  // ── Kích hoạt gọi khẩn cấp (Giữ nguyên để tương thích ngược nếu cần gọi) ───
   void _triggerEmergencyCall() {
     int countdown = 5;
     bool isCancelled = false;
@@ -141,7 +288,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Bắt buộc chọn Hủy để đóng
+      barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setStateModal) {
@@ -300,1095 +447,438 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   // ── BUILD ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    int preparedCount =
-        (_isCCCDPrepared ? 1 : 0) +
-        (_isBHYTPrepared ? 1 : 0) +
-        (_isSoKhamPrepared ? 1 : 0) +
-        (_isDonThuocPrepared ? 1 : 0) +
-        (_isXetNghiemPrepared ? 1 : 0);
+    final isSelectedToday = _getDateKey(_selectedDate) == _getDateKey(DateTime.now());
 
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF0F4FB,
-      ), // Màu nền xanh biển nhạt, dễ chịu
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              child: Column(
-                children: [
-                  _buildQuickStats(),
-                  const SizedBox(height: 16),
-                  _buildMedCard(),
-                  const SizedBox(height: 16),
-                  _buildAppointmentCard(preparedCount),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Header (Lời chào thời gian thực + SOS nổi bật) ─────────────────────────
-  Widget _buildHeader() {
-    final name = ApiService.currentFullname.isNotEmpty
-        ? ApiService.currentFullname
-        : ApiService.currentUsername;
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFF0284C7),
-            Color(0xFF38BDF8),
-          ], // Tông màu xanh biển nhạt, dịu mắt
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(36),
-          bottomRight: Radius.circular(36),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x220284C7),
-            blurRadius: 18,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+      backgroundColor: const Color(0xFFF0F4FB), // Nền xanh biển nhạt
+      body: Container(
+        color: const Color(0xFFF0F4FB),
+        child: SingleChildScrollView(
+          child: Column(
             children: [
-              Expanded(
+              // Khu vực Header và Lịch tuần có nền màu xanh gradient giống phần cá nhân
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF0284C7), Color(0xFF38BDF8)], // Dải màu xanh giống phần cá nhân
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x220284C7),
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    )
+                  ],
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _getTimeGreeting(),
-                      style: const TextStyle(
-                        fontSize: 16.5,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Bác $name',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _getVietnameseDate(),
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        color: Colors.white60,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
+                    _buildHeader(),
+                    _buildCalendarRow(),
+                    _buildGoToTodayButton(isSelectedToday),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-
-              // Nút SOS Nhấp nháy nhẹ nhàng thu hút chú ý
+              const SizedBox(height: 24),
+              // Khu vực hiển thị danh sách lịch uống thuốc
+              _buildMedicationList(),
+              const SizedBox(height: 100), // Để khoảng trống cho BottomNavigationBar
             ],
           ),
-          const SizedBox(height: 20),
-          // Banner nhắc nhở sức khỏe (Soft Glassmorphism)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-            ),
-            child: const Row(
-              children: [
-                Text('💧', style: TextStyle(fontSize: 20)),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Bác nhớ uống đủ 2 lít nước ngày hôm nay để khỏe mạnh nhé!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w500,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  // ── Quick Stats Bar (Hiển thị các chỉ số gần nhất cho người già yên tâm) ───
-  Widget _buildQuickStats() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatItem(
-            'Huyết áp',
-            '$_bpSys/$_bpDia',
-            'mmHg',
-            const Color(0xFF0284C7),
-            Icons.favorite_rounded,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildStatItem(
-            'Đường huyết',
-            _bloodSugar,
-            'mmol/L',
-            const Color(0xFF059669),
-            Icons.water_drop_rounded,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _buildStatItem(
-            'Nhịp tim',
-            _heartRate,
-            'l/phút',
-            const Color(0xFFE11D48),
-            Icons.monitor_heart_rounded,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatItem(
-    String label,
-    String value,
-    String unit,
-    Color color,
-    IconData icon,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
+  // ── Header (Tiêu đề ngày có Năm + nút chức năng, chữ trắng tương phản tốt) ───
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(height: 6),
           Text(
-            label,
+            _formatHeaderDate(_selectedDate),
             style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontWeight: FontWeight.w600,
+              fontSize: 30, // Điều chỉnh size hài hòa
+              fontWeight: FontWeight.bold,
+              color: Colors.white, // Chữ trắng nổi bật trên nền xanh
             ),
           ),
-          const SizedBox(height: 4),
-          RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              style: const TextStyle(color: Color(0xFF1E293B)),
-              children: [
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(
-                    fontSize: 17.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextSpan(
-                  text: '\n$unit',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Map<String, dynamic> _getTimeOfDayInfo(String timeStr, bool isTaken) {
-    if (isTaken) {
-      return {
-        'period': 'Đã hoàn thành',
-        'icon': Icons.check_circle_rounded,
-        'color': const Color(0xFF059669),
-        'bgColor': const Color(0xFFECFDF5),
-        'gradient': const [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
-      };
-    }
-    try {
-      final parts = timeStr.split(':');
-      if (parts.isNotEmpty) {
-        final hour = int.parse(parts[0]);
-        if (hour >= 5 && hour < 11) {
-          return {
-            'period': 'Buổi sáng',
-            'icon': Icons.light_mode_rounded,
-            'color': const Color(0xFFEA580C),
-            'bgColor': const Color(0xFFFFF7ED),
-            'gradient': const [Color(0xFFFFFAF2), Color(0xFFFFF1E0)],
-          };
-        } else if (hour >= 11 && hour < 17) {
-          return {
-            'period': 'Buổi trưa',
-            'icon': Icons.wb_sunny_rounded,
-            'color': const Color(0xFF0284C7),
-            'bgColor': const Color(0xFFF0F9FF),
-            'gradient': const [Color(0xFFF6FBFF), Color(0xFFE0F2FE)],
-          };
-        } else {
-          return {
-            'period': 'Buổi tối',
-            'icon': Icons.dark_mode_rounded,
-            'color': const Color(0xFF4F46E5),
-            'bgColor': const Color(0xFFEEF2FF),
-            'gradient': const [Color(0xFFF8FAFC), Color(0xFFE0E7FF)],
-          };
-        }
-      }
-    } catch (_) {}
-    return {
-      'period': 'Lịch uống',
-      'icon': Icons.access_time_rounded,
-      'color': const Color(0xFF0284C7),
-      'bgColor': const Color(0xFFF4FAF9),
-      'gradient': const [Color(0xFFFFFFFF), Color(0xFFF4FAF9)],
-    };
-  }
-
-  // Kiểm tra xem thời gian lịch uống thuốc đã đến chưa (so với _now, tự cập nhật mỗi phút)
-  bool _isScheduleTimeDue(String timeStr) {
-    // Trả về true để mô phỏng tất cả các lịch uống thuốc đều đã đến giờ, giúp hiển thị giao diện xem thử.
-    return true;
-  }
-
-  // ── Thẻ nhắc uống thuốc (Horizontal Carousel trực quan & dễ hiểu) ───────────────────
-  Widget _buildMedCard() {
-    final total = _medicationSchedules.length;
-
-    // Chỉ lấy những liều đã đến giờ
-    final dueSchedules = _medicationSchedules
-        .where((s) => _isScheduleTimeDue(s['time'] ?? ''))
-        .toList();
-
-    final int due = dueSchedules.length;
-    final int taken = dueSchedules
-        .where((s) => _takenScheduleIds.contains(s['schedule_id']))
-        .length;
-    final double progress = due > 0 ? (taken / due) : 0;
-    final bool allDone = due > 0 && taken >= due;
-    final bool hasUpcoming =
-        dueSchedules.length < total; // Có liều sắp tới chưa đến giờ
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: allDone ? const Color(0xFFA7F3D0) : Colors.grey.shade100,
-          width: 1.5,
-        ),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Tiêu đề & Tiến trình số
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: allDone
-                      ? const Color(0xFFD1FAE5)
-                      : const Color(0xFFE0F2FE),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  allDone
-                      ? Icons.check_circle_rounded
-                      : Icons.medication_rounded,
-                  color: allDone
-                      ? const Color(0xFF059669)
-                      : const Color(0xFF0284C7),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Uống thuốc hôm nay',
-                  style: TextStyle(
-                    fontSize: 19.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-              if (due > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: allDone
-                        ? const Color(0xFFD1FAE5)
-                        : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '$taken/$due liều',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: allDone
-                          ? const Color(0xFF059669)
-                          : const Color(0xFF475569),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Thanh tiến trình
-          if (due > 0)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                height: 10,
-                child: LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    allDone ? const Color(0xFF059669) : const Color(0xFF0EA5E9),
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 20),
-          // Lịch trình thời gian uống thuốc trong ngày
-          const Text(
-            'Lịch trình uống thuốc ngày:',
-            style: TextStyle(
-              fontSize: 15.5,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          if (_isLoadingMedications)
-            const Center(child: CircularProgressIndicator())
-          else if (_medicationSchedules.isEmpty)
-            // Không có lịch uống thuốc nào hôm nay
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey.shade100),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF1F5F9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.medication_rounded,
-                      color: Color(0xFF94A3B8),
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Hôm nay bác không có lịch uống thuốc.",
-                    style: TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            )
-          else if (dueSchedules.isEmpty)
-            // Có lịch nhưng chưa đến giờ nào cả
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F9FF),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFBAE6FD)),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0F2FE),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.access_time_rounded,
-                      color: Color(0xFF0284C7),
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Chưa đến giờ uống thuốc.",
-                    style: TextStyle(
-                      color: Color(0xFF0369A1),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Liều đầu tiên lúc ${_medicationSchedules.first['time'] ?? '--:--'}',
-                    style: const TextStyle(
-                      color: Color(0xFF0284C7),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            SizedBox(
-              height: 195,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: dueSchedules.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 14),
-                itemBuilder: (context, index) {
-                  final schedule = dueSchedules[index];
-                  final med = schedule['medication'] ?? {};
-                  final id = schedule['schedule_id'];
-                  final isTaken = _takenScheduleIds.contains(id);
-                  final time = schedule['time'] ?? '--:--';
-
-                  final info = _getTimeOfDayInfo(time, isTaken);
-                  final Color themeColor = info['color'];
-                  final List<Color> gradient = info['gradient'];
-                  final IconData periodIcon = info['icon'];
-                  final String periodText = info['period'];
-
-                  return Container(
-                    width: 230,
-                    margin: const EdgeInsets.only(
-                      bottom: 6,
-                      top: 2,
-                    ), // space for shadow
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: gradient,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isTaken
-                            ? const Color(0xFFA7F3D0)
-                            : themeColor.withValues(alpha: 0.15),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: themeColor.withValues(alpha: 0.06),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Header: Buổi + Thời gian
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: themeColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(periodIcon, size: 14, color: themeColor),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    periodText,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: themeColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Text(
-                              time,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Thân: Tên thuốc + Liều lượng
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              med['name'] ?? 'Không rõ tên',
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E293B),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 16,
-                                  color: Colors.grey.shade500,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    med['dosage'] ?? '1 liều',
-                                    style: TextStyle(
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        // Nút bấm xác nhận hoặc Trạng thái đã uống
-                        if (isTaken)
-                          Container(
-                            width: double.infinity,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFECFDF5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  color: Color(0xFF059669),
-                                  size: 18,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'Đã uống',
-                                  style: TextStyle(
-                                    color: Color(0xFF059669),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          SizedBox(
-                            width: double.infinity,
-                            height: 40,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: themeColor,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: EdgeInsets.zero,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _takenScheduleIds.add(id);
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: const Color(0xFF059669),
-                                    duration: const Duration(seconds: 2),
-                                    content: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.check_circle_rounded,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'Đã ghi nhận uống ${med['name']}!',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                'Xác nhận đã uống',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+              // Nút Lịch khám bệnh
+              IconButton(
+                icon: const Icon(Icons.calendar_month_outlined, size: 28),
+                color: Colors.white,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ElderlyAppointmentScreen(),
                     ),
                   );
                 },
               ),
-            ),
-          // Gợi ý liều sắp tới nếu vẫn còn liều chưa đến giờ
-          if (!_isLoadingMedications && hasUpcoming) ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F9FF),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFBAE6FD)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.access_time_filled_rounded,
-                    color: Color(0xFF0284C7),
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Còn ${total - dueSchedules.length} liều nữa sẽ đến hôm nay',
-                      style: const TextStyle(
-                        color: Color(0xFF0369A1),
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Center(
-            child: TextButton(
-              onPressed: () => MainNavigator.of(context)?.setTab(1),
-              child: const Text(
-                'Xem toàn bộ lịch uống thuốc',
-                style: TextStyle(
-                  color: Color(0xFF0284C7),
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Thẻ Lịch khám (Gồm Checklist giấy tờ mang đi khám tích hợp bên dưới) ───
-  Widget _buildAppointmentCard(int preparedCount) {
-    final bool isAllPrepared = preparedCount == 5;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade100, width: 1.5),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Tiêu đề lịch khám
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFF7ED),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.calendar_month_rounded,
-                  color: Color(0xFFD97706),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Lịch khám sắp tới',
-                  style: TextStyle(
-                    fontSize: 19.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Còn 3 ngày',
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFB45309),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          // Chi tiết lịch khám
-          const Text(
-            'Bệnh viện Chợ Rẫy',
-            style: TextStyle(
-              fontSize: 19.5,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'BS. Nguyễn Thị Lan  ·  Khoa Tim mạch',
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF475569),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Thời gian nổi bật
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.access_time_filled_rounded,
-                  size: 20,
-                  color: Color(0xFFD97706),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  '08:30  ·  Thứ Sáu, 12/06/2026',
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFB45309),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Nút xem chi tiết chính lịch khám
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF0EA5E9)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ElderlyAppointmentScreen(),
-                  ),
-                );
-              },
-              child: const Text(
-                'Xem chi tiết lịch khám bệnh',
-                style: TextStyle(
-                  color: Color(0xFF0284C7),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-            ),
-          ),
-          const Divider(height: 32, thickness: 1),
-          // ── PHẦN CHUẨN BỊ GIẤY TỜ TÍCH HỢP (Collapsible) ──
-          if (_isAppointmentNear) ...[
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _isDocChecklistExpanded = !_isDocChecklistExpanded;
-                });
-              },
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.assignment_rounded,
-                    color: Color(0xFF0EA5E9),
-                    size: 22,
-                  ),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Bác cần chuẩn bị giấy tờ gì?',
-                      style: TextStyle(
-                        fontSize: 17.5,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _isDocChecklistExpanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    color: Colors.grey,
-                  ),
-                ],
-              ),
-            ),
-            if (_isDocChecklistExpanded) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'Hãy tích chọn vào ô bên dưới khi bác bỏ giấy tờ vào cặp mang đi khám nhé:',
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: Colors.grey,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildCheckItem(
-                'Căn cước công dân (CCCD)',
-                _isCCCDPrepared,
-                (v) => setState(() {
-                  _isCCCDPrepared = v ?? false;
-                }),
-              ),
-              _buildCheckItem(
-                'Thẻ Bảo hiểm Y tế (BHYT)',
-                _isBHYTPrepared,
-                (v) => setState(() {
-                  _isBHYTPrepared = v ?? false;
-                }),
-              ),
-              _buildCheckItem(
-                'Sổ khám bệnh cũ',
-                _isSoKhamPrepared,
-                (v) => setState(() {
-                  _isSoKhamPrepared = v ?? false;
-                }),
-              ),
-              _buildCheckItem(
-                'Đơn thuốc đang sử dụng',
-                _isDonThuocPrepared,
-                (v) => setState(() {
-                  _isDonThuocPrepared = v ?? false;
-                }),
-              ),
-              _buildCheckItem(
-                'Kết quả xét nghiệm, X-Quang mới',
-                _isXetNghiemPrepared,
-                (v) => setState(() {
-                  _isXetNghiemPrepared = v ?? false;
-                }),
-              ),
-              if (isAllPrepared) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD1FAE5),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        color: Color(0xFF059669),
-                        size: 20,
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Bác đã chuẩn bị đầy đủ giấy tờ khám! Thật tuyệt vời.',
-                          style: TextStyle(
-                            fontSize: 14.5,
-                            color: Color(0xFF065F46),
-                            fontWeight: FontWeight.bold,
-                          ),
+              const SizedBox(width: 8),
+              // Nút Hộp thư (Inbox) đi kèm chấm thông báo đỏ
+              IconButton(
+                onPressed: () {
+                  MainNavigator.of(context)?.setTab(2); // Đi đến tab Thông báo
+                },
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.mail_outline_rounded, size: 28),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 8,
+                          minHeight: 8,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+                color: Colors.white,
+              ),
             ],
-          ],
+          ),
         ],
       ),
     );
   }
 
-  // Checkbox tùy chỉnh to, rõ ràng, nhấp nhạy tốt
-  Widget _buildCheckItem(
-    String label,
-    bool value,
-    ValueChanged<bool?> onChanged,
-  ) {
-    return InkWell(
-      onTap: () => onChanged(!value),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: value ? const Color(0xFF10B981) : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: value
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFCBD5E1),
-                  width: 2.2,
-                ),
-              ),
-              child: value
-                  ? const Icon(
-                      Icons.check_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    )
-                  : null,
+  // ── Weekly Calendar Slider (Lịch tuần PageView, chữ trắng trên nền xanh) ───
+  Widget _buildCalendarRow() {
+    return SizedBox(
+      height: 90,
+      child: PageView.builder(
+        controller: _pageController,
+        onPageChanged: (page) {
+          setState(() {
+            _currentCalendarPage = page;
+          });
+        },
+        itemBuilder: (context, index) {
+          final pageOffset = index - 1000;
+          final days = _getDaysForPage(pageOffset);
+          
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: days.map((day) {
+                final isSelected = _getDateKey(day) == _getDateKey(_selectedDate);
+                final isToday = _getDateKey(day) == _getDateKey(DateTime.now());
+                final weekdayStr = _getVietnameseWeekday(day);
+                
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedDate = day;
+                    });
+                  },
+                  child: Container(
+                    width: 44, // Cố định chiều rộng phần tử để căn chỉnh đều
+                    color: Colors.transparent, // Tăng vùng chạm
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          weekdayStr,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected 
+                                ? Colors.white
+                                : Colors.white70, // Chữ mờ hơn khi chưa chọn
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected 
+                                ? Colors.white // Nền tròn màu trắng khi được chọn
+                                : Colors.transparent,
+                            border: isToday && !isSelected
+                                ? Border.all(
+                                    color: Colors.white, // Viền trắng cho ngày hôm nay khi chưa chọn
+                                    width: 2,
+                                  )
+                                : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${day.day}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? const Color(0xFF0284C7) // Màu xanh chủ đạo khi chọn
+                                  : Colors.white, // Chữ màu trắng
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 17.5,
-                  fontWeight: FontWeight.w600,
-                  color: value ? Colors.grey : const Color(0xFF1E293B),
-                  decoration: value ? TextDecoration.lineThrough : null,
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
+    );
+  }
+
+  // ── Nút "Quay lại hôm nay" (Dạng nút kính mờ - Glassmorphism trên nền xanh) ───
+  Widget _buildGoToTodayButton(bool isSelectedToday) {
+    final isPageToday = _currentCalendarPage == 1000;
+    final isTodaySelectedAndOnCorrectPage = isSelectedToday && isPageToday;
+
+    return Center(
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isTodaySelectedAndOnCorrectPage ? 0.0 : 1.0,
+        child: isTodaySelectedAndOnCorrectPage
+            ? const SizedBox.shrink()
+            : Container(
+                margin: const EdgeInsets.only(top: 8),
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedDate = DateTime.now();
+                    });
+                    _pageController?.animateToPage(
+                      1000,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.2), // Nền mờ kính
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(color: Colors.white.withOpacity(0.4), width: 1),
+                    ),
+                  ),
+                  child: const Text(
+                    'Quay lại hôm nay',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  // ── Danh sách lịch thuốc thiết kế theo hình ảnh yêu cầu (Gọn gàng, không có timeline dài) ───
+  Widget _buildMedicationList() {
+    if (_isLoadingMedications) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 60),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    if (_medicationSchedules.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
+          child: Column(
+            children: [
+              Icon(Icons.medication_liquid_rounded, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              const Text(
+                'Bác không có lịch uống thuốc nào.',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final grouped = _groupSchedulesByTime();
+    
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: grouped.keys.length,
+      itemBuilder: (context, index) {
+        final String time = grouped.keys.elementAt(index);
+        final List<dynamic> schedules = grouped[time]!;
+        
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Tiêu đề mốc giờ uống thuốc (Ví dụ: 08:00) nằm ngoài thẻ giống hình vẽ
+              Padding(
+                padding: const EdgeInsets.only(left: 4, bottom: 8),
+                child: Text(
+                  time,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+              ),
+              // Thẻ trắng chứa các thuốc của khung giờ đó
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Colors.grey.shade100,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  children: List.generate(schedules.length, (idx) {
+                    final schedule = schedules[idx];
+                    final med = schedule['medication'] ?? {};
+                    final int id = schedule['schedule_id'];
+                    final String name = med['name'] ?? 'Không rõ tên';
+                    final String subtitle = _buildMedicationSubtitle(med);
+                    final isTaken = _isMedicationTaken(id, _selectedDate);
+                    
+                    final medIcon = _getMedicationIcon(name);
+                    final medColor = _getMedicationColor(name);
+                    
+                    return InkWell(
+                      onTap: () {
+                        _toggleMedicationTaken(id, _selectedDate, name);
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                // Biểu tượng hình tròn bên trái
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: isTaken 
+                                        ? const Color(0xFFE8F5E9) 
+                                        : medColor.withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    medIcon,
+                                    color: isTaken 
+                                        ? const Color(0xFF10B981) 
+                                        : medColor,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                // Tên thuốc và thông tin cách dùng/liều lượng
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: isTaken 
+                                              ? Colors.grey.shade400 
+                                              : const Color(0xFF1E293B),
+                                          decoration: isTaken 
+                                              ? TextDecoration.lineThrough 
+                                              : null,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        subtitle,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: isTaken 
+                                              ? Colors.grey.shade400 
+                                              : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // Biểu tượng tích chọn hoặc vòng tròn rỗng góc phải để đồng bộ
+                                Icon(
+                                  isTaken 
+                                      ? Icons.check_circle_rounded 
+                                      : Icons.circle_outlined,
+                                  color: isTaken 
+                                      ? const Color(0xFF10B981) 
+                                      : const Color(0xFFCBD5E1),
+                                  size: 26,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Đường phân cách giữa các dòng thuốc trong cùng một thẻ
+                          if (idx < schedules.length - 1)
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              indent: 76,
+                              endIndent: 16,
+                              color: Color(0xFFF1F5F9),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

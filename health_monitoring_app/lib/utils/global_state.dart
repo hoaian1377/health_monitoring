@@ -132,6 +132,27 @@ class GlobalState {
     }
   }
 
+  final ValueNotifier<Map<String, Set<int>>> takenSchedulesByDate = ValueNotifier({});
+
+  bool isScheduleTaken(int scheduleId, DateTime date) {
+    final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return takenSchedulesByDate.value[key]?.contains(scheduleId) ?? false;
+  }
+
+  void toggleScheduleTaken(int scheduleId, DateTime date) {
+    final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final map = Map<String, Set<int>>.from(takenSchedulesByDate.value);
+    if (map[key] == null) {
+      map[key] = {};
+    }
+    if (map[key]!.contains(scheduleId)) {
+      map[key]!.remove(scheduleId);
+    } else {
+      map[key]!.add(scheduleId);
+    }
+    takenSchedulesByDate.value = map;
+  }
+
   void addMedicationLog(MedicationLog log) {
     final newList = List<MedicationLog>.from(medicationLogs.value);
     newList.add(log);
