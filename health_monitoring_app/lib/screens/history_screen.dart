@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../utils/global_state.dart';
+
+import '../utils/api_service.dart';
 import 'package:intl/intl.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -24,15 +25,49 @@ class _HistoryScreenState extends State<HistoryScreen>
   // Biến tìm kiếm
   String _searchQuery = '';
 
+  List<dynamic> _treatmentHistory = [];
+  int? _currentElderlyId;
+
+  final _hospitalController = TextEditingController();
+  final _doctorController = TextEditingController();
+  final _diagnosisController = TextEditingController();
+  final _treatmentController = TextEditingController();
+  final _resultController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _fetchTreatmentHistory();
+  }
+
+  Future<void> _fetchTreatmentHistory() async {
+    final res = await ApiService.getElderlyList();
+    if (res['success'] == true) {
+      final list = res['elderly_list'] as List;
+      if (list.isNotEmpty) {
+        _currentElderlyId = list.first['id'] as int;
+      }
+    }
+    
+    if (_currentElderlyId != null) {
+      final history = await ApiService.getTreatmentHistory(_currentElderlyId!);
+      if (mounted) {
+        setState(() {
+          _treatmentHistory = history;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _hospitalController.dispose();
+    _doctorController.dispose();
+    _diagnosisController.dispose();
+    _treatmentController.dispose();
+    _resultController.dispose();
     super.dispose();
   }
 
@@ -202,34 +237,12 @@ class _HistoryScreenState extends State<HistoryScreen>
           const SizedBox(height: 24),
           _sectionLabel('LỊCH SỬ DÙNG THUỐC'),
           const SizedBox(height: 12),
-          ValueListenableBuilder<List<MedicationLog>>(
-            valueListenable: globalState.medicationLogs,
-            builder: (context, logs, child) {
-              final filteredLogs = logs.where((log) => log.taskTitle.toLowerCase().contains(_searchQuery)).toList();
-              
-              if (filteredLogs.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Center(
-                    child: Text('Chưa có lịch sử hoặc không tìm thấy.', style: TextStyle(color: Colors.black54)),
-                  ),
-                );
-              }
-              
-              // Sort logs descending by time
-              filteredLogs.sort((a, b) => b.takenAt.compareTo(a.takenAt));
-              
-              return Column(
-                children: filteredLogs.map((log) {
-                  return _buildHistoryItem(
-                    time: DateFormat('dd/MM HH:mm').format(log.takenAt),
-                    name: log.taskTitle,
-                    status: log.status == 'taken' ? 'Đã uống' : 'Bỏ lỡ',
-                    isCompleted: log.status == 'taken',
-                  );
-                }).toList(),
-              );
-            },
+          // Lịch sử dùng thuốc (tạm ẩn cho đến khi có API thật)
+          const Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Center(
+              child: Text('Đang cập nhật lịch sử dùng thuốc từ API...', style: TextStyle(color: Colors.black54)),
+            ),
           ),
           const SizedBox(height: 100),
         ],
@@ -355,11 +368,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           ),
           const SizedBox(height: 20),
           GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Chức năng thêm kết quả điều trị đang phát triển!')),
-              );
-            },
+            onTap: _showAddTreatmentHistorySheet,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -382,21 +391,133 @@ class _HistoryScreenState extends State<HistoryScreen>
           const SizedBox(height: 24),
           _sectionLabel('CÁC LẦN KHÁM GẦN NHẤT'),
           const SizedBox(height: 12),
-          _buildAppointmentHistoryItem(
-            date: '01/03/2026',
-            hospital: 'Bệnh viện Chợ Rẫy',
-            doctor: 'BS. Nguyễn Thị Lan',
-            result: 'Huyết áp ổn định 125/80. Tiếp tục uống thuốc.',
-          ),
-          _buildAppointmentHistoryItem(
-            date: '15/11/2025',
-            hospital: 'Phòng khám Đa khoa Thành Đô',
-            doctor: 'BS. Trần Văn Minh',
-            result: 'Đường huyết 5.8 mmol/L - bình thường.',
-          ),
+          if (_treatmentHistory.isEmpty)
+             const Padding(
+               padding: EdgeInsets.all(24.0),
+               child: Center(child: Text('Chưa có lịch sử điều trị.', style: TextStyle(color: Colors.black54))),
+             )
+          else
+             ..._treatmentHistory.map((item) {
+                return _buildAppointmentHistoryItem(
+                   date: item['start_date'] != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(item['start_date'])) : 'Không rõ',
+                   hospital: item['hospital'] ?? 'Không rõ',
+                   doctor: item['doctor_name'] ?? 'Không rõ',
+                   result: item['result'] ?? item['diagnosis'] ?? 'Chưa có kết quả',
+                );
+             }),
           const SizedBox(height: 100),
         ],
       ),
+    );
+  }
+
+  void _showAddTreatmentHistorySheet() {
+    _hospitalController.clear();
+    _doctorController.clear();
+    _diagnosisController.clear();
+    _treatmentController.clear();
+    _resultController.clear();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24 + MediaQuery.of(context).padding.bottom,
+            top: 24, left: 24, right: 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 46, height: 4,
+                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('Thêm kết quả điều trị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B))),
+                const SizedBox(height: 20),
+                _buildTextField('Bệnh viện / Cơ sở y tế', _hospitalController),
+                const SizedBox(height: 16),
+                _buildTextField('Bác sĩ điều trị', _doctorController),
+                const SizedBox(height: 16),
+                _buildTextField('Chẩn đoán bệnh', _diagnosisController),
+                const SizedBox(height: 16),
+                _buildTextField('Phương pháp điều trị', _treatmentController),
+                const SizedBox(height: 16),
+                _buildTextField('Kết quả / Ghi chú thêm', _resultController, maxLines: 3),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0EA5E9),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    onPressed: () async {
+                      if (_currentElderlyId == null) return;
+                      final res = await ApiService.createTreatmentHistory(
+                        elderlyId: _currentElderlyId!,
+                        hospital: _hospitalController.text,
+                        doctorName: _doctorController.text,
+                        diagnosis: _diagnosisController.text,
+                        treatment: _treatmentController.text,
+                        result: _resultController.text,
+                        startDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                      );
+                      Navigator.pop(context);
+                      if (res['success'] == true) {
+                        _fetchTreatmentHistory();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(backgroundColor: Color(0xFF0EA5E9), content: Text('Đã lưu kết quả điều trị thành công!')),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(backgroundColor: Colors.red, content: Text(res['error'] ?? 'Thêm thất bại')),
+                        );
+                      }
+                    },
+                    child: const Text('Lưu thông tin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5)),
+          ),
+        ),
+      ],
     );
   }
 

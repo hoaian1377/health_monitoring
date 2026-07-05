@@ -7,6 +7,7 @@ import 'admin_backup_screen.dart';
 import 'health_dashboard_screen.dart';
 import 'add_elderly_screen.dart';
 import 'elderly_list_screen.dart';
+import 'checklist_screen.dart';
 import '../utils/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -156,6 +157,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       title: 'Hồ sơ sức khỏe',
                       subtitle: 'Tổng quan, toa thuốc, giấy tờ và lịch khám',
                       onTap: () => _navigate(const HealthDashboardScreen()),
+                    ),
+                    _MenuItem(
+                      icon: Icons.checklist_rounded,
+                      iconBg: const Color(0xFFFFF7ED),
+                      iconColor: const Color(0xFFF97316),
+                      title: 'Checklist & Lịch khám',
+                      subtitle: 'Lên lịch nhắc nhở, tái khám, công việc',
+                      onTap: () => _navigate(const ChecklistScreen()),
                     ),
                   ]),
                   const SizedBox(height: 24),

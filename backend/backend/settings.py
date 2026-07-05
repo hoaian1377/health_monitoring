@@ -90,7 +90,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'Healthqzz',
+        'NAME': 'Health_monitoring',
         'USER':'',
         'PASSWORD':'',
         'HOST':'localhost',

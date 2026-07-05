@@ -104,11 +104,17 @@ def bulk_create_checklist_items(request, checklist_id):
     for item_data in items_data:
         item = ChecklistItem.objects.create(
             checklistid=checklist,
-            content=item_data.get('content', ''),
-            note=item_data.get('note', ''),
+            title=item_data.get('title', ''),
+            item_type=item_data.get('item_type', 'task'),
+            time_string=item_data.get('time_string', ''),
+            details=item_data.get('details', ''),
             is_complete=False,
+            hospital=item_data.get('hospital'),
+            doctor=item_data.get('doctor'),
+            appointment_date=item_data.get('appointment_date'),
+            file_path=item_data.get('file_path'),
         )
-        created.append({'checklist_itemid': item.checklist_itemid, 'content': item.content})
+        created.append({'checklist_itemid': item.checklist_itemid, 'title': item.title})
 
     return Response({
         'message': f'Đã tạo {len(created)} mục.',

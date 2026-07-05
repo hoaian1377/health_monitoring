@@ -8,9 +8,15 @@ class ChecklistItemSerializer(serializers.ModelSerializer):
         fields = [
             'checklist_itemid',
             'checklistid',
-            'content',
+            'title',
+            'item_type',
+            'time_string',
+            'details',
             'is_complete',
-            'note',
+            'hospital',
+            'doctor',
+            'appointment_date',
+            'file_path',
         ]
 
 

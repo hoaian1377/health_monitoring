@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
-import '../../utils/global_state.dart';
+
 
 class ElderlyTaskItem {
   final String id;
@@ -591,7 +591,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
 
     // Đọc trạng thái đã tích uống từ Trang chủ (thông qua GlobalState dùng chung)
     final int? scheduleId = task.type == 'medication' ? int.tryParse(task.id) : null;
-    final bool isTaken = scheduleId != null && globalState.isScheduleTaken(scheduleId, DateTime.now());
+    final bool isTaken = scheduleId != null && false;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),

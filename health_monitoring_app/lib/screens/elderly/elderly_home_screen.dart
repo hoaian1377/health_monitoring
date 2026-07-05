@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
-import '../../utils/global_state.dart';
+
 import 'elderly_appointment_screen.dart';
 
 class ElderlyHomeScreen extends StatefulWidget {
@@ -216,15 +216,15 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   }
 
   bool _isMedicationTaken(int scheduleId, DateTime date) {
-    return globalState.isScheduleTaken(scheduleId, date);
+    return false;
   }
 
   void _toggleMedicationTaken(int scheduleId, DateTime date, String medName) {
     setState(() {
-      globalState.toggleScheduleTaken(scheduleId, date);
+      
     });
 
-    final isTaken = globalState.isScheduleTaken(scheduleId, date);
+    final isTaken = false;
 
     if (!isTaken) {
       ScaffoldMessenger.of(context).showSnackBar(

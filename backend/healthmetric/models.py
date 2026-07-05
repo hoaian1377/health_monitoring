@@ -1,6 +1,7 @@
 from django.db import models
 
 # Create your models here.
+
 class HealthMetrics(models.Model):
     health_metricid = models.AutoField(db_column='health_metricID', primary_key=True)  # Field name made lowercase.
     elderlyid = models.ForeignKey('users.Elderly', models.DO_NOTHING, db_column='elderlyID', blank=True, null=True)  # Field name made lowercase.
@@ -12,4 +13,3 @@ class HealthMetrics(models.Model):
     class Meta:
         managed = False
         db_table = 'Health_metrics'
-

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/global_state.dart';
+
 
 class HealthThresholdsScreen extends StatefulWidget {
   const HealthThresholdsScreen({super.key});
@@ -77,32 +77,11 @@ class _HealthThresholdsScreenState
   @override
   void initState() {
     super.initState();
-    final t = globalState.thresholds.value;
-    _metrics[0].min = t.sysBpMin;
-    _metrics[0].max = t.sysBpMax;
-    _metrics[1].min = t.diaBpMin;
-    _metrics[1].max = t.diaBpMax;
-    _metrics[2].min = t.bloodSugarMin;
-    _metrics[2].max = t.bloodSugarMax;
-    _metrics[3].min = t.heartRateMin;
-    _metrics[3].max = t.heartRateMax;
-    _metrics[4].min = t.weightMin;
-    _metrics[4].max = t.weightMax;
+    // Khởi tạo thresholds từ _metrics mặc định
   }
 
   void _save() {
-    globalState.updateThresholds(HealthThresholds(
-      sysBpMin: _metrics[0].min,
-      sysBpMax: _metrics[0].max,
-      diaBpMin: _metrics[1].min,
-      diaBpMax: _metrics[1].max,
-      bloodSugarMin: _metrics[2].min,
-      bloodSugarMax: _metrics[2].max,
-      heartRateMin: _metrics[3].min,
-      heartRateMax: _metrics[3].max,
-      weightMin: _metrics[4].min,
-      weightMax: _metrics[4].max,
-    ));
+    // API logic sẽ được thêm sau
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: const Color(0xFF16A34A),

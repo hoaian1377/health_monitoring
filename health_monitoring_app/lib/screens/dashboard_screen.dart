@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
-import '../utils/global_state.dart';
+
 import '../utils/api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -37,13 +37,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadLatestMetrics();
   }
 
+  Map<String, dynamic>? _nextAppointment;
+
   Future<void> _loadLatestMetrics() async {
     if (ApiService.currentAccountId != null) {
       final data = await ApiService.getHealthMetrics(ApiService.currentAccountId!);
-      if (data.isNotEmpty) {
-        final latest = data[0];
-        if (mounted) {
-          setState(() {
+      final appts = await ApiService.getAppointments(ApiService.currentAccountId!);
+      
+      if (mounted) {
+        setState(() {
+          if (data.isNotEmpty) {
+            final latest = data[0];
             if (latest['heart_rate'] != null) {
               _heartRate = latest['heart_rate'].toString();
             }
@@ -57,8 +61,26 @@ class _DashboardScreenState extends State<DashboardScreen>
             if (latest['blood_sugar'] != null) {
               _bloodSugar = latest['blood_sugar'].toString();
             }
-          });
-        }
+          }
+
+          if (appts.isNotEmpty) {
+            final now = DateTime.now();
+            List<dynamic> futureAppts = appts.where((a) {
+              if (a['appointment_date'] == null) return false;
+              try {
+                final date = DateTime.parse(a['appointment_date']);
+                return date.isAfter(now) || date.isAtSameMomentAs(DateTime(now.year, now.month, now.day));
+              } catch (e) {
+                return false;
+              }
+            }).toList();
+
+            if (futureAppts.isNotEmpty) {
+              futureAppts.sort((a, b) => DateTime.parse(a['appointment_date']).compareTo(DateTime.parse(b['appointment_date'])));
+              _nextAppointment = futureAppts.first;
+            }
+          }
+        });
       }
     }
   }
@@ -367,22 +389,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                           icon: Icons.monitor_heart_rounded,
                           value: _bpSys,
                           unit: '/$_bpDia mmHg',
-                          statusText: int.tryParse(_bpSys) != null &&
-                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
-                              ? 'Bất thường'
-                              : 'Bình thường',
-                          statusColor: int.tryParse(_bpSys) != null &&
-                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFF16A34A),
-                          statusBg: int.tryParse(_bpSys) != null &&
-                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
-                              ? const Color(0xFFFEF3C7)
-                              : const Color(0xFFDCFCE7),
-                          statusIcon: int.tryParse(_bpSys) != null &&
-                                  globalState.isOutOfRange('sysBp', double.parse(_bpSys))
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_rounded,
+                          statusText: () {
+                            final v = int.tryParse(_bpSys) ?? 0;
+                            return (v > 0 && (v > 140 || v < 90)) ? 'Bất thường' : 'Bình thường';
+                          }(),
+                          statusColor: () {
+                            final v = int.tryParse(_bpSys) ?? 0;
+                            return (v > 0 && (v > 140 || v < 90)) ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+                          }(),
+                          statusBg: () {
+                            final v = int.tryParse(_bpSys) ?? 0;
+                            return (v > 0 && (v > 140 || v < 90)) ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7);
+                          }(),
+                          statusIcon: () {
+                            final v = int.tryParse(_bpSys) ?? 0;
+                            return (v > 0 && (v > 140 || v < 90)) ? Icons.warning_amber_rounded : Icons.check_circle_rounded;
+                          }(),
                           accentColor: const Color(0xFFDC2626),
                         ),
                       ),
@@ -393,22 +415,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                           icon: Icons.favorite_rounded,
                           value: _heartRate,
                           unit: ' lần/phút',
-                          statusText: int.tryParse(_heartRate) != null &&
-                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
-                              ? 'Bất thường'
-                              : 'Bình thường',
-                          statusColor: int.tryParse(_heartRate) != null &&
-                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFF16A34A),
-                          statusBg: int.tryParse(_heartRate) != null &&
-                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
-                              ? const Color(0xFFFEF3C7)
-                              : const Color(0xFFDCFCE7),
-                          statusIcon: int.tryParse(_heartRate) != null &&
-                                  globalState.isOutOfRange('heartRate', double.parse(_heartRate))
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_rounded,
+                          statusText: () {
+                            final v = int.tryParse(_heartRate) ?? 0;
+                            return (v > 0 && (v > 100 || v < 60)) ? 'Bất thường' : 'Bình thường';
+                          }(),
+                          statusColor: () {
+                            final v = int.tryParse(_heartRate) ?? 0;
+                            return (v > 0 && (v > 100 || v < 60)) ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+                          }(),
+                          statusBg: () {
+                            final v = int.tryParse(_heartRate) ?? 0;
+                            return (v > 0 && (v > 100 || v < 60)) ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7);
+                          }(),
+                          statusIcon: () {
+                            final v = int.tryParse(_heartRate) ?? 0;
+                            return (v > 0 && (v > 100 || v < 60)) ? Icons.warning_amber_rounded : Icons.check_circle_rounded;
+                          }(),
                           accentColor: const Color(0xFFE11D48),
                         ),
                       ),
@@ -425,22 +447,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                           icon: Icons.water_drop_rounded,
                           value: _bloodSugar,
                           unit: ' mmol/L',
-                          statusText: double.tryParse(_bloodSugar) != null &&
-                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
-                              ? 'Bất thường'
-                              : 'Bình thường',
-                          statusColor: double.tryParse(_bloodSugar) != null &&
-                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
-                              ? const Color(0xFFD97706)
-                              : const Color(0xFF16A34A),
-                          statusBg: double.tryParse(_bloodSugar) != null &&
-                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
-                              ? const Color(0xFFFEF3C7)
-                              : const Color(0xFFDCFCE7),
-                          statusIcon: double.tryParse(_bloodSugar) != null &&
-                                  globalState.isOutOfRange('bloodSugar', double.parse(_bloodSugar))
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_rounded,
+                          statusText: () {
+                            final v = double.tryParse(_bloodSugar) ?? 0;
+                            return (v > 0 && (v > 7.8 || v < 3.9)) ? 'Bất thường' : 'Bình thường';
+                          }(),
+                          statusColor: () {
+                            final v = double.tryParse(_bloodSugar) ?? 0;
+                            return (v > 0 && (v > 7.8 || v < 3.9)) ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+                          }(),
+                          statusBg: () {
+                            final v = double.tryParse(_bloodSugar) ?? 0;
+                            return (v > 0 && (v > 7.8 || v < 3.9)) ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7);
+                          }(),
+                          statusIcon: () {
+                            final v = double.tryParse(_bloodSugar) ?? 0;
+                            return (v > 0 && (v > 7.8 || v < 3.9)) ? Icons.warning_amber_rounded : Icons.check_circle_rounded;
+                          }(),
                           accentColor: const Color(0xFF0284C7),
                         ),
                       ),
@@ -674,6 +696,21 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Lịch khám sắp tới ─────────────────────────────────────────────────────
   Widget _buildNextAppointmentCard() {
+    if (_nextAppointment == null) return const SizedBox.shrink();
+
+    final loc = _nextAppointment!['location'] ?? 'Không rõ';
+    final doc = _nextAppointment!['doctor_name'] ?? '';
+    final dateStr = _nextAppointment!['appointment_date'] ?? '';
+    
+    int daysDiff = 0;
+    try {
+      if (dateStr.isNotEmpty) {
+        final date = DateTime.parse(dateStr);
+        final now = DateTime.now();
+        daysDiff = date.difference(DateTime(now.year, now.month, now.day)).inDays;
+      }
+    } catch (_) {}
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -700,24 +737,24 @@ class _DashboardScreenState extends State<DashboardScreen>
                 color: Color(0xFF0EA5E9), size: 24),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Lịch khám sắp tới',
+                const Text('Lịch khám sắp tới',
                     style: TextStyle(
                         fontSize: 12,
                         color: Color(0xFF64748B),
                         fontWeight: FontWeight.w600)),
-                SizedBox(height: 4),
-                Text('Bệnh viện Chợ Rẫy',
-                    style: TextStyle(
+                const SizedBox(height: 4),
+                Text(loc,
+                    style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B))),
-                SizedBox(height: 2),
-                Text('BS. Nguyễn Thị Lan · Tim mạch',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                const SizedBox(height: 2),
+                Text(doc.isNotEmpty ? 'BS. $doc' : 'Chưa rõ BS',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
               ],
             ),
           ),
@@ -728,19 +765,19 @@ class _DashboardScreenState extends State<DashboardScreen>
               color: const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Text('Còn',
+                const Text('Còn',
                     style: TextStyle(
                         fontSize: 10,
                         color: Color(0xFFD97706),
                         fontWeight: FontWeight.bold)),
-                Text('3',
-                    style: TextStyle(
+                Text('$daysDiff',
+                    style: const TextStyle(
                         fontSize: 18,
                         color: Color(0xFFD97706),
                         fontWeight: FontWeight.w900)),
-                Text('ngày',
+                const Text('ngày',
                     style: TextStyle(
                         fontSize: 10,
                         color: Color(0xFFD97706),
@@ -1015,21 +1052,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                   days: days,
                   color: const Color(0xFFDC2626),
                   unit: 'mmHg',
-                  threshold: globalState.thresholds.value.sysBpMax,
+                  threshold: 140.0,
                 ),
                 _buildBarChart(
                   data: generateData(double.tryParse(_heartRate) ?? 72.0, 10.0),
                   days: days,
                   color: const Color(0xFFE11D48),
                   unit: 'l/p',
-                  threshold: globalState.thresholds.value.heartRateMax,
+                  threshold: 100.0,
                 ),
                 _buildBarChart(
                   data: generateData(double.tryParse(_bloodSugar) ?? 5.5, 1.5),
                   days: days,
                   color: const Color(0xFF0284C7),
                   unit: 'mmol',
-                  threshold: globalState.thresholds.value.bloodSugarMax,
+                  threshold: 7.8,
                   isDecimal: true,
                 ),
                 _buildBarChart(
@@ -1037,7 +1074,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   days: days,
                   color: const Color(0xFF7C3AED),
                   unit: 'kg',
-                  threshold: globalState.thresholds.value.weightMax,
+                  threshold: 80.0,
                   isDecimal: true,
                 ),
               ],

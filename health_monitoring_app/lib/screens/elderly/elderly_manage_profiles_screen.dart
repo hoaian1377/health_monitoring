@@ -1,7 +1,34 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../utils/global_state.dart';
 import '../../utils/api_service.dart';
+
+class ElderlyProfile {
+  final int? id;
+  final String name;
+  final String dob;
+  final String gender;
+  final String phone;
+  final String address;
+  final String bloodType;
+  final String diseases;
+  final String allergies;
+  final String emergencyContact;
+  bool isActive;
+
+  ElderlyProfile({
+    this.id,
+    required this.name,
+    required this.dob,
+    required this.gender,
+    required this.phone,
+    required this.address,
+    required this.bloodType,
+    required this.diseases,
+    required this.allergies,
+    required this.emergencyContact,
+    this.isActive = false,
+  });
+}
 
 class ElderlyManageProfilesScreen extends StatefulWidget {
   const ElderlyManageProfilesScreen({super.key});
@@ -13,15 +40,76 @@ class _State extends State<ElderlyManageProfilesScreen> {
   static const _teal = Color(0xFF0284C7);
   static const _tealLight = Color(0xFFE0F2FE);
 
+  List<ElderlyProfile> _profiles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfiles();
+  }
+
+  Future<void> _loadProfiles() async {
+    setState(() => _isLoading = true);
+    final res = await ApiService.getElderlyList();
+    if (res['success'] == true) {
+      final list = res['elderly_list'] as List;
+      final parsed = list.map((e) {
+        String note = e['medical_note'] ?? '';
+        String diseases = note;
+        String allergies = '';
+        if (note.contains(' - ')) {
+          final parts = note.split(' - ');
+          diseases = parts[0];
+          if (parts.length > 1) allergies = parts.sublist(1).join(' - ');
+        }
+        
+        bool genderBool = e['gender'] == true || e['gender'] == 1 || e['gender'] == 'true';
+        String genderStr = genderBool ? 'Nam' : 'Nữ';
+
+        // Check active
+        bool isActive = e['id'] == ApiService.currentAccountId;
+
+        return ElderlyProfile(
+          id: e['id'],
+          name: e['fullname'] ?? '',
+          dob: e['date_of_birthday'] ?? e['dob'] ?? '',
+          gender: genderStr,
+          phone: '', // Not in DB
+          address: '', // Not in DB
+          bloodType: '', // Not in DB
+          diseases: diseases,
+          allergies: allergies,
+          emergencyContact: '', // Not in DB
+          isActive: isActive,
+        );
+      }).toList();
+
+      setState(() {
+        _profiles = parsed;
+        _isLoading = false;
+      });
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _switchActive(int index) {
-    globalState.switchActiveProfile(index);
+    if (_profiles[index].id != null) {
+      ApiService.currentAccountId = _profiles[index].id;
+    }
+    for (int i = 0; i < _profiles.length; i++) {
+      _profiles[i].isActive = (i == index);
+    }
+    setState(() {});
+
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       backgroundColor: _teal,
-      content: Text('Đã chuyển sang hồ sơ: ${globalState.profiles.value[index].name}'),
+      content: Text('Đã chuyển sang hồ sơ: ${_profiles[index].name}'),
       duration: const Duration(seconds: 2),
     ));
     Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) Navigator.pop(context, globalState.profiles.value[index].name);
+      if (mounted) Navigator.pop(context, _profiles[index].name);
     });
   }
 
@@ -31,15 +119,17 @@ class _State extends State<ElderlyManageProfilesScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Xóa hồ sơ sức khỏe?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Bác có chắc muốn xóa hồ sơ "${globalState.profiles.value[index].name}" không ạ? Dữ liệu đo sức khỏe liên quan sẽ bị mất vĩnh viễn.'),
+        content: Text('Bác có chắc muốn xóa hồ sơ "${_profiles[index].name}" không ạ? Dữ liệu đo sức khỏe liên quan sẽ bị mất vĩnh viễn.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy bỏ', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () {
               Navigator.pop(ctx);
-              globalState.deleteProfile(index);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFDC2626), content: Text('Đã xóa hồ sơ thành công')));
+              setState(() {
+                _profiles.removeAt(index);
+              });
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFDC2626), content: Text('Đã ẩn hồ sơ')));
             },
             child: const Text('Xác nhận xóa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
@@ -85,7 +175,7 @@ class _State extends State<ElderlyManageProfilesScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 _formField('Họ và tên *', nameC, Icons.person_outline_rounded, 'Nhập họ và tên đầy đủ'),
                 const SizedBox(height: 14),
-                _formField('Ngày sinh *', dobC, Icons.cake_outlined, 'dd/mm/yyyy'),
+                _formField('Ngày sinh *', dobC, Icons.cake_outlined, 'YYYY-MM-DD'),
                 const SizedBox(height: 14),
                 const Text('Giới tính *', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _teal)),
                 const SizedBox(height: 8),
@@ -125,29 +215,51 @@ class _State extends State<ElderlyManageProfilesScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFFDC2626), content: Text('Vui lòng nhập họ tên và ngày sinh!')));
                         return;
                       }
-                      final profile = ElderlyProfile(name: nameC.text, dob: dobC.text, gender: gender, phone: phoneC.text, address: addrC.text, bloodType: bloodC.text, diseases: disC.text, allergies: allC.text, emergencyContact: emergC.text);
-                      if (editIndex != null) {
-                        globalState.updateProfile(editIndex, profile);
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFF16A34A), content: Text('Đã cập nhật hồ sơ thành công!')));
-                      } else {
-                        final res = await ApiService.createElderly(fullname: profile.name, dob: profile.dob, gender: profile.gender, medicalNote: '${profile.diseases} - ${profile.allergies}');
+                      
+                      String genderStr = gender == 'Nam' ? 'true' : 'false';
+
+                      if (existing != null && existing.id != null) {
+                        final res = await ApiService.updateElderly(
+                          elderlyId: existing.id!, 
+                          fullname: nameC.text, 
+                          dob: dobC.text, 
+                          gender: genderStr, 
+                          medicalNote: '${disC.text} - ${allC.text}'
+                        );
                         if (res['success'] == true) {
-                          globalState.addProfile(profile);
-                          Navigator.pop(ctx);
-                          showDialog(context: context, builder: (c) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                            title: const Text('Mã QR Đăng Nhập Của Bác', textAlign: TextAlign.center),
-                            content: Column(mainAxisSize: MainAxisSize.min, children: [
-                              const Text('Bác hãy lưu hoặc dùng điện thoại quét mã QR này để đăng nhập nhanh nhé.', textAlign: TextAlign.center),
-                              const SizedBox(height: 20),
-                              QrImageView(data: res['qr_token'], version: QrVersions.auto, size: 200.0),
-                            ]),
-                            actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Đóng lại', style: TextStyle(color: _teal, fontWeight: FontWeight.bold)))],
-                          ));
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFF16A34A), content: Text('Đã thêm hồ sơ mới thành công!')));
+                          await _loadProfiles();
+                          if (mounted) {
+                            Navigator.pop(ctx);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFF16A34A), content: Text('Đã cập nhật hồ sơ thành công!')));
+                          }
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFFDC2626), content: Text(res['error'] ?? 'Lỗi tạo hồ sơ')));
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFFDC2626), content: Text(res['error'] ?? 'Lỗi cập nhật')));
+                        }
+                      } else {
+                        final res = await ApiService.createElderly(
+                          fullname: nameC.text, 
+                          dob: dobC.text, 
+                          gender: genderStr, 
+                          medicalNote: '${disC.text} - ${allC.text}'
+                        );
+                        if (res['success'] == true) {
+                          await _loadProfiles();
+                          if (mounted) {
+                            Navigator.pop(ctx);
+                            showDialog(context: context, builder: (c) => AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              title: const Text('Mã QR Đăng Nhập Của Bác', textAlign: TextAlign.center),
+                              content: Column(mainAxisSize: MainAxisSize.min, children: [
+                                const Text('Bác hãy lưu hoặc dùng điện thoại quét mã QR này để đăng nhập nhanh nhé.', textAlign: TextAlign.center),
+                                const SizedBox(height: 20),
+                                QrImageView(data: res['qr_token'], version: QrVersions.auto, size: 200.0),
+                              ]),
+                              actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('Đóng lại', style: TextStyle(color: _teal, fontWeight: FontWeight.bold)))],
+                            ));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(backgroundColor: Color(0xFF16A34A), content: Text('Đã thêm hồ sơ mới thành công!')));
+                          }
+                        } else {
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(backgroundColor: const Color(0xFFDC2626), content: Text(res['error'] ?? 'Lỗi tạo hồ sơ')));
                         }
                       }
                     },
@@ -184,6 +296,14 @@ class _State extends State<ElderlyManageProfilesScreen> {
     ]);
   }
 
+  String _getActiveProfileName() {
+    try {
+      return _profiles.firstWhere((p) => p.isActive).name;
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -198,7 +318,7 @@ class _State extends State<ElderlyManageProfilesScreen> {
           padding: const EdgeInsets.fromLTRB(20, 52, 20, 28),
           child: Row(children: [
             GestureDetector(
-              onTap: () => Navigator.pop(context, globalState.activeProfile.name),
+              onTap: () => Navigator.pop(context, _getActiveProfileName()),
               child: Container(padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20)),
@@ -210,7 +330,9 @@ class _State extends State<ElderlyManageProfilesScreen> {
             ])),
           ]),
         ),
-        Expanded(child: SingleChildScrollView(
+        Expanded(child: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(children: [
             // Add button
@@ -232,84 +354,81 @@ class _State extends State<ElderlyManageProfilesScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            ValueListenableBuilder<List<ElderlyProfile>>(
-              valueListenable: globalState.profiles,
-              builder: (context, profiles, _) => Column(
-                children: List.generate(profiles.length, (i) {
-                  final p = profiles[i];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: p.isActive ? _teal : const Color(0xFFE2E8F0), width: p.isActive ? 2 : 1),
-                      boxShadow: [BoxShadow(color: p.isActive ? _teal.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Container(
-                            width: 54, height: 54,
-                            decoration: BoxDecoration(color: p.isActive ? _teal : const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(16)),
-                            alignment: Alignment.center,
-                            child: Text(p.name.isNotEmpty ? p.name[0] : '?',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: p.isActive ? Colors.white : const Color(0xFF94A3B8))),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Row(children: [
-                              Expanded(child: Text(p.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)), overflow: TextOverflow.ellipsis)),
-                              if (p.isActive) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(color: _teal, borderRadius: BorderRadius.circular(20)),
-                                  child: const Text('Đang theo dõi', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                ),
-                              ],
-                            ]),
-                            const SizedBox(height: 2),
-                            Text('${p.gender} · ${p.dob}', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
-                          ])),
-                        ]),
-                        const SizedBox(height: 12),
-                        Wrap(spacing: 8, runSpacing: 6, children: [
-                          _chip(Icons.bloodtype_outlined, 'Nhóm máu: ${p.bloodType}'),
-                          _chip(Icons.phone_outlined, p.phone),
-                          if (p.diseases.isNotEmpty) _chip(Icons.medical_services_outlined, p.diseases, warn: true),
-                        ]),
-                        const SizedBox(height: 14),
-                        Row(children: [
-                          if (!p.isActive) ...[
-                            Expanded(child: OutlinedButton.icon(
-                              onPressed: () => _switchActive(i),
-                              style: OutlinedButton.styleFrom(side: const BorderSide(color: _teal), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 10)),
-                              icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: _teal),
-                              label: const Text('Chuyển sang', style: TextStyle(color: _teal, fontWeight: FontWeight.bold, fontSize: 13)),
-                            )),
-                            const SizedBox(width: 8),
-                          ],
-                          Expanded(child: OutlinedButton.icon(
-                            onPressed: () => _showAddOrEdit(existing: p, editIndex: i),
-                            style: OutlinedButton.styleFrom(side: const BorderSide(color: _teal), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 10)),
-                            icon: const Icon(Icons.edit_rounded, size: 16, color: _teal),
-                            label: const Text('Chỉnh sửa', style: TextStyle(color: _teal, fontWeight: FontWeight.bold, fontSize: 13)),
-                          )),
-                          if (!p.isActive) ...[
-                            const SizedBox(width: 8),
-                            OutlinedButton(
-                              onPressed: () => _deleteProfile(i),
-                              style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFDC2626)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14)),
-                              child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
-                            ),
-                          ],
-                        ]),
+            Column(
+              children: List.generate(_profiles.length, (i) {
+                final p = _profiles[i];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: p.isActive ? _teal : const Color(0xFFE2E8F0), width: p.isActive ? 2 : 1),
+                    boxShadow: [BoxShadow(color: p.isActive ? _teal.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Container(
+                          width: 54, height: 54,
+                          decoration: BoxDecoration(color: p.isActive ? _teal : const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(16)),
+                          alignment: Alignment.center,
+                          child: Text(p.name.isNotEmpty ? p.name[0] : '?',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: p.isActive ? Colors.white : const Color(0xFF94A3B8))),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            Expanded(child: Text(p.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)), overflow: TextOverflow.ellipsis)),
+                            if (p.isActive) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(color: _teal, borderRadius: BorderRadius.circular(20)),
+                                child: const Text('Đang theo dõi', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ]),
+                          const SizedBox(height: 2),
+                          Text('${p.gender} · ${p.dob}', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                        ])),
                       ]),
-                    ),
-                  );
-                }),
-              ),
+                      const SizedBox(height: 12),
+                      Wrap(spacing: 8, runSpacing: 6, children: [
+                        if (p.bloodType.isNotEmpty) _chip(Icons.bloodtype_outlined, 'Nhóm máu: ${p.bloodType}'),
+                        if (p.phone.isNotEmpty) _chip(Icons.phone_outlined, p.phone),
+                        if (p.diseases.isNotEmpty) _chip(Icons.medical_services_outlined, p.diseases, warn: true),
+                      ]),
+                      const SizedBox(height: 14),
+                      Row(children: [
+                        if (!p.isActive) ...[
+                          Expanded(child: OutlinedButton.icon(
+                            onPressed: () => _switchActive(i),
+                            style: OutlinedButton.styleFrom(side: const BorderSide(color: _teal), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 10)),
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: _teal),
+                            label: const Text('Chuyển sang', style: TextStyle(color: _teal, fontWeight: FontWeight.bold, fontSize: 13)),
+                          )),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(child: OutlinedButton.icon(
+                          onPressed: () => _showAddOrEdit(existing: p, editIndex: i),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: _teal), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 10)),
+                          icon: const Icon(Icons.edit_rounded, size: 16, color: _teal),
+                          label: const Text('Chỉnh sửa', style: TextStyle(color: _teal, fontWeight: FontWeight.bold, fontSize: 13)),
+                        )),
+                        if (!p.isActive) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () => _deleteProfile(i),
+                            style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFFDC2626)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14)),
+                            child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+                          ),
+                        ],
+                      ]),
+                    ]),
+                  ),
+                );
+              }),
             ),
             const SizedBox(height: 40),
           ]),
@@ -330,3 +449,4 @@ class _State extends State<ElderlyManageProfilesScreen> {
     );
   }
 }
+
