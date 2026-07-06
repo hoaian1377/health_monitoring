@@ -34,6 +34,7 @@ subprojects {
                 if (namespace.isNullOrEmpty()) {
                     namespace = "com.example.${project.name.replace("-", "_").replace(".", "_")}"
                 }
+                compileSdkVersion(36)
             }
         }
 

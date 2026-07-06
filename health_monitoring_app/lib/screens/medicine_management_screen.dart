@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/api_service.dart';
+import '../utils/alarm_service.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 class MedicineItem {
@@ -240,6 +241,11 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
   List<TodayDoseSlot> _todaySlots = [];
 
+  // Elderly management
+  List<Map<String, dynamic>> _elderlyList = [];
+  int? _selectedElderlyId;
+  bool _isLoadingElderly = false;
+
   // Form controllers
   final _nameCtrl = TextEditingController();
   final _dosageCtrl = TextEditingController();
@@ -261,6 +267,26 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _buildTodaySlots();
+    _loadElderlyList();
+  }
+
+  Future<void> _loadElderlyList() async {
+    setState(() => _isLoadingElderly = true);
+    final result = await ApiService.getElderlyList();
+    if (result['success'] == true && mounted) {
+      final list = (result['elderly_list'] as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
+      setState(() {
+        _elderlyList = list;
+        if (list.isNotEmpty) {
+          _selectedElderlyId = list[0]['id'] as int?;
+        }
+        _isLoadingElderly = false;
+      });
+    } else if (mounted) {
+      setState(() => _isLoadingElderly = false);
+    }
   }
 
   void _buildTodaySlots() {
@@ -2482,6 +2508,37 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                   _formField(_storageCtrl,
                       'VD: Bảo quản dưới 25°C, tránh ẩm',
                       Icons.thermostat_rounded),
+                  // Người cao tuổi
+                  if (_elderlyList.isNotEmpty) ...[
+                    _formLabel('Dành cho'),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      value: _selectedElderlyId,
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        prefixIcon: const Icon(Icons.person_rounded,
+                            size: 18, color: Color(0xFF0EA5E9)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
+                      ),
+                      items: _elderlyList.map((e) {
+                        return DropdownMenuItem<int>(
+                          value: e['id'] as int?,
+                          child: Text(
+                            e['fullname'] ?? 'Không rõ tên',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setState(() => _selectedElderlyId = v),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
                   const SizedBox(height: 24),
 
                   // Save button
@@ -2496,7 +2553,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                             borderRadius: BorderRadius.circular(16)),
                         elevation: 0,
                       ),
-                      onPressed: () {
+                      onPressed: () async {
                         if (_nameCtrl.text.trim().isEmpty) return;
                         final timesStr = _formTimes
                             .map((t) =>
@@ -2534,6 +2591,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                                     : _storageCtrl.text.trim();
                             editTarget.color = _formColor;
                             _buildTodaySlots();
+                            _scheduleAlarms(editTarget);
                           });
                         } else {
                           final catColors = {
@@ -2544,7 +2602,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                             'khac': '#7C3AED',
                           };
                           setState(() {
-                            _medicines.add(MedicineItem(
+                            final newMed = MedicineItem(
                               id: DateTime.now().millisecondsSinceEpoch
                                   .toString(),
                               name: _nameCtrl.text.trim(),
@@ -2577,9 +2635,30 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                                   _storageCtrl.text.trim().isEmpty
                                       ? null
                                       : _storageCtrl.text.trim(),
-                            ));
+                            );
+                            _medicines.add(newMed);
                             _buildTodaySlots();
+                            _scheduleAlarms(newMed);
                           });
+                        }
+
+                        // Push to backend API for new medication
+                        if (!isEdit && _selectedElderlyId != null) {
+                          final medName = _nameCtrl.text.trim();
+                          for (final timeStr in timesStr) {
+                            await ApiService.addMedication(
+                              elderlyId: _selectedElderlyId!,
+                              name: medName,
+                              dosage: _dosageCtrl.text.trim().isEmpty
+                                  ? '1 viên'
+                                  : _dosageCtrl.text.trim(),
+                              instruction: _formInstruction,
+                              time: timeStr,
+                              frequency: timesStr.length == 1
+                                  ? '1 lần/ngày'
+                                  : '${timesStr.length} lần/ngày',
+                            );
+                          }
                         }
 
                         Navigator.pop(ctx);
@@ -3218,6 +3297,32 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         ],
       ),
     );
+  }
+  void _scheduleAlarms(MedicineItem med) {
+    if (!med.isActive) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day, now.hour, now.minute);
+    for (final timeStr in med.times) {
+      final parts = timeStr.split(':');
+      final hour = int.tryParse(parts[0]) ?? 8;
+      final minute = int.tryParse(parts[1]) ?? 0;
+      var alarmTime = DateTime(today.year, today.month, today.day, hour, minute);
+      
+      if (alarmTime.isBefore(today)) {
+        alarmTime = alarmTime.add(const Duration(days: 1)); // Schedule for next day
+      } else if (alarmTime.isAtSameMomentAs(today)) {
+        alarmTime = now.add(const Duration(seconds: 5)); // Trigger very soon if set to current minute
+      }
+      
+      final alarmId = '${med.id}_$timeStr'.hashCode.abs();
+      
+      AlarmService.scheduleAlarm(
+        id: alarmId,
+        dateTime: alarmTime,
+        title: 'Đến giờ uống thuốc!',
+        body: 'Thuốc: ${med.name} - ${med.dosage} (${med.instruction})',
+      );
+    }
   }
 }
 

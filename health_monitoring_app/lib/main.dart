@@ -5,13 +5,33 @@ import 'screens/history_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
+import 'package:alarm/alarm.dart';
+import 'utils/alarm_service.dart';
+import 'screens/alarm_ring_screen.dart';
 // ── Elderly-specific screens ────────────────────────────────────────────────
 import 'screens/elderly/elderly_profile_screen.dart';
 import 'screens/elderly/elderly_notifications_screen.dart';
 import 'screens/elderly/elderly_checklist_screen.dart';
 import 'utils/api_service.dart';
 
-void main() {
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AlarmService.init();
+
+  Alarm.ringStream.stream.listen((alarmSettings) {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (context) => AlarmRingScreen(
+          alarmId: alarmSettings.id,
+          title: alarmSettings.notificationSettings.title,
+          body: alarmSettings.notificationSettings.body,
+        ),
+      ),
+    );
+  });
+
   runApp(const HealthApp());
 }
 
@@ -21,6 +41,7 @@ class HealthApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'HealthCare',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
