@@ -15,6 +15,9 @@ class ElderlyTaskItem {
   int? dosesPerDay;
   String? startDate;
   String? endDate;
+  String? frequency;
+  String? instruction;
+  String? description;
 
   ElderlyTaskItem({
     required this.id,
@@ -27,6 +30,9 @@ class ElderlyTaskItem {
     this.dosesPerDay,
     this.startDate,
     this.endDate,
+    this.frequency,
+    this.instruction,
+    this.description,
   });
 }
 
@@ -121,6 +127,19 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     _fetchMedications();
   }
 
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final parts = dateStr.split('-');
+      if (parts.length == 3) {
+        return '${parts[2]}/${parts[1]}/${parts[0]}';
+      }
+    } catch (e) {
+      // ignore
+    }
+    return dateStr;
+  }
+
   Future<void> _fetchMedications() async {
     final targetElderlyId = ApiService.currentAccountId;
     if (targetElderlyId == null) return;
@@ -141,6 +160,11 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
               details: '${med['dosage'] ?? ''} - ${med['instruction'] ?? ''}',
               medCode: 'MED-${s['schedule_id']}',
               dosage: med['dosage'],
+              startDate: _formatDate(s['start_date']),
+              endDate: _formatDate(s['end_date']),
+              frequency: s['frequency'],
+              instruction: med['instruction'],
+              description: med['description'],
             ));
           }
         });
@@ -367,8 +391,8 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     String typeLabel;
 
     if (task.type == 'medication') {
-      themeColor = const Color(0xFF0284C7);
-      typeIcon = Icons.medication_rounded;
+      themeColor = _getMedicationColor(task.title);
+      typeIcon = _getMedicationIcon(task.title);
       typeLabel = 'Thông tin thuốc';
     } else {
       themeColor = const Color(0xFFD97706);
@@ -409,103 +433,75 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Nhãn loại và thời gian (Không có icon báo thức)
+              
+              // Hàng tiêu đề có icon tròn bên trái như caregiver
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       color: themeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Row(
+                    child: Icon(typeIcon, color: themeColor, size: 26),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          typeIcon,
-                          size: 14,
-                          color: themeColor,
+                        Text(
+                          task.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Color(0xFF1E293B),
+                          ),
                         ),
-                        const SizedBox(width: 4),
                         Text(
                           typeLabel,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
                             color: themeColor,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    task.time,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: themeColor,
-                    ),
-                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              // Tên thuốc/tiêu đề
-              Text(
-                task.title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               const Divider(color: Color(0xFFF1F5F9), thickness: 1),
               const SizedBox(height: 16),
-              // Cách dùng / Chi tiết hướng dẫn
-              const Text(
-                'Hướng dẫn & Cách dùng:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF64748B),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                task.details,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E293B),
-                  height: 1.4,
-                ),
-              ),
+
               if (task.type == 'medication') ...[
-                const SizedBox(height: 20),
-                // Các thông tin liều lượng và thời hạn nếu có
-                Row(
-                  children: [
-                    if (task.dosage != null) ...[
-                      _buildDetailBadge(Icons.vaccines_rounded, 'Liều dùng', task.dosage!),
-                      const SizedBox(width: 12),
-                    ],
-                    if (task.dosesPerDay != null) ...[
-                      _buildDetailBadge(Icons.repeat_rounded, 'Tần suất', '${task.dosesPerDay} lần/ngày'),
-                    ],
-                  ],
+                _detailRow(Icons.medical_services_rounded, 'Liều lượng', task.dosage ?? 'Không rõ', themeColor),
+                _detailRow(
+                  Icons.repeat_rounded,
+                  'Tần suất',
+                  task.frequency ?? (task.dosesPerDay != null ? '${task.dosesPerDay} lần/ngày' : 'Chưa rõ'),
+                  themeColor,
                 ),
-                if (task.startDate != null) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _buildDetailBadge(
-                        Icons.date_range_rounded,
-                        'Thời gian đơn thuốc',
-                        '${task.startDate} - ${task.endDate}',
-                      ),
-                    ],
+                _detailRow(Icons.access_time_rounded, 'Giờ uống', task.time, themeColor),
+                _detailRow(Icons.restaurant_rounded, 'Cách uống', task.instruction ?? 'Không rõ', themeColor),
+                if (task.startDate != null && task.startDate!.isNotEmpty)
+                  _detailRow(
+                    Icons.calendar_today_rounded,
+                    'Thời gian',
+                    '${task.startDate} - ${task.endDate}',
+                    themeColor,
                   ),
+                if (task.description != null && task.description!.isNotEmpty) ...[
+                  const Divider(color: Color(0xFFF1F5F9), thickness: 1),
+                  const SizedBox(height: 8),
+                  _noteBox(Icons.sticky_note_2_rounded, 'Ghi chú', task.description!, themeColor),
                 ],
+              ] else ...[
+                _detailRow(Icons.access_time_rounded, 'Thời gian', task.time, themeColor),
+                const Divider(color: Color(0xFFF1F5F9), thickness: 1),
+                const SizedBox(height: 8),
+                _noteBox(Icons.info_outline_rounded, 'Hướng dẫn chuẩn bị', task.details, themeColor),
               ],
               const SizedBox(height: 28),
               // Nút Đóng
@@ -535,46 +531,99 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     );
   }
 
-  Widget _buildDetailBadge(IconData icon, String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 14, color: const Color(0xFF64748B)),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                ),
-              ],
+  Widget _detailRow(IconData icon, String label, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
+            child: Icon(icon, size: 14, color: color),
+          ),
+          const SizedBox(width: 10),
+          Text(label,
               style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+                  fontSize: 15, color: Color(0xFF64748B))),
+          const Spacer(),
+          Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF1E293B))),
+        ],
       ),
     );
   }
 
-  // Dựng thẻ nhiệm vụ phẳng tối giản, sạch sẽ (Đã đồng bộ hiển thị tích xanh khi hoàn thành ở trang chủ)
+  Widget _noteBox(IconData icon, String label, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.15)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: color)),
+                const SizedBox(height: 3),
+                Text(text,
+                    style: const TextStyle(
+                        fontSize: 14, color: Color(0xFF475569))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Phân loại tự động biểu tượng theo tên thuốc
+  IconData _getMedicationIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('siro') || lower.contains('nước') || lower.contains('dầu') || lower.contains('giọt') || lower.contains('dung dịch')) {
+      return Icons.water_drop_rounded;
+    }
+    if (lower.contains('sữa') || lower.contains('bột') || lower.contains('gói') || lower.contains('pha')) {
+      return Icons.science_outlined;
+    }
+    if (lower.contains('tiêm') || lower.contains('insulin') || lower.contains('chích')) {
+      return Icons.vaccines_rounded;
+    }
+    return Icons.medication_rounded;
+  }
+
+  // Phân loại tự động tông màu sắc theo tên thuốc
+  Color _getMedicationColor(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('siro') || lower.contains('nước') || lower.contains('dầu') || lower.contains('giọt') || lower.contains('dung dịch')) {
+      return const Color(0xFF0EA5E9);
+    }
+    if (lower.contains('sữa') || lower.contains('bột') || lower.contains('gói') || lower.contains('pha')) {
+      return const Color(0xFFD97706);
+    }
+    if (lower.contains('tiêm') || lower.contains('insulin') || lower.contains('chích')) {
+      return const Color(0xFFEC4899);
+    }
+    return const Color(0xFF2563EB);
+  }
+
+  // Dựng thẻ nhiệm vụ phẳng tối giản, sạch sẽ
   Widget _buildElderlyChecklistItemCard(ElderlyTaskItem task) {
     Color typeColor;
     switch (task.type) {
@@ -588,6 +637,14 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
         typeColor = const Color(0xFF475569);
         break;
     }
+
+    final Color itemColor = task.type == 'medication'
+        ? _getMedicationColor(task.title)
+        : typeColor;
+
+    final IconData itemIcon = task.type == 'medication'
+        ? _getMedicationIcon(task.title)
+        : Icons.assignment_rounded;
 
     // Đọc trạng thái đã tích uống từ Trang chủ (thông qua GlobalState dùng chung)
     final int? scheduleId = task.type == 'medication' ? int.tryParse(task.id) : null;
@@ -608,7 +665,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
         border: Border.all(
           color: isTaken
               ? Colors.grey.shade200
-              : typeColor.withValues(alpha: 0.15),
+              : itemColor.withValues(alpha: 0.15),
           width: 1.5,
         ),
       ),
@@ -625,20 +682,37 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // Icon tròn bên trái như Home Screen
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: isTaken
+                          ? const Color(0xFFE8F5E9)
+                          : itemColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isTaken ? Icons.check_circle_rounded : itemIcon,
+                      color: isTaken ? const Color(0xFF10B981) : itemColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
                   // Nội dung công việc (Đạt cấu trúc chống lỗi tràn viền ngang)
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Hàng nhãn mốc thời gian và hướng dẫn (Không có icon báo thức)
+                        // Hàng nhãn mốc thời gian và hướng dẫn
                         Row(
                           children: [
                             Text(
                               task.time == 'Trước khám' ? 'Trước khám' : task.time,
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: isTaken ? Colors.grey : typeColor,
+                                color: isTaken ? Colors.grey : itemColor,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -673,18 +747,11 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Chevron chỉ thị hoặc Tích xanh lá cây báo hiệu hoàn thành đồng bộ từ trang chủ
-                  isTaken
-                      ? const Icon(
-                          Icons.check_circle_rounded,
-                          color: Color(0xFF10B981),
-                          size: 26,
-                        )
-                      : Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.grey.shade400,
-                          size: 24,
-                        ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.grey.shade400,
+                    size: 24,
+                  ),
                 ],
               ),
             ),

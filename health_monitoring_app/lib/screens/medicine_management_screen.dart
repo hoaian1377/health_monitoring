@@ -573,17 +573,21 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                       ],
                     ),
                     const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        _statPill(Icons.check_circle_rounded, Colors.greenAccent,
-                            '${(adherence * 100).toStringAsFixed(0)}%', 'Tuân thủ'),
-                        const SizedBox(width: 10),
-                        _statPill(Icons.medication_rounded, Colors.lightBlueAccent,
-                            '${_medicines.where((m) => m.isActive).length}', 'Đang dùng'),
-                        const SizedBox(width: 10),
-                        _statPill(Icons.warning_rounded, Colors.orangeAccent,
-                            '${_medicines.where((m) => m.isLowStock).length}', 'Sắp hết'),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: [
+                          _statPill(Icons.check_circle_rounded, Colors.greenAccent,
+                              '${(adherence * 100).toStringAsFixed(0)}%', 'Tuân thủ'),
+                          const SizedBox(width: 10),
+                          _statPill(Icons.medication_rounded, Colors.lightBlueAccent,
+                              '${_medicines.where((m) => m.isActive).length}', 'Đang dùng'),
+                          const SizedBox(width: 10),
+                          _statPill(Icons.warning_rounded, Colors.orangeAccent,
+                              '${_medicines.where((m) => m.isLowStock).length}', 'Sắp hết'),
+                        ],
+                      ),
                     ),
                   ],
                 ),

@@ -216,15 +216,20 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   }
 
   bool _isMedicationTaken(int scheduleId, DateTime date) {
-    return false;
+    return _takenScheduleIds.contains(scheduleId);
   }
 
   void _toggleMedicationTaken(int scheduleId, DateTime date, String medName) {
+    final bool currentlyTaken = _takenScheduleIds.contains(scheduleId);
     setState(() {
-      
+      if (currentlyTaken) {
+        _takenScheduleIds.remove(scheduleId);
+      } else {
+        _takenScheduleIds.add(scheduleId);
+      }
     });
 
-    final isTaken = false;
+    final isTaken = !currentlyTaken;
 
     if (!isTaken) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -481,11 +486,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                     _buildHeader(),
                     _buildCalendarRow(),
                     _buildGoToTodayButton(isSelectedToday),
-                    const SizedBox(height: 16),
+                    SizedBox(height: isSelectedToday && _currentCalendarPage == 1000 ? 8 : 16),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
               // Khu vực hiển thị danh sách lịch uống thuốc
               _buildMedicationList(),
               const SizedBox(height: 100), // Để khoảng trống cho BottomNavigationBar
@@ -653,44 +658,46 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     final isPageToday = _currentCalendarPage == 1000;
     final isTodaySelectedAndOnCorrectPage = isSelectedToday && isPageToday;
 
+    if (isTodaySelectedAndOnCorrectPage) {
+      return const SizedBox.shrink();
+    }
+
     return Center(
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        opacity: isTodaySelectedAndOnCorrectPage ? 0.0 : 1.0,
-        child: isTodaySelectedAndOnCorrectPage
-            ? const SizedBox.shrink()
-            : Container(
-                margin: const EdgeInsets.only(top: 8),
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedDate = DateTime.now();
-                    });
-                    _pageController?.animateToPage(
-                      1000,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.2), // Nền mờ kính
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: Colors.white.withOpacity(0.4), width: 1),
-                    ),
-                  ),
-                  child: const Text(
-                    'Quay lại hôm nay',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+        opacity: 1.0,
+        child: Container(
+          margin: const EdgeInsets.only(top: 8),
+          child: ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _selectedDate = DateTime.now();
+              });
+              _pageController?.animateToPage(
+                1000,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.2), // Nền mờ kính
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: Colors.white.withOpacity(0.4), width: 1),
               ),
+            ),
+            child: const Text(
+              'Quay lại hôm nay',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -733,6 +740,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       itemCount: grouped.keys.length,
       itemBuilder: (context, index) {
         final String time = grouped.keys.elementAt(index);
@@ -743,13 +751,13 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tiêu đề mốc giờ uống thuốc (Ví dụ: 08:00) nằm ngoài thẻ giống hình vẽ
+              // Tiêu đề mốc giờ uống thuốc (Ví dụ: 08:00) nằm ngoài thẻ
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 8),
                 child: Text(
                   time,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF475569),
                   ),
@@ -778,7 +786,13 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                     final med = schedule['medication'] ?? {};
                     final int id = schedule['schedule_id'];
                     final String name = med['name'] ?? 'Không rõ tên';
-                    final String subtitle = _buildMedicationSubtitle(med);
+                    final String dosage = med['dosage'] ?? 'Không rõ';
+                    final String instruction = med['instruction'] ?? 'Không rõ';
+                    final String frequency = schedule['frequency'] ?? 'Chưa rõ';
+                    final String startDate = _formatDate(schedule['start_date']);
+                    final String endDate = _formatDate(schedule['end_date']);
+                    final String? description = med['description'];
+                    
                     final isTaken = _isMedicationTaken(id, _selectedDate);
                     
                     final medIcon = _getMedicationIcon(name);
@@ -786,7 +800,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                     
                     return InkWell(
                       onTap: () {
-                        _toggleMedicationTaken(id, _selectedDate, name);
+                        _showConfirmationDialog(id, name, time, isTaken);
                       },
                       borderRadius: BorderRadius.circular(20),
                       child: Column(
@@ -814,7 +828,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                // Tên thuốc và thông tin cách dùng/liều lượng
+                                // Tên thuốc và thông tin chi tiết quan trọng hiện trực tiếp trên list
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -822,7 +836,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                                       Text(
                                         name,
                                         style: TextStyle(
-                                          fontSize: 18,
+                                          fontSize: 20,
                                           fontWeight: FontWeight.bold,
                                           color: isTaken 
                                               ? Colors.grey.shade400 
@@ -832,17 +846,52 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                                               : null,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        subtitle,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: isTaken 
-                                              ? Colors.grey.shade400 
-                                              : const Color(0xFF64748B),
-                                        ),
+                                      const SizedBox(height: 8),
+                                      // Hàng chứa các chip thông tin thuốc
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: [
+                                          _buildMiniBadge(Icons.vaccines_rounded, dosage, medColor, isTaken),
+                                          _buildMiniBadge(Icons.repeat_rounded, frequency, medColor, isTaken),
+                                          _buildMiniBadge(Icons.restaurant_rounded, instruction, medColor, isTaken),
+                                          if (startDate.isNotEmpty)
+                                            _buildMiniBadge(
+                                              Icons.date_range_rounded, 
+                                              '${startDate.substring(0, 5)} - ${endDate.substring(0, 5)}', 
+                                              medColor, 
+                                              isTaken
+                                            ),
+                                        ],
                                       ),
+                                      if (description != null && description.isNotEmpty) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(
+                                              Icons.notes_rounded, 
+                                              size: 13, 
+                                              color: isTaken ? Colors.grey.shade400 : Colors.grey.shade500
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                description,
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontStyle: FontStyle.italic,
+                                                  color: isTaken 
+                                                      ? Colors.grey.shade400 
+                                                      : const Color(0xFF64748B),
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -880,5 +929,244 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         );
       },
     );
+  }
+
+  // Widget xây dựng Badge nhỏ gọn cho thông tin thuốc trên thẻ
+  Widget _buildMiniBadge(IconData icon, String text, Color color, bool isTaken) {
+    final Color badgeBg = isTaken ? const Color(0xFFF1F5F9) : color.withOpacity(0.08);
+    final Color badgeText = isTaken ? Colors.grey.shade400 : color;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: badgeBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isTaken ? Colors.grey.shade200 : color.withOpacity(0.15),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: badgeText),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: badgeText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Mở BottomSheet Xác nhận Đã uống / Chưa uống thuốc đẹp mắt
+  void _showConfirmationDialog(int scheduleId, String name, String time, bool isTaken) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final bottomPadding = MediaQuery.of(context).padding.bottom;
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
+          ),
+          padding: EdgeInsets.fromLTRB(24, 20, 24, bottomPadding > 0 ? bottomPadding + 16 : 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: isTaken 
+                      ? const Color(0xFFFEE2E2) 
+                      : const Color(0xFFD1FAE5), 
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isTaken ? Icons.remove_circle_outline_rounded : Icons.check_circle_outline_rounded,
+                  color: isTaken ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                  size: 40,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                isTaken ? 'Hủy Ghi Nhận Uống Thuốc' : 'Xác Nhận Uống Thuốc',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 16, color: Color(0xFF475569), height: 1.4),
+                  children: [
+                    TextSpan(text: isTaken ? 'Bác muốn hủy ghi nhận đã uống thuốc ' : 'Bác đã uống thuốc '),
+                    TextSpan(
+                      text: name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    ),
+                    TextSpan(text: ' lúc '),
+                    TextSpan(
+                      text: time,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    ),
+                    const TextSpan(text: ' chưa?'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Chưa, quay lại',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: isTaken ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _toggleMedicationTaken(scheduleId, _selectedDate, name);
+                      },
+                      child: Text(
+                        isTaken ? 'Đúng, hủy ghi nhận' : 'Đã uống',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 14, color: color),
+          ),
+          const SizedBox(width: 10),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 15, color: Color(0xFF64748B))),
+          const Spacer(),
+          Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF1E293B))),
+        ],
+      ),
+    );
+  }
+
+  Widget _noteBox(IconData icon, String label, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.15)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: color)),
+                const SizedBox(height: 3),
+                Text(text,
+                    style: const TextStyle(
+                        fontSize: 14, color: Color(0xFF475569))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final parts = dateStr.split('-');
+      if (parts.length == 3) {
+        return '${parts[2]}/${parts[1]}/${parts[0]}';
+      }
+    } catch (e) {
+      // ignore
+    }
+    return dateStr;
   }
 }
