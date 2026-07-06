@@ -9,7 +9,7 @@ class ApiService {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://192.168.123.4:8000";
+      return "http://10.0.2.2:8000";
     }
     return "http://localhost:8000";
   }
@@ -286,20 +286,28 @@ class ApiService {
     required String instruction,
     required String time,
     required String frequency,
+    String description = '',
+    String? startDate,
+    String? endDate,
   }) async {
     final url = Uri.parse("$baseUrl/api/medication/create/");
     try {
+      final body = <String, dynamic>{
+        "elderly_id": elderlyId,
+        "name": name,
+        "dosage": dosage,
+        "instruction": instruction,
+        "time": time,
+        "frequency": frequency,
+        "description": description,
+      };
+      if (startDate != null && startDate.isNotEmpty) body["start_date"] = startDate;
+      if (endDate != null && endDate.isNotEmpty) body["end_date"] = endDate;
+
       final res = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "elderly_id": elderlyId,
-          "name": name,
-          "dosage": dosage,
-          "instruction": instruction,
-          "time": time,
-          "frequency": frequency,
-        }),
+        body: jsonEncode(body),
       );
       return res.statusCode == 201;
     } catch (e) {
@@ -315,19 +323,27 @@ class ApiService {
     required String instruction,
     required String time,
     required String frequency,
+    String description = '',
+    String? startDate,
+    String? endDate,
   }) async {
     final url = Uri.parse("$baseUrl/api/medication/schedule/$scheduleId/update/");
     try {
+      final body = <String, dynamic>{
+        "name": name,
+        "dosage": dosage,
+        "instruction": instruction,
+        "time": time,
+        "frequency": frequency,
+        "description": description,
+      };
+      if (startDate != null && startDate.isNotEmpty) body["start_date"] = startDate;
+      if (endDate != null && endDate.isNotEmpty) body["end_date"] = endDate;
+
       final res = await http.put(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "name": name,
-          "dosage": dosage,
-          "instruction": instruction,
-          "time": time,
-          "frequency": frequency,
-        }),
+        body: jsonEncode(body),
       );
       return res.statusCode == 200;
     } catch (e) {
@@ -614,13 +630,13 @@ class ApiService {
   static Future<bool> createChecklistItem({
     required int checklistId,
     required String title,
+    String? content,
     String itemType = 'task',
     String timeString = '',
     String details = '',
     String? hospital,
     String? doctor,
     String? appointmentDate,
-    String? filePath,
   }) async {
     final url = Uri.parse("$baseUrl/api/checklist/item/create/");
     try {
@@ -632,11 +648,11 @@ class ApiService {
             'item_type': itemType,
             'time_string': timeString,
             'details': details,
-            'is_complete': false,
             'hospital': hospital,
             'doctor': doctor,
             'appointment_date': appointmentDate,
-            'file_path': filePath,
+            'file_path': null,
+            'is_complete': false,
           }));
       return res.statusCode == 201;
     } catch (e) {
@@ -681,29 +697,16 @@ class ApiService {
 
   /// Cập nhật checklist item
   static Future<bool> updateChecklistItem(int itemId, {
-    String? title,
-    String? itemType,
-    String? timeString,
-    String? details,
+    String? content,
     bool? isComplete,
-    String? hospital,
-    String? doctor,
-    String? appointmentDate,
-    String? filePath,
+    String? note,
   }) async {
     final url = Uri.parse("$baseUrl/api/checklist/item/$itemId/");
     try {
       final body = <String, dynamic>{};
-      if (title != null) body['title'] = title;
-      if (itemType != null) body['item_type'] = itemType;
-      if (timeString != null) body['time_string'] = timeString;
-      if (details != null) body['details'] = details;
+      if (content != null) body['content'] = content;
       if (isComplete != null) body['is_complete'] = isComplete;
-      if (hospital != null) body['hospital'] = hospital;
-      if (doctor != null) body['doctor'] = doctor;
-      if (appointmentDate != null) body['appointment_date'] = appointmentDate;
-      if (filePath != null) body['file_path'] = filePath;
-
+      if (note != null) body['note'] = note;
       final res = await http.patch(url,
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(body));

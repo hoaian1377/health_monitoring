@@ -245,6 +245,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   List<Map<String, dynamic>> _elderlyList = [];
   int? _selectedElderlyId;
   bool _isLoadingElderly = false;
+  bool _isLoadingMedications = false;
 
   // Form controllers
   final _nameCtrl = TextEditingController();
@@ -266,7 +267,6 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _buildTodaySlots();
     _loadElderlyList();
   }
 
@@ -284,9 +284,56 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         }
         _isLoadingElderly = false;
       });
+      if (_selectedElderlyId != null) {
+        await _loadMedicationSchedules(_selectedElderlyId!);
+      }
     } else if (mounted) {
       setState(() => _isLoadingElderly = false);
     }
+  }
+
+  Future<void> _loadMedicationSchedules(int elderlyId) async {
+    setState(() => _isLoadingMedications = true);
+    final schedules = await ApiService.getElderlyMedicationSchedule(elderlyId);
+    if (!mounted) return;
+
+    setState(() {
+      _medicines.clear();
+      for (var schedule in schedules) {
+        final med = schedule['medication'] ?? {};
+        final name = med['name']?.toString() ?? 'Không rõ';
+        final dosage = med['dosage']?.toString() ?? '1 viên';
+        final instruction = med['instruction']?.toString() ?? 'Sau ăn';
+        final time = schedule['time']?.toString() ?? '08:00';
+        final frequency = schedule['frequency']?.toString() ?? '1 lần/ngày';
+        final stock = schedule['stock_remaining'] is int
+            ? schedule['stock_remaining'] as int
+            : 30;
+        final totalStock = schedule['stock_total'] is int
+            ? schedule['stock_total'] as int
+            : stock;
+        final startDate = DateTime.tryParse(schedule['start_date']?.toString() ?? '') ?? DateTime.now();
+        final endDate = DateTime.tryParse(schedule['end_date']?.toString() ?? '') ?? DateTime.now().add(const Duration(days: 30));
+        _medicines.add(MedicineItem(
+          id: schedule['schedule_id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          name: name,
+          category: 'khac',
+          dosage: dosage,
+          unit: 'viên',
+          frequency: frequency,
+          times: [time],
+          instruction: instruction,
+          startDate: startDate,
+          endDate: endDate,
+          stockRemaining: stock,
+          stockTotal: totalStock,
+          prescribedBy: 'Không rõ',
+          color: '#0EA5E9',
+        ));
+      }
+      _buildTodaySlots();
+      _isLoadingMedications = false;
+    });
   }
 
   void _buildTodaySlots() {
@@ -2534,7 +2581,11 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                           ),
                         );
                       }).toList(),
-                      onChanged: (v) => setState(() => _selectedElderlyId = v),
+                      onChanged: (v) async {
+                        if (v == null) return;
+                        setState(() => _selectedElderlyId = v);
+                        await _loadMedicationSchedules(v);
+                      },
                     ),
                     const SizedBox(height: 14),
                   ],
@@ -2642,13 +2693,12 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                           });
                         }
 
-                        // Push to backend API for new medication
+                        // Push to backend API for new medication and reload data
                         if (!isEdit && _selectedElderlyId != null) {
-                          final medName = _nameCtrl.text.trim();
                           for (final timeStr in timesStr) {
                             await ApiService.addMedication(
                               elderlyId: _selectedElderlyId!,
-                              name: medName,
+                              name: _nameCtrl.text.trim(),
                               dosage: _dosageCtrl.text.trim().isEmpty
                                   ? '1 viên'
                                   : _dosageCtrl.text.trim(),
@@ -2659,6 +2709,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                                   : '${timesStr.length} lần/ngày',
                             );
                           }
+                          await _loadMedicationSchedules(_selectedElderlyId!);
                         }
 
                         Navigator.pop(ctx);
