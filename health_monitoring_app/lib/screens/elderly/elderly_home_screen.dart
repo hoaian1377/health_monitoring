@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:vibration/vibration.dart';
+import '../../utils/alarm_service.dart';
 
 import 'elderly_appointment_screen.dart';
 
@@ -59,7 +62,13 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         setState(() {
           _now = DateTime.now();
         });
+        _checkAndShowReminders();
       }
+    });
+
+    // Request permissions appropriately (must happen when UI is running)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AlarmService.requestPermissions();
     });
 
     // Khởi tạo PageController với trang mặc định là 1000 đại diện cho tuần này
@@ -73,6 +82,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     // Load medications
     final schedules = await ApiService.getElderlyMedicationSchedule(accountId);
     
+    // Schedule alarms
+    AlarmService.scheduleAlarmsFromApiData(schedules);
+
     // Load health metrics
     final data = await ApiService.getHealthMetrics(accountId);
     
@@ -107,6 +119,209 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     _pulseController.dispose();
     _pageController?.dispose();
     super.dispose();
+  }
+
+  // Set lưu ID các lịch đã báo để không báo lại nhiều lần trong cùng 1 phút
+  final Set<int> _notifiedScheduleIds = {};
+
+  // Hàm kiểm tra tới giờ uống thuốc
+  void _checkAndShowReminders() {
+    if (_medicationSchedules.isEmpty) return;
+    
+    final now = DateTime.now();
+    final todayKey = _getDateKey(now);
+
+    for (var schedule in _medicationSchedules) {
+      final timeStr = schedule['time']?.toString() ?? '';
+      if (timeStr.isEmpty) continue;
+
+      final parts = timeStr.split(':');
+      if (parts.length < 2) continue;
+      
+      final hour = int.tryParse(parts[0]) ?? 8;
+      final minute = int.tryParse(parts[1]) ?? 0;
+      final scheduleId = schedule['schedule_id'] as int;
+
+      // Nếu đúng giờ phút hiện tại và chưa báo động lần nào
+      if (now.hour == hour && now.minute == minute && !_notifiedScheduleIds.contains(scheduleId)) {
+        // Chỉ nhắc nếu chưa đánh dấu đã uống
+        if (!_takenScheduleIds.contains(scheduleId)) {
+          _notifiedScheduleIds.add(scheduleId);
+          _showMedicineReminderDialog(schedule);
+        }
+      }
+    }
+  }
+
+  // Form (Dialog) nhắc nhở uống thuốc đẹp và reo chuông
+  void _showMedicineReminderDialog(Map<String, dynamic> schedule) async {
+    final med = schedule['medication'] ?? {};
+    final medName = med['name']?.toString() ?? 'Thuốc';
+    final dosage = _translateDosage(med['dosage']?.toString() ?? '');
+    final instruction = med['instruction']?.toString() ?? '';
+    final timeStr = schedule['time']?.toString() ?? '';
+    final scheduleId = schedule['schedule_id'] as int;
+
+    // Khởi tạo và phát âm thanh báo thức (Lặp lại)
+    final player = AudioPlayer();
+    player.setReleaseMode(ReleaseMode.loop);
+    await player.play(AssetSource('audio/alarm.mp3'));
+
+    // Bật Rung
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(pattern: [500, 1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000, 500, 1000], repeat: 1); // Lặp rung liên tục
+    }
+
+    // Hàm dọn dẹp khi tắt popup
+    void stopAlarmAndClose() {
+      player.stop();
+      Vibration.cancel();
+      Navigator.pop(context);
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Bắt buộc phải tương tác
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          elevation: 16,
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon Rung/Chuông có hiệu ứng
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.alarm_on_rounded, color: Colors.redAccent, size: 56),
+                ),
+                const SizedBox(height: 20),
+                
+                // Tiêu đề
+                const Text(
+                  'TỚI GIỜ UỐNG THUỐC!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.redAccent,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Đã đến cữ $timeStr. Bác uống thuốc ngay nhé!',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.black87),
+                ),
+                const SizedBox(height: 24),
+
+                // Khối thông tin thuốc (Thiết kế Card)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.blue.shade100, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      )
+                    ]
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.medication_rounded, color: Colors.blue, size: 28),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              medName,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(color: Colors.white, thickness: 2, height: 24),
+                      Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, color: Colors.black54, size: 20),
+                          const SizedBox(width: 8),
+                          Text('Liều lượng: $dosage', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      if (instruction.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.deepOrange, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Lưu ý: $instruction',
+                                style: const TextStyle(fontSize: 16, color: Colors.deepOrange, fontStyle: FontStyle.italic),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ]
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Các nút hành động
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: stopAlarmAndClose,
+                        child: const Text('ĐỂ SAU', style: TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981), // Màu xanh ngọc lục bảo đẹp
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          elevation: 4,
+                          shadowColor: const Color(0xFF10B981).withOpacity(0.5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: () {
+                          stopAlarmAndClose();
+                          _toggleMedicationTaken(scheduleId, DateTime.now(), medName);
+                        },
+                        child: const Text('ĐÃ UỐNG XONG', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Helper cho định dạng khoá ngày
@@ -518,6 +733,21 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
           ),
           Row(
             children: [
+              // Nút Test Form Nhắc Nhở
+              IconButton(
+                icon: const Icon(Icons.notifications_active, size: 28),
+                color: Colors.white,
+                onPressed: () {
+                  if (_medicationSchedules.isNotEmpty) {
+                    _showMedicineReminderDialog(_medicationSchedules.first);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Bác chưa có lịch uống thuốc nào để test!')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
               // Nút Lịch khám bệnh
               IconButton(
                 icon: const Icon(Icons.calendar_month_outlined, size: 28),

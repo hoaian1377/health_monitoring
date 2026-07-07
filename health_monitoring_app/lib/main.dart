@@ -5,9 +5,9 @@ import 'screens/history_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/login_screen.dart';
-import 'package:alarm/alarm.dart';
 import 'utils/alarm_service.dart';
-import 'screens/alarm_ring_screen.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 // ── Elderly-specific screens ────────────────────────────────────────────────
 import 'screens/elderly/elderly_profile_screen.dart';
 import 'screens/elderly/elderly_notifications_screen.dart';
@@ -18,22 +18,13 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Khởi tạo timezone, set về giờ Việt Nam
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('Asia/Ho_Chi_Minh'));
   await AlarmService.init();
-
-  Alarm.ringStream.stream.listen((alarmSettings) {
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (context) => AlarmRingScreen(
-          alarmId: alarmSettings.id,
-          title: alarmSettings.notificationSettings.title,
-          body: alarmSettings.notificationSettings.body,
-        ),
-      ),
-    );
-  });
-
   runApp(const HealthApp());
 }
+
 
 class HealthApp extends StatelessWidget {
   const HealthApp({super.key});

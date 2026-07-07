@@ -297,6 +297,8 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     final schedules = await ApiService.getElderlyMedicationSchedule(elderlyId);
     if (!mounted) return;
 
+    AlarmService.scheduleAlarmsFromApiData(schedules);
+
     setState(() {
       _medicines.clear();
       for (var schedule in schedules) {
