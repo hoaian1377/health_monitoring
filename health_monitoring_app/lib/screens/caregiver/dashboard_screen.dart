@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,12 +13,16 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   // ── Chỉ số sức khỏe ──────────────────────────────────────────────────────────
-  String _bpSys = '120';
-  String _bpDia = '80';
-  String _heartRate = '72';
-  String _bloodSugar = '5.5';
-  String _weight = '62.0';
-  String _temperature = '36.5';
+  String _bpSys = '--';
+  String _bpDia = '--';
+  String _heartRate = '--';
+  String _bloodSugar = '--';
+  String _weight = '--';
+  String _temperature = '--';
+
+  // Elderly
+  int? _selectedElderlyId;
+  String _selectedElderlyName = '';
 
   // Chart tab
   late TabController _chartTabController;
@@ -27,61 +31,82 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _selectedPeriod = 'Tuần';
   final List<String> _periods = ['Ngày', 'Tuần', 'Tháng', 'Quý', 'Năm'];
 
-  // Cảnh báo bỏ lỡ thuốc
-  bool _showMissedAlert = true;
-
   @override
   void initState() {
     super.initState();
     _chartTabController = TabController(length: 4, vsync: this);
-    _loadLatestMetrics();
+    _loadElderlyThenMetrics();
   }
 
   Map<String, dynamic>? _nextAppointment;
 
-  Future<void> _loadLatestMetrics() async {
-    if (ApiService.currentAccountId != null) {
-      final data = await ApiService.getHealthMetrics(ApiService.currentAccountId!);
-      final appts = await ApiService.getAppointments(ApiService.currentAccountId!);
-      
-      if (mounted) {
-        setState(() {
-          if (data.isNotEmpty) {
-            final latest = data[0];
-            if (latest['heart_rate'] != null) {
-              _heartRate = latest['heart_rate'].toString();
-            }
-            if (latest['blood_pressure'] != null) {
-              final bp = latest['blood_pressure'].toString().split('/');
-              if (bp.length == 2) {
-                _bpSys = bp[0];
-                _bpDia = bp[1];
-              }
-            }
-            if (latest['blood_sugar'] != null) {
-              _bloodSugar = latest['blood_sugar'].toString();
-            }
-          }
-
-          if (appts.isNotEmpty) {
-            final now = DateTime.now();
-            List<dynamic> futureAppts = appts.where((a) {
-              if (a['appointment_date'] == null) return false;
-              try {
-                final date = DateTime.parse(a['appointment_date']);
-                return date.isAfter(now) || date.isAtSameMomentAs(DateTime(now.year, now.month, now.day));
-              } catch (e) {
-                return false;
-              }
-            }).toList();
-
-            if (futureAppts.isNotEmpty) {
-              futureAppts.sort((a, b) => DateTime.parse(a['appointment_date']).compareTo(DateTime.parse(b['appointment_date'])));
-              _nextAppointment = futureAppts.first;
-            }
-          }
-        });
+  Future<void> _loadElderlyThenMetrics() async {
+    // Bước 1: Lấy danh sách elderly để có đúng elderly_id
+    final result = await ApiService.getElderlyList();
+    if (result['success'] == true) {
+      final list = (result['elderly_list'] as List)
+          .cast<Map<String, dynamic>>();
+      if (list.isNotEmpty) {
+        _selectedElderlyId = list.first['id'] as int;
+        _selectedElderlyName = list.first['fullname']?.toString() ?? '';
       }
+    }
+    // Bước 2: Load metrics với đúng elderly_id
+    await _loadLatestMetrics();
+  }
+
+  Future<void> _loadLatestMetrics() async {
+    final eldId = _selectedElderlyId;
+    if (eldId == null) return;
+
+    final data = await ApiService.getHealthMetrics(eldId);
+    final appts = await ApiService.getAppointments(eldId);
+
+    if (mounted) {
+      setState(() {
+        if (data.isNotEmpty) {
+          final latest = data[0];
+          if (latest['heart_rate'] != null) {
+            _heartRate = latest['heart_rate'].toString();
+          }
+          if (latest['blood_pressure'] != null) {
+            final bp = latest['blood_pressure'].toString().split('/');
+            if (bp.length == 2) {
+              _bpSys = bp[0];
+              _bpDia = bp[1];
+            }
+          }
+          if (latest['blood_sugar'] != null) {
+            _bloodSugar = latest['blood_sugar'].toString();
+          }
+          if (latest['temperature'] != null) {
+            _temperature = latest['temperature'].toString();
+          }
+        }
+
+        if (appts.isNotEmpty) {
+          final now = DateTime.now();
+          List<dynamic> futureAppts = appts.where((a) {
+            if (a['appointment_date'] == null) return false;
+            try {
+              final date = DateTime.parse(a['appointment_date']);
+              return date.isAfter(now) ||
+                  date.isAtSameMomentAs(DateTime(now.year, now.month, now.day));
+            } catch (e) {
+              return false;
+            }
+          }).toList();
+
+          if (futureAppts.isNotEmpty) {
+            futureAppts.sort(
+              (a, b) => DateTime.parse(
+                a['appointment_date'],
+              ).compareTo(DateTime.parse(b['appointment_date'])),
+            );
+            _nextAppointment = futureAppts.first;
+          }
+        }
+      });
     }
   }
 
@@ -110,7 +135,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
+          bottom:
+              MediaQuery.of(ctx).viewInsets.bottom +
+              24 +
+              MediaQuery.of(ctx).padding.bottom,
           top: 20,
           left: 20,
           right: 20,
@@ -139,51 +167,82 @@ class _DashboardScreenState extends State<DashboardScreen>
                       color: const Color(0xFFE0F2FE),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.edit_rounded,
-                        color: Color(0xFF0EA5E9), size: 18),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: Color(0xFF0EA5E9),
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Text(
                     'Nhập / Cập nhật Chỉ Số',
                     style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
-              const Text('Thời gian ghi nhận: Hôm nay, ngay bây giờ',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+              const Text(
+                'Thời gian ghi nhận: Hôm nay, ngay bây giờ',
+                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              ),
               const SizedBox(height: 20),
-              _sheetSection('Huyết Áp', Icons.monitor_heart_rounded,
-                  const Color(0xFFDC2626)),
+              _sheetSection(
+                'Huyết Áp',
+                Icons.monitor_heart_rounded,
+                const Color(0xFFDC2626),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: _inputField(
-                        'Tâm thu', bpSysCtrl, 'mmHg', Icons.arrow_upward_rounded),
+                      'Tâm thu',
+                      bpSysCtrl,
+                      'mmHg',
+                      Icons.arrow_upward_rounded,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _inputField('Tâm trương', bpDiaCtrl, 'mmHg',
-                        Icons.arrow_downward_rounded),
+                    child: _inputField(
+                      'Tâm trương',
+                      bpDiaCtrl,
+                      'mmHg',
+                      Icons.arrow_downward_rounded,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _sheetSection(
-                  'Nhịp Tim', Icons.favorite_rounded, const Color(0xFFE11D48)),
+                'Nhịp Tim',
+                Icons.favorite_rounded,
+                const Color(0xFFE11D48),
+              ),
               const SizedBox(height: 10),
               _inputField(
-                  'Nhịp tim', heartCtrl, 'lần/phút', Icons.favorite_border_rounded),
+                'Nhịp tim',
+                heartCtrl,
+                'lần/phút',
+                Icons.favorite_border_rounded,
+              ),
               const SizedBox(height: 16),
-              _sheetSection('Đường Huyết', Icons.water_drop_rounded,
-                  const Color(0xFF0284C7)),
+              _sheetSection(
+                'Đường Huyết',
+                Icons.water_drop_rounded,
+                const Color(0xFF0284C7),
+              ),
               const SizedBox(height: 10),
               _inputField(
-                  'Đường huyết', sugarCtrl, 'mmol/L', Icons.water_drop_outlined),
+                'Đường huyết',
+                sugarCtrl,
+                'mmol/L',
+                Icons.water_drop_outlined,
+              ),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -191,11 +250,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _sheetSection('Cân Nặng', Icons.scale_rounded,
-                            const Color(0xFF7C3AED)),
+                        _sheetSection(
+                          'Cân Nặng',
+                          Icons.scale_rounded,
+                          const Color(0xFF7C3AED),
+                        ),
                         const SizedBox(height: 10),
                         _inputField(
-                            'Cân nặng', weightCtrl, 'kg', Icons.scale_outlined),
+                          'Cân nặng',
+                          weightCtrl,
+                          'kg',
+                          Icons.scale_outlined,
+                        ),
                       ],
                     ),
                   ),
@@ -204,11 +270,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _sheetSection('Nhiệt Độ', Icons.thermostat_rounded,
-                            const Color(0xFFEA580C)),
+                        _sheetSection(
+                          'Nhiệt Độ',
+                          Icons.thermostat_rounded,
+                          const Color(0xFFEA580C),
+                        ),
                         const SizedBox(height: 10),
-                        _inputField('Nhiệt độ', tempCtrl, '°C',
-                            Icons.thermostat_outlined),
+                        _inputField(
+                          'Nhiệt độ',
+                          tempCtrl,
+                          '°C',
+                          Icons.thermostat_outlined,
+                        ),
                       ],
                     ),
                   ),
@@ -223,29 +296,35 @@ class _DashboardScreenState extends State<DashboardScreen>
                     backgroundColor: const Color(0xFF0EA5E9),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     elevation: 0,
                   ),
                   onPressed: () async {
                     setState(() {
                       _bpSys = bpSysCtrl.text.isEmpty ? _bpSys : bpSysCtrl.text;
                       _bpDia = bpDiaCtrl.text.isEmpty ? _bpDia : bpDiaCtrl.text;
-                      _heartRate =
-                          heartCtrl.text.isEmpty ? _heartRate : heartCtrl.text;
-                      _bloodSugar =
-                          sugarCtrl.text.isEmpty ? _bloodSugar : sugarCtrl.text;
-                      _weight =
-                          weightCtrl.text.isEmpty ? _weight : weightCtrl.text;
-                      _temperature =
-                          tempCtrl.text.isEmpty ? _temperature : tempCtrl.text;
+                      _heartRate = heartCtrl.text.isEmpty
+                          ? _heartRate
+                          : heartCtrl.text;
+                      _bloodSugar = sugarCtrl.text.isEmpty
+                          ? _bloodSugar
+                          : sugarCtrl.text;
+                      _weight = weightCtrl.text.isEmpty
+                          ? _weight
+                          : weightCtrl.text;
+                      _temperature = tempCtrl.text.isEmpty
+                          ? _temperature
+                          : tempCtrl.text;
                     });
-                    
-                    if (ApiService.currentAccountId != null) {
+
+                    if (_selectedElderlyId != null) {
                       await ApiService.addHealthMetric(
-                        elderlyId: ApiService.currentAccountId!,
+                        elderlyId: _selectedElderlyId!,
                         heartRate: int.tryParse(_heartRate),
                         bloodPressure: '$_bpSys/$_bpDia',
                         bloodSugar: double.tryParse(_bloodSugar),
+                        temperature: double.tryParse(_temperature),
                       );
                     }
 
@@ -260,8 +339,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       );
                     }
                   },
-                  child: const Text('Lưu Chỉ Số',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: const Text(
+                    'Lưu Chỉ Số',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ),
               ),
             ],
@@ -276,47 +357,63 @@ class _DashboardScreenState extends State<DashboardScreen>
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 6),
-        Text(label,
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: color,
-                letterSpacing: 0.3)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: color,
+            letterSpacing: 0.3,
+          ),
+        ),
       ],
     );
   }
 
   Widget _inputField(
-      String label, TextEditingController ctrl, String unit, IconData icon) {
+    String label,
+    TextEditingController ctrl,
+    String unit,
+    IconData icon,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF64748B),
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: ctrl,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             suffixText: unit,
-            suffixStyle:
-                const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+            suffixStyle: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF94A3B8),
+            ),
             prefixIcon: Icon(icon, color: const Color(0xFF0EA5E9), size: 18),
             filled: true,
             fillColor: const Color(0xFFF0F9FF),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFF0EA5E9),
+                width: 1.5,
+              ),
             ),
           ),
         ),
@@ -338,12 +435,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Cảnh báo bỏ lỡ thuốc
-                  if (_showMissedAlert) ...[
-                    _buildMissedMedicineAlert(),
-                    const SizedBox(height: 16),
-                  ],
-
                   // Lịch khám sắp tới
                   _buildNextAppointmentCard(),
                   const SizedBox(height: 24),
@@ -357,21 +448,29 @@ class _DashboardScreenState extends State<DashboardScreen>
                         onTap: _showMetricsSheet,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFF0EA5E9).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.edit_rounded,
-                                  size: 14, color: Color(0xFF0EA5E9)),
+                              Icon(
+                                Icons.edit_rounded,
+                                size: 14,
+                                color: Color(0xFF0EA5E9),
+                              ),
                               SizedBox(width: 4),
-                              Text('Nhập / Sửa',
-                                  style: TextStyle(
-                                      color: Color(0xFF0EA5E9),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12)),
+                              Text(
+                                'Nhập / Sửa',
+                                style: TextStyle(
+                                  color: Color(0xFF0EA5E9),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -391,19 +490,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                           unit: '/$_bpDia mmHg',
                           statusText: () {
                             final v = int.tryParse(_bpSys) ?? 0;
-                            return (v > 0 && (v > 140 || v < 90)) ? 'Bất thường' : 'Bình thường';
+                            return (v > 0 && (v > 140 || v < 90))
+                                ? 'Bất thường'
+                                : 'Bình thường';
                           }(),
                           statusColor: () {
                             final v = int.tryParse(_bpSys) ?? 0;
-                            return (v > 0 && (v > 140 || v < 90)) ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+                            return (v > 0 && (v > 140 || v < 90))
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFF16A34A);
                           }(),
                           statusBg: () {
                             final v = int.tryParse(_bpSys) ?? 0;
-                            return (v > 0 && (v > 140 || v < 90)) ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7);
+                            return (v > 0 && (v > 140 || v < 90))
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFFDCFCE7);
                           }(),
                           statusIcon: () {
                             final v = int.tryParse(_bpSys) ?? 0;
-                            return (v > 0 && (v > 140 || v < 90)) ? Icons.warning_amber_rounded : Icons.check_circle_rounded;
+                            return (v > 0 && (v > 140 || v < 90))
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_rounded;
                           }(),
                           accentColor: const Color(0xFFDC2626),
                         ),
@@ -417,19 +524,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                           unit: ' lần/phút',
                           statusText: () {
                             final v = int.tryParse(_heartRate) ?? 0;
-                            return (v > 0 && (v > 100 || v < 60)) ? 'Bất thường' : 'Bình thường';
+                            return (v > 0 && (v > 100 || v < 60))
+                                ? 'Bất thường'
+                                : 'Bình thường';
                           }(),
                           statusColor: () {
                             final v = int.tryParse(_heartRate) ?? 0;
-                            return (v > 0 && (v > 100 || v < 60)) ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+                            return (v > 0 && (v > 100 || v < 60))
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFF16A34A);
                           }(),
                           statusBg: () {
                             final v = int.tryParse(_heartRate) ?? 0;
-                            return (v > 0 && (v > 100 || v < 60)) ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7);
+                            return (v > 0 && (v > 100 || v < 60))
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFFDCFCE7);
                           }(),
                           statusIcon: () {
                             final v = int.tryParse(_heartRate) ?? 0;
-                            return (v > 0 && (v > 100 || v < 60)) ? Icons.warning_amber_rounded : Icons.check_circle_rounded;
+                            return (v > 0 && (v > 100 || v < 60))
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_rounded;
                           }(),
                           accentColor: const Color(0xFFE11D48),
                         ),
@@ -449,19 +564,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                           unit: ' mmol/L',
                           statusText: () {
                             final v = double.tryParse(_bloodSugar) ?? 0;
-                            return (v > 0 && (v > 7.8 || v < 3.9)) ? 'Bất thường' : 'Bình thường';
+                            return (v > 0 && (v > 7.8 || v < 3.9))
+                                ? 'Bất thường'
+                                : 'Bình thường';
                           }(),
                           statusColor: () {
                             final v = double.tryParse(_bloodSugar) ?? 0;
-                            return (v > 0 && (v > 7.8 || v < 3.9)) ? const Color(0xFFD97706) : const Color(0xFF16A34A);
+                            return (v > 0 && (v > 7.8 || v < 3.9))
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFF16A34A);
                           }(),
                           statusBg: () {
                             final v = double.tryParse(_bloodSugar) ?? 0;
-                            return (v > 0 && (v > 7.8 || v < 3.9)) ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7);
+                            return (v > 0 && (v > 7.8 || v < 3.9))
+                                ? const Color(0xFFFEF3C7)
+                                : const Color(0xFFDCFCE7);
                           }(),
                           statusIcon: () {
                             final v = double.tryParse(_bloodSugar) ?? 0;
-                            return (v > 0 && (v > 7.8 || v < 3.9)) ? Icons.warning_amber_rounded : Icons.check_circle_rounded;
+                            return (v > 0 && (v > 7.8 || v < 3.9))
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle_rounded;
                           }(),
                           accentColor: const Color(0xFF0284C7),
                         ),
@@ -561,7 +684,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             const Text(
               'Theo Dõi Sức Khỏe',
               style: TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
             ),
             Text(
               'Ngày ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
@@ -616,84 +742,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ── Cảnh báo bỏ lỡ thuốc ──────────────────────────────────────────────────
-  Widget _buildMissedMedicineAlert() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF1F2), Color(0xFFFFE4E6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFECACA)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDC2626).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.medication_rounded,
-                color: Color(0xFFDC2626), size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Bỏ lỡ uống thuốc — Đã thông báo người thân',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFB91C1C))),
-                const SizedBox(height: 3),
-                const Text(
-                    'Vitamin D3 lúc 13:00 chưa xác nhận. Người thân đã được thông báo.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF991B1B))),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    setState(() => _showMissedAlert = false);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        backgroundColor: Color(0xFF16A34A),
-                        content: Text('✓ Đã xác nhận uống thuốc!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text('Xác nhận đã uống',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () => setState(() => _showMissedAlert = false),
-            child: const Icon(Icons.close_rounded,
-                size: 18, color: Color(0xFF94A3B8)),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Lịch khám sắp tới ─────────────────────────────────────────────────────
   Widget _buildNextAppointmentCard() {
     if (_nextAppointment == null) return const SizedBox.shrink();
@@ -701,13 +749,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     final loc = _nextAppointment!['location'] ?? 'Không rõ';
     final doc = _nextAppointment!['doctor_name'] ?? '';
     final dateStr = _nextAppointment!['appointment_date'] ?? '';
-    
+
     int daysDiff = 0;
     try {
       if (dateStr.isNotEmpty) {
         final date = DateTime.parse(dateStr);
         final now = DateTime.now();
-        daysDiff = date.difference(DateTime(now.year, now.month, now.day)).inDays;
+        daysDiff = date
+            .difference(DateTime(now.year, now.month, now.day))
+            .inDays;
       }
     } catch (_) {}
 
@@ -718,9 +768,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: const Color(0xFF0EA5E9).withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5))
+            color: const Color(0xFF0EA5E9).withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
         ],
         border: Border.all(color: const Color(0xFFE0F2FE)),
       ),
@@ -733,55 +784,77 @@ class _DashboardScreenState extends State<DashboardScreen>
               color: const Color(0xFFE0F2FE),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.calendar_month_rounded,
-                color: Color(0xFF0EA5E9), size: 24),
+            child: const Icon(
+              Icons.calendar_month_rounded,
+              color: Color(0xFF0EA5E9),
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Lịch khám sắp tới',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w600)),
+                const Text(
+                  'Lịch khám sắp tới',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(loc,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B))),
+                Text(
+                  loc,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(doc.isNotEmpty ? 'BS. $doc' : 'Chưa rõ BS',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                Text(
+                  doc.isNotEmpty ? 'BS. $doc' : 'Chưa rõ BS',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF475569),
+                  ),
+                ),
               ],
             ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFFEF3C7),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               children: [
-                const Text('Còn',
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFD97706),
-                        fontWeight: FontWeight.bold)),
-                Text('$daysDiff',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFFD97706),
-                        fontWeight: FontWeight.w900)),
-                const Text('ngày',
-                    style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFD97706),
-                        fontWeight: FontWeight.bold)),
+                const Text(
+                  'Còn',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFFD97706),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '$daysDiff',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: Color(0xFFD97706),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const Text(
+                  'ngày',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFFD97706),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
           ),
@@ -822,9 +895,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -845,9 +919,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 child: Text(
                   title,
                   style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF475569)),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -857,9 +932,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           Text(
             value,
             style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: accentColor.withOpacity(0.9)),
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: accentColor.withOpacity(0.9),
+            ),
           ),
           Text(
             unit,
@@ -880,9 +956,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 Text(
                   statusText,
                   style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
                 ),
               ],
             ),
@@ -920,9 +997,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
@@ -933,48 +1011,64 @@ class _DashboardScreenState extends State<DashboardScreen>
               color: const Color(0xFF7C3AED).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.scale_rounded,
-                color: Color(0xFF7C3AED), size: 22),
+            child: const Icon(
+              Icons.scale_rounded,
+              color: Color(0xFF7C3AED),
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Cân nặng',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w600)),
-              Text('${_weight} kg',
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B))),
+              const Text(
+                'Cân nặng',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                '${_weight} kg',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
             ],
           ),
           const Spacer(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text('BMI (est.)',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-              Text(bmi.toStringAsFixed(1),
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: bmiColor)),
+              const Text(
+                'BMI (est.)',
+                style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+              ),
+              Text(
+                bmi.toStringAsFixed(1),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: bmiColor,
+                ),
+              ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: bmiColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(bmiStatus,
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: bmiColor)),
+                child: Text(
+                  bmiStatus,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: bmiColor,
+                  ),
+                ),
               ),
             ],
           ),
@@ -985,24 +1079,28 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Biểu đồ đa chỉ số ─────────────────────────────────────────────────────
   Widget _buildMultiChart() {
-    int points = _selectedPeriod == 'Tuần' ? 7 : (_selectedPeriod == 'Tháng' ? 30 : 12);
+    int points = _selectedPeriod == 'Tuần'
+        ? 7
+        : (_selectedPeriod == 'Tháng' ? 30 : 12);
     if (_selectedPeriod == 'Ngày') points = 6;
-    
+
     List<String> days = [];
     if (_selectedPeriod == 'Tuần') {
       days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     } else if (_selectedPeriod == 'Tháng') {
-      days = List.generate(points, (i) => '${i+1}');
+      days = List.generate(points, (i) => '${i + 1}');
     } else if (_selectedPeriod == 'Ngày') {
       days = ['8h', '10h', '12h', '14h', '16h', '18h'];
     } else {
-      days = List.generate(points, (i) => 'T${i+1}');
+      days = List.generate(points, (i) => 'T${i + 1}');
     }
 
     List<double> generateData(double base, double variance) {
       final rand = Random(42); // Fixed seed for stable UI
-      return List.generate(points - 1, (i) => base + (rand.nextDouble() * 2 - 1) * variance)
-          ..add(base); // last point is current
+      return List.generate(
+        points - 1,
+        (i) => base + (rand.nextDouble() * 2 - 1) * variance,
+      )..add(base); // last point is current
     }
 
     return Container(
@@ -1011,9 +1109,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4)),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -1032,7 +1131,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               labelColor: const Color(0xFF0EA5E9),
               unselectedLabelColor: const Color(0xFF94A3B8),
               labelStyle: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 12),
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
               unselectedLabelStyle: const TextStyle(fontSize: 12),
               tabs: const [
                 Tab(text: 'Huyết áp'),
@@ -1114,46 +1215,57 @@ class _DashboardScreenState extends State<DashboardScreen>
                 return Container(
                   margin: const EdgeInsets.only(right: 12),
                   child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (isHigh)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 2),
-                      child: Icon(Icons.warning_rounded, size: 12, color: Color(0xFFDC2626)),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      isDecimal
-                          ? data[i].toStringAsFixed(1)
-                          : data[i].toInt().toString(),
-                      style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                          color: isHigh ? const Color(0xFFDC2626) : const Color(0xFF64748B)),
-                    ),
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (isHigh)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 2),
+                          child: Icon(
+                            Icons.warning_rounded,
+                            size: 12,
+                            color: Color(0xFFDC2626),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          isDecimal
+                              ? data[i].toStringAsFixed(1)
+                              : data[i].toInt().toString(),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: isToday
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isHigh
+                                ? const Color(0xFFDC2626)
+                                : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 28,
+                        height: barH,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        days[i],
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isToday
+                              ? FontWeight.bold
+                              : FontWeight.w500,
+                          color: isToday ? color : const Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
                   ),
-                  Container(
-                    width: 28,
-                    height: barH,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    days[i],
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight:
-                            isToday ? FontWeight.bold : FontWeight.w500,
-                        color: isToday ? color : const Color(0xFF94A3B8)),
-                  ),
-                ],
-              ),
-            );
-          }),
+                );
+              }),
             ),
           ),
         ),
@@ -1163,13 +1275,27 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
               const SizedBox(width: 4),
-              const Text('Bình thường', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+              const Text(
+                'Bình thường',
+                style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              ),
               const SizedBox(width: 12),
-              const Icon(Icons.warning_rounded, size: 10, color: Color(0xFFDC2626)),
+              const Icon(
+                Icons.warning_rounded,
+                size: 10,
+                color: Color(0xFFDC2626),
+              ),
               const SizedBox(width: 4),
-              Text('Vượt ngưỡng (>$threshold)', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+              Text(
+                'Vượt ngưỡng (>$threshold)',
+                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              ),
             ],
           ),
         ),
@@ -1186,9 +1312,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4)),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -1199,23 +1326,32 @@ class _DashboardScreenState extends State<DashboardScreen>
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Tỉ lệ tuân thủ uống thuốc',
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF475569))),
-                  Text('Rất tốt',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF16A34A),
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    'Tỉ lệ tuân thủ uống thuốc',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  Text(
+                    'Rất tốt',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF16A34A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
-              const Text('92%',
-                  style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0EA5E9))),
+              const Text(
+                '92%',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0EA5E9),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -1226,8 +1362,9 @@ class _DashboardScreenState extends State<DashboardScreen>
               value: 0.92,
               minHeight: 6,
               backgroundColor: const Color(0xFFE0F2FE),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(Color(0xFF0EA5E9)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF0EA5E9),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1245,35 +1382,36 @@ class _DashboardScreenState extends State<DashboardScreen>
                       color: status[index] == 1
                           ? const Color(0xFFDCFCE7)
                           : status[index] == 0
-                              ? const Color(0xFFFFEBEB)
-                              : const Color(0xFFFEF3C7),
+                          ? const Color(0xFFFFEBEB)
+                          : const Color(0xFFFEF3C7),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       status[index] == 1
                           ? Icons.check_rounded
                           : status[index] == 0
-                              ? Icons.close_rounded
-                              : Icons.access_time_rounded,
+                          ? Icons.close_rounded
+                          : Icons.access_time_rounded,
                       size: 16,
                       color: status[index] == 1
                           ? const Color(0xFF16A34A)
                           : status[index] == 0
-                              ? const Color(0xFFDC2626)
-                              : const Color(0xFFD97706),
+                          ? const Color(0xFFDC2626)
+                          : const Color(0xFFD97706),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     days[index],
                     style: TextStyle(
-                        fontSize: 11,
-                        color: status[index] == 2
-                            ? const Color(0xFF0EA5E9)
-                            : const Color(0xFF94A3B8),
-                        fontWeight: status[index] == 2
-                            ? FontWeight.bold
-                            : FontWeight.w500),
+                      fontSize: 11,
+                      color: status[index] == 2
+                          ? const Color(0xFF0EA5E9)
+                          : const Color(0xFF94A3B8),
+                      fontWeight: status[index] == 2
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                    ),
                   ),
                 ],
               );
@@ -1300,10 +1438,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Row(
       children: [
         Container(
-            width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 4),
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+        ),
       ],
     );
   }
@@ -1378,33 +1521,50 @@ class _DashboardScreenState extends State<DashboardScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(title,
-                          style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E293B))),
-                    ),
-                    Text(time,
+                      child: Text(
+                        title,
                         style: const TextStyle(
-                            fontSize: 10, color: Color(0xFF94A3B8))),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      time,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                Text(desc,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B))),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
                 if (sentToFamily) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.notifications_active_rounded,
-                          size: 11, color: Color(0xFF0EA5E9)),
+                      const Icon(
+                        Icons.notifications_active_rounded,
+                        size: 11,
+                        color: Color(0xFF0EA5E9),
+                      ),
                       const SizedBox(width: 4),
-                      const Text('Đã thông báo người thân',
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF0EA5E9),
-                              fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Đã thông báo người thân',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFF0EA5E9),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -1433,17 +1593,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                 color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFBAE6FD),
+                  color: isSelected
+                      ? const Color(0xFF0EA5E9)
+                      : const Color(0xFFBAE6FD),
                 ),
                 boxShadow: isSelected
-                    ? [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 2))]
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF0EA5E9).withOpacity(0.25),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
                     : [],
               ),
-              child: Text(period,
-                  style: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF0EA5E9),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13)),
+              child: Text(
+                period,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFF0EA5E9),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
           );
         }).toList(),
@@ -1459,7 +1630,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           context: context,
           backgroundColor: Colors.transparent,
           builder: (ctx) => Container(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(ctx).padding.bottom),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              0,
+              20,
+              32 + MediaQuery.of(ctx).padding.bottom,
+            ),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1468,25 +1644,58 @@ class _DashboardScreenState extends State<DashboardScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 12),
-                Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 const Row(
                   children: [
                     Icon(Icons.download_rounded, color: Color(0xFF0EA5E9)),
                     SizedBox(width: 10),
-                    Text('Xuất báo cáo sức khỏe',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    Text(
+                      'Xuất báo cáo sức khỏe',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text('Khoảng thời gian: $_selectedPeriod này',
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                Text(
+                  'Khoảng thời gian: $_selectedPeriod này',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
                 const SizedBox(height: 20),
-                _exportOption(Icons.picture_as_pdf_rounded, 'Xuất file PDF', 'Báo cáo đầy đủ dạng PDF', const Color(0xFFDC2626)),
+                _exportOption(
+                  Icons.picture_as_pdf_rounded,
+                  'Xuất file PDF',
+                  'Báo cáo đầy đủ dạng PDF',
+                  const Color(0xFFDC2626),
+                ),
                 const SizedBox(height: 10),
-                _exportOption(Icons.table_chart_rounded, 'Xuất file Excel', 'Dữ liệu chỉ số dạng bảng', const Color(0xFF16A34A)),
+                _exportOption(
+                  Icons.table_chart_rounded,
+                  'Xuất file Excel',
+                  'Dữ liệu chỉ số dạng bảng',
+                  const Color(0xFF16A34A),
+                ),
                 const SizedBox(height: 10),
-                _exportOption(Icons.share_rounded, 'Chia sẻ với bác sĩ', 'Gửi link báo cáo qua Zalo/Email', const Color(0xFF7C3AED)),
+                _exportOption(
+                  Icons.share_rounded,
+                  'Chia sẻ với bác sĩ',
+                  'Gửi link báo cáo qua Zalo/Email',
+                  const Color(0xFF7C3AED),
+                ),
               ],
             ),
           ),
@@ -1500,22 +1709,39 @@ class _DashboardScreenState extends State<DashboardScreen>
             colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
           ),
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: const Color(0xFF0EA5E9).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0EA5E9).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.download_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 10),
-            Text('Xuất báo cáo $_selectedPeriod này',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(
+              'Xuất báo cáo $_selectedPeriod này',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _exportOption(IconData icon, String title, String subtitle, Color color) {
+  Widget _exportOption(
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color,
+  ) {
     return GestureDetector(
       onTap: () {
         Navigator.pop(context);
@@ -1538,15 +1764,31 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(width: 14),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ],
             ),
             const Spacer(),

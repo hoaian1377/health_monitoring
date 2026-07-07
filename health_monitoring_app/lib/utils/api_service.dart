@@ -9,7 +9,7 @@ class ApiService {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://192.168.123.4:8000";
+      return "http://10.0.2.2:8000";
     }
     return "http://localhost:8000";
   }
@@ -68,10 +68,7 @@ class ApiService {
       final res = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "username": username,
-          "password": password,
-        }),
+        body: jsonEncode({"username": username, "password": password}),
       );
 
       print("STATUS: ${res.statusCode}");
@@ -89,10 +86,7 @@ class ApiService {
           currentDob = ''; // caregiver might not have this
           currentGender = '';
         }
-        return {
-          "success": true,
-          "data": data,
-        };
+        return {"success": true, "data": data};
       } else {
         return {
           "success": false,
@@ -101,10 +95,7 @@ class ApiService {
       }
     } catch (e) {
       print("ERROR: $e");
-      return {
-        "success": false,
-        "error": "Lỗi kết nối máy chủ.",
-      };
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
 
@@ -135,10 +126,7 @@ class ApiService {
 
       if (res.statusCode == 201) {
         final data = jsonDecode(res.body);
-        return {
-          "success": true,
-          "qr_token": data["qr_token"],
-        };
+        return {"success": true, "qr_token": data["qr_token"]};
       } else {
         return {
           "success": false,
@@ -147,17 +135,15 @@ class ApiService {
       }
     } catch (e) {
       print("ERROR: $e");
-      return {
-        "success": false,
-        "error": "Lỗi kết nối máy chủ.",
-      };
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
 
   // ================= GET ELDERLY LIST =================
   static Future<Map<String, dynamic>> getElderlyList() async {
     final url = Uri.parse(
-        "$baseUrl/api/users/elderly-list/?caregiver_account_id=$currentAccountId");
+      "$baseUrl/api/users/elderly-list/?caregiver_account_id=$currentAccountId",
+    );
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {
@@ -263,8 +249,12 @@ class ApiService {
   }
 
   // ================= GET ELDERLY MEDICATION SCHEDULE =================
-  static Future<List<dynamic>> getElderlyMedicationSchedule(int elderlyId) async {
-    final url = Uri.parse("$baseUrl/api/medication/elderly-schedule/?elderly_id=$elderlyId");
+  static Future<List<dynamic>> getElderlyMedicationSchedule(
+    int elderlyId,
+  ) async {
+    final url = Uri.parse(
+      "$baseUrl/api/medication/elderly-schedule/?elderly_id=$elderlyId",
+    );
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {
@@ -301,7 +291,8 @@ class ApiService {
         "frequency": frequency,
         "description": description,
       };
-      if (startDate != null && startDate.isNotEmpty) body["start_date"] = startDate;
+      if (startDate != null && startDate.isNotEmpty)
+        body["start_date"] = startDate;
       if (endDate != null && endDate.isNotEmpty) body["end_date"] = endDate;
 
       final res = await http.post(
@@ -327,7 +318,9 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
-    final url = Uri.parse("$baseUrl/api/medication/schedule/$scheduleId/update/");
+    final url = Uri.parse(
+      "$baseUrl/api/medication/schedule/$scheduleId/update/",
+    );
     try {
       final body = <String, dynamic>{
         "name": name,
@@ -337,7 +330,8 @@ class ApiService {
         "frequency": frequency,
         "description": description,
       };
-      if (startDate != null && startDate.isNotEmpty) body["start_date"] = startDate;
+      if (startDate != null && startDate.isNotEmpty)
+        body["start_date"] = startDate;
       if (endDate != null && endDate.isNotEmpty) body["end_date"] = endDate;
 
       final res = await http.put(
@@ -353,7 +347,9 @@ class ApiService {
 
   // ================= DELETE MEDICATION SCHEDULE =================
   static Future<bool> deleteMedication(int scheduleId) async {
-    final url = Uri.parse("$baseUrl/api/medication/schedule/$scheduleId/delete/");
+    final url = Uri.parse(
+      "$baseUrl/api/medication/schedule/$scheduleId/delete/",
+    );
     try {
       final res = await http.delete(url);
       return res.statusCode == 200;
@@ -369,10 +365,16 @@ class ApiService {
       final request = http.MultipartRequest('POST', url);
       if (kIsWeb) {
         final imageBytes = await imageFile.readAsBytes();
-        final filename = imageFile.name.isNotEmpty ? imageFile.name : 'prescription.jpg';
-        request.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: filename));
+        final filename = imageFile.name.isNotEmpty
+            ? imageFile.name
+            : 'prescription.jpg';
+        request.files.add(
+          http.MultipartFile.fromBytes('image', imageBytes, filename: filename),
+        );
       } else {
-        request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+        request.files.add(
+          await http.MultipartFile.fromPath('image', imageFile.path),
+        );
       }
       final streamedResponse = await request.send();
       final res = await http.Response.fromStream(streamedResponse);
@@ -401,7 +403,8 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/medication/appointment/create/");
     try {
-      final res = await http.post(url,
+      final res = await http.post(
+        url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'elderly_id': elderlyId,
@@ -420,7 +423,9 @@ class ApiService {
 
   // ================= GET APPOINTMENTS =================
   static Future<List<dynamic>> getAppointments(int elderlyId) async {
-    final url = Uri.parse("$baseUrl/api/medication/appointment/list/?elderly_id=$elderlyId");
+    final url = Uri.parse(
+      "$baseUrl/api/medication/appointment/list/?elderly_id=$elderlyId",
+    );
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {
@@ -457,7 +462,10 @@ class ApiService {
         final data = jsonDecode(res.body);
         return {"success": true, "data": data};
       }
-      return {"success": false, "error": "Không thể sao lưu. Mã lỗi: ${res.statusCode}"};
+      return {
+        "success": false,
+        "error": "Không thể sao lưu. Mã lỗi: ${res.statusCode}",
+      };
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
@@ -487,7 +495,9 @@ class ApiService {
 
   // ================= GET NOTIFICATIONS =================
   static Future<List<dynamic>> getNotifications() async {
-    final url = Uri.parse("$baseUrl/api/notification/notifications/?caregiver_id=$currentAccountId");
+    final url = Uri.parse(
+      "$baseUrl/api/notification/notifications/?caregiver_id=$currentAccountId",
+    );
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {
@@ -502,7 +512,9 @@ class ApiService {
 
   // ================= GENERATE MOCK NOTIFICATIONS =================
   static Future<bool> generateMockNotifications() async {
-    final url = Uri.parse("$baseUrl/api/notification/generate-mock/?caregiver_id=$currentAccountId");
+    final url = Uri.parse(
+      "$baseUrl/api/notification/generate-mock/?caregiver_id=$currentAccountId",
+    );
     try {
       final res = await http.post(
         url,
@@ -538,6 +550,7 @@ class ApiService {
     int? heartRate,
     String? bloodPressure,
     double? bloodSugar,
+    double? temperature,
   }) async {
     final url = Uri.parse("$baseUrl/api/healthmetrics/create/");
     try {
@@ -549,6 +562,7 @@ class ApiService {
           "heart_rate": heartRate,
           "blood_pressure": bloodPressure,
           "blood_sugar": bloodSugar,
+          "temperature": temperature,
         }),
       );
       return res.statusCode == 201;
@@ -560,15 +574,23 @@ class ApiService {
 
   // ================= GET HEALTH METRICS =================
   static Future<List<dynamic>> getHealthMetrics(int elderlyId) async {
-    final url = Uri.parse("$baseUrl/api/healthmetrics/list/?elderly_id=$elderlyId");
+    final url = Uri.parse(
+      "$baseUrl/api/healthmetrics/list/?elderly_id=$elderlyId",
+    );
     try {
       final res = await http.get(url);
+      print("[HealthMetrics] Status: ${res.statusCode}, Body: ${res.body}");
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        final decoded = jsonDecode(res.body);
+        // Hỗ trợ cả array thẳng và {"results": [...]}
+        if (decoded is List) return decoded;
+        if (decoded is Map && decoded['results'] != null)
+          return decoded['results'];
+        return [];
       }
       return [];
     } catch (e) {
-      print("ERROR: $e");
+      print("[HealthMetrics] ERROR: $e");
       return [];
     }
   }
@@ -590,7 +612,9 @@ class ApiService {
 
   /// Lấy các items của một checklist
   static Future<List<dynamic>> getChecklistItems(int checklistId) async {
-    final url = Uri.parse("$baseUrl/api/checklist/item/?checklist_id=$checklistId");
+    final url = Uri.parse(
+      "$baseUrl/api/checklist/item/?checklist_id=$checklistId",
+    );
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) return jsonDecode(res.body);
@@ -609,14 +633,13 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/checklist/create/");
     try {
-      final body = <String, dynamic>{
-        'elderlyid': elderlyId,
-        'title': title,
-      };
+      final body = <String, dynamic>{'elderlyid': elderlyId, 'title': title};
       if (appointmentId != null) body['appointmentid'] = appointmentId;
-      final res = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(body));
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
       if (res.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(res.body)};
       }
@@ -640,20 +663,22 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/checklist/item/create/");
     try {
-      final res = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'checklistid': checklistId,
-            'title': title,
-            'item_type': itemType,
-            'time_string': timeString,
-            'details': details,
-            'hospital': hospital,
-            'doctor': doctor,
-            'appointment_date': appointmentDate,
-            'file_path': null,
-            'is_complete': false,
-          }));
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'checklistid': checklistId,
+          'title': title,
+          'item_type': itemType,
+          'time_string': timeString,
+          'details': details,
+          'hospital': hospital,
+          'doctor': doctor,
+          'appointment_date': appointmentDate,
+          'file_path': null,
+          'is_complete': false,
+        }),
+      );
       return res.statusCode == 201;
     } catch (e) {
       print("ERROR createChecklistItem: $e");
@@ -668,9 +693,11 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/checklist/$checklistId/items/bulk/");
     try {
-      final res = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'items': items}));
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'items': items}),
+      );
       return res.statusCode == 201;
     } catch (e) {
       print("ERROR bulkCreate: $e");
@@ -682,9 +709,11 @@ class ApiService {
   static Future<Map<String, dynamic>> toggleChecklistItem(int itemId) async {
     final url = Uri.parse("$baseUrl/api/checklist/item/$itemId/toggle/");
     try {
-      final res = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({}));
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({}),
+      );
       if (res.statusCode == 200) {
         return {'success': true, 'data': jsonDecode(res.body)};
       }
@@ -696,7 +725,8 @@ class ApiService {
   }
 
   /// Cập nhật checklist item
-  static Future<bool> updateChecklistItem(int itemId, {
+  static Future<bool> updateChecklistItem(
+    int itemId, {
     String? content,
     bool? isComplete,
     String? note,
@@ -707,9 +737,11 @@ class ApiService {
       if (content != null) body['content'] = content;
       if (isComplete != null) body['is_complete'] = isComplete;
       if (note != null) body['note'] = note;
-      final res = await http.patch(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(body));
+      final res = await http.patch(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
       return res.statusCode == 200;
     } catch (e) {
       print("ERROR updateChecklistItem: $e");
@@ -732,7 +764,10 @@ class ApiService {
   // ================= TREATMENT HISTORY =================
 
   /// Lấy danh sách lịch sử điều trị theo elderly_id
-  static Future<List<dynamic>> getTreatmentHistory(int elderlyId, {String? status}) async {
+  static Future<List<dynamic>> getTreatmentHistory(
+    int elderlyId, {
+    String? status,
+  }) async {
     String endpoint = "$baseUrl/api/treatmenthistory/?elderly_id=$elderlyId";
     if (status != null) endpoint += "&status=$status";
     final url = Uri.parse(endpoint);
@@ -762,21 +797,23 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/treatmenthistory/create/");
     try {
-      final res = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'elderly_id': elderlyId,
-            'diagnosis': diagnosis,
-            'treatment': treatment,
-            'treatment_type': treatmentType,
-            'doctor_name': doctorName,
-            'hospital': hospital,
-            'start_date': startDate,
-            'end_date': endDate,
-            'result': result,
-            'notes': notes,
-            'status': status,
-          }));
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'elderly_id': elderlyId,
+          'diagnosis': diagnosis,
+          'treatment': treatment,
+          'treatment_type': treatmentType,
+          'doctor_name': doctorName,
+          'hospital': hospital,
+          'start_date': startDate,
+          'end_date': endDate,
+          'result': result,
+          'notes': notes,
+          'status': status,
+        }),
+      );
       if (res.statusCode == 201) {
         return {'success': true, 'data': jsonDecode(res.body)};
       }
@@ -788,12 +825,17 @@ class ApiService {
   }
 
   /// Cập nhật lịch sử điều trị
-  static Future<bool> updateTreatmentHistory(int id, Map<String, dynamic> data) async {
+  static Future<bool> updateTreatmentHistory(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     final url = Uri.parse("$baseUrl/api/treatmenthistory/$id/update/");
     try {
-      final res = await http.patch(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(data));
+      final res = await http.patch(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
       return res.statusCode == 200;
     } catch (e) {
       print("ERROR updateTreatmentHistory: $e");
@@ -805,9 +847,11 @@ class ApiService {
   static Future<bool> updateTreatmentStatus(int id, String newStatus) async {
     final url = Uri.parse("$baseUrl/api/treatmenthistory/$id/status/");
     try {
-      final res = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'status': newStatus}));
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'status': newStatus}),
+      );
       return res.statusCode == 200;
     } catch (e) {
       print("ERROR updateTreatmentStatus: $e");
@@ -827,4 +871,3 @@ class ApiService {
     }
   }
 }
-

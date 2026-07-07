@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
 import 'add_elderly_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
 
 class PersonalProfileScreen extends StatefulWidget {
   const PersonalProfileScreen({super.key});

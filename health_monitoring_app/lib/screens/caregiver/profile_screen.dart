@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'personal_profile_screen.dart';
-import 'login_screen.dart';
-import 'change_password_screen.dart';
+import '../login_screen.dart';
+import '../change_password_screen.dart';
 import 'manage_profiles_screen.dart';
-import 'admin_backup_screen.dart';
-import 'health_dashboard_screen.dart';
+import '../admin_backup_screen.dart';
+import 'caregiver_health_settings_screen.dart';
 import 'add_elderly_screen.dart';
 import 'elderly_list_screen.dart';
 import 'checklist_screen.dart';
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconColor: const Color(0xFF7C3AED),
                       title: 'Đổi mật khẩu',
                       subtitle: 'Bảo mật tài khoản của bạn',
-                      onTap: () => _navigate(const ChangePasswordScreen()),
+                      onTap: () => _navigate(ChangePasswordScreen()),
                     ),
                   ]),
 

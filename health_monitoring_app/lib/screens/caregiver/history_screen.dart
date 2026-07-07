@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
 import 'package:intl/intl.dart';
 
 class HistoryScreen extends StatefulWidget {
@@ -237,12 +237,46 @@ class _HistoryScreenState extends State<HistoryScreen>
           const SizedBox(height: 24),
           _sectionLabel('LỊCH SỬ DÙNG THUỐC'),
           const SizedBox(height: 12),
-          // Lịch sử dùng thuốc (tạm ẩn cho đến khi có API thật)
-          const Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Center(
-              child: Text('Đang cập nhật lịch sử dùng thuốc từ API...', style: TextStyle(color: Colors.black54)),
-            ),
+          _sectionLabel('Hôm nay - 15/05/2026'),
+          const SizedBox(height: 12),
+          _buildHistoryItem(
+            time: '07:00',
+            name: 'Glucophage 500mg',
+            status: 'Đã uống',
+            isCompleted: true,
+          ),
+          _buildHistoryItem(
+            time: '07:00',
+            name: 'Vitamin D3',
+            status: 'Bỏ lỡ',
+            isCompleted: false,
+          ),
+          _buildHistoryItem(
+            time: '19:00',
+            name: 'Amlodipine 5mg',
+            status: 'Chưa uống',
+            isUpcoming: true,
+          ),
+          const SizedBox(height: 20),
+          _sectionLabel('Hôm qua - 14/05/2026'),
+          const SizedBox(height: 12),
+          _buildHistoryItem(
+            time: '07:00',
+            name: 'Glucophage 500mg',
+            status: 'Đã uống',
+            isCompleted: true,
+          ),
+          _buildHistoryItem(
+            time: '07:00',
+            name: 'Vitamin D3',
+            status: 'Đã uống',
+            isCompleted: true,
+          ),
+          _buildHistoryItem(
+            time: '19:00',
+            name: 'Amlodipine 5mg',
+            status: 'Đã uống',
+            isCompleted: true,
           ),
           const SizedBox(height: 100),
         ],

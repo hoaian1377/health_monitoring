@@ -54,7 +54,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   Future<void> _loadElderlyList() async {
     final result = await ApiService.getElderlyList();
     if (mounted && result['success'] == true) {
-      final list = (result['elderly_list'] as List).cast<Map<String, dynamic>>();
+      final list = (result['elderly_list'] as List)
+          .cast<Map<String, dynamic>>();
       setState(() {
         _elderlyList = list;
         if (list.isNotEmpty) {
@@ -68,8 +69,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   Future<void> _loadElderlyDetails() async {
     if (_selectedElderlyId == null) return;
     setState(() => _isLoadingMedications = true);
-    
-    final schedules = await ApiService.getElderlyMedicationSchedule(_selectedElderlyId!);
+
+    final schedules = await ApiService.getElderlyMedicationSchedule(
+      _selectedElderlyId!,
+    );
     final data = await ApiService.getHealthMetrics(_selectedElderlyId!);
 
     if (mounted) {
@@ -83,7 +86,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
         _heartRate = '--';
         _bloodSugar = '--';
         _temperature = '--';
-        
+
         if (data.isNotEmpty) {
           final latest = data[0];
           if (latest['heart_rate'] != null) {
@@ -244,7 +247,6 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   ),
                 ],
               ),
-
             ],
           ),
           const SizedBox(height: 20),
@@ -563,16 +565,25 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       label,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: isSelected
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFF64748B),
                       ),
                     ),
                     if (count > 0) ...[
                       const SizedBox(width: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
+                          color: isSelected
+                              ? const Color(0xFF0EA5E9)
+                              : const Color(0xFFE2E8F0),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -580,7 +591,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : const Color(0xFF475569),
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF475569),
                           ),
                         ),
                       ),
@@ -663,16 +676,30 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     color: Color(0xFFE0F2FE),
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                   ),
-                  child: const Icon(Icons.medication_rounded, color: Color(0xFF0284C7), size: 20),
+                  child: const Icon(
+                    Icons.medication_rounded,
+                    color: Color(0xFF0284C7),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Quản lý Lịch uống thuốc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
+                      const Text(
+                        'Quản lý Lịch uống thuốc',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Colors.black87,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      const Text('Thiết lập & Theo dõi việc uống thuốc', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      const Text(
+                        'Thiết lập & Theo dõi việc uống thuốc',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ),
@@ -680,7 +707,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 130),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(12),
@@ -688,7 +718,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
                           value: _selectedElderlyId,
-                          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF475569), size: 20),
+                          icon: const Icon(
+                            Icons.arrow_drop_down,
+                            color: Color(0xFF475569),
+                            size: 20,
+                          ),
                           isDense: true,
                           isExpanded: true,
                           items: _elderlyList.map((e) {
@@ -696,7 +730,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               value: e['id'] as int,
                               child: Text(
                                 e['fullname'] ?? 'N/A',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             );
@@ -714,7 +752,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Compact view: hide full progress bar to save vertical space
 
             // Filter Tabs
@@ -723,11 +761,32 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
             // Medication List
             if (_elderlyList.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(16), child: Text("Chưa có người cao tuổi nào.", style: TextStyle(color: Colors.grey))))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    "Chưa có người cao tuổi nào.",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
             else if (_isLoadingMedications)
-              const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (_medicationSchedules.isEmpty)
-              const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("Chưa có lịch uống thuốc.", style: TextStyle(color: Colors.grey))))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text(
+                    "Chưa có lịch uống thuốc.",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
             else if (filteredGroups.isEmpty)
               const Center(
                 child: Padding(
@@ -776,128 +835,297 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    14,
+                                    12,
+                                    14,
+                                    10,
+                                  ),
                                   child: Row(
                                     children: [
-                                      Icon(groupIcon, color: groupColor, size: 18),
+                                      Icon(
+                                        groupIcon,
+                                        color: groupColor,
+                                        size: 18,
+                                      ),
                                       const SizedBox(width: 8),
                                       Text(
                                         groupName,
-                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: groupColor),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: groupColor,
+                                        ),
                                       ),
                                       const Spacer(),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: groupColor.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(10),
+                                          color: groupColor.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                         child: Text(
                                           '${meds.length} liều',
-                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: groupColor),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: groupColor,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                                const Divider(
+                                  height: 1,
+                                  color: Color(0xFFE2E8F0),
+                                ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
                                   child: LayoutBuilder(
                                     builder: (context, constraints) {
                                       final maxShow = 6;
                                       final chips = <Widget>[];
-                                      for (var i = 0; i < meds.length && i < maxShow; i++) {
+                                      for (
+                                        var i = 0;
+                                        i < meds.length && i < maxShow;
+                                        i++
+                                      ) {
                                         final schedule = meds[i];
-                                        final med = schedule['medication'] ?? {};
-                                        final name = (med['name'] ?? 'Không tên').toString();
-                                        final time = (schedule['time'] ?? '--:--').toString();
-                                        chips.add(Container(
-                                          width: 160,
-                                          margin: const EdgeInsets.only(right: 8, bottom: 8),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: groupColor.withValues(alpha: 0.08),
-                                                  borderRadius: BorderRadius.circular(8),
-                                                ),
-                                                child: Text(time, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: groupColor)),
+                                        final med =
+                                            schedule['medication'] ?? {};
+                                        final name =
+                                            (med['name'] ?? 'Không tên')
+                                                .toString();
+                                        final time =
+                                            (schedule['time'] ?? '--:--')
+                                                .toString();
+                                        chips.add(
+                                          Container(
+                                            width: 160,
+                                            margin: const EdgeInsets.only(
+                                              right: 8,
+                                              bottom: 8,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: const Color(0xFFE2E8F0),
                                               ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              // Delete icon
-                                              GestureDetector(
-                                                onTap: () async {
-                                                  final doDelete = await showDialog<bool>(
-                                                    context: context,
-                                                    builder: (c) => AlertDialog(
-                                                      title: const Text('Xác nhận'),
-                                                      content: const Text('Bạn có chắc muốn xóa lịch uống thuốc này?'),
-                                                      actions: [
-                                                        TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Hủy')),
-                                                        TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Xóa', style: TextStyle(color: Color(0xFFD97706)))),
-                                                      ],
-                                                    ),
-                                                  );
-                                                  if (doDelete == true) {
-                                                    final scheduleId = schedule['id'] ?? schedule['schedule_id'] ?? schedule['scheduleId'];
-                                                    bool ok = false;
-                                                    if (scheduleId != null) {
-                                                      try {
-                                                        ok = await ApiService.deleteMedication(int.parse(scheduleId.toString()));
-                                                      } catch (_) {
-                                                        ok = false;
-                                                      }
-                                                    }
-                                                    setState(() {
-                                                      _medicationSchedules.removeWhere((s) => identical(s, schedule) || (s['id'] != null && scheduleId != null && s['id'].toString() == scheduleId.toString()));
-                                                    });
-                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ok ? 'Đã xóa' : 'Đã xóa (cục bộ)')));
-                                                  }
-                                                },
-                                                child: Container(
-                                                  padding: const EdgeInsets.all(6),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 6,
+                                                        vertical: 4,
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color: const Color(0xFFFFF1F2),
-                                                    borderRadius: BorderRadius.circular(8),
+                                                    color: groupColor
+                                                        .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
                                                   ),
-                                                  child: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFDC2626)),
+                                                  child: Text(
+                                                    time,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: groupColor,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    name,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF1E293B),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                // Delete icon
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    final doDelete = await showDialog<bool>(
+                                                      context: context,
+                                                      builder: (c) => AlertDialog(
+                                                        title: const Text(
+                                                          'Xác nhận',
+                                                        ),
+                                                        content: const Text(
+                                                          'Bạn có chắc muốn xóa lịch uống thuốc này?',
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  c,
+                                                                ).pop(false),
+                                                            child: const Text(
+                                                              'Hủy',
+                                                            ),
+                                                          ),
+                                                          TextButton(
+                                                            onPressed: () =>
+                                                                Navigator.of(
+                                                                  c,
+                                                                ).pop(true),
+                                                            child: const Text(
+                                                              'Xóa',
+                                                              style: TextStyle(
+                                                                color: Color(
+                                                                  0xFFD97706,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                    if (doDelete == true) {
+                                                      final scheduleId =
+                                                          schedule['id'] ??
+                                                          schedule['schedule_id'] ??
+                                                          schedule['scheduleId'];
+                                                      bool ok = false;
+                                                      if (scheduleId != null) {
+                                                        try {
+                                                          ok = await ApiService.deleteMedication(
+                                                            int.parse(
+                                                              scheduleId
+                                                                  .toString(),
+                                                            ),
+                                                          );
+                                                        } catch (_) {
+                                                          ok = false;
+                                                        }
+                                                      }
+                                                      setState(() {
+                                                        _medicationSchedules.removeWhere(
+                                                          (s) =>
+                                                              identical(
+                                                                s,
+                                                                schedule,
+                                                              ) ||
+                                                              (s['id'] !=
+                                                                      null &&
+                                                                  scheduleId !=
+                                                                      null &&
+                                                                  s['id']
+                                                                          .toString() ==
+                                                                      scheduleId
+                                                                          .toString()),
+                                                        );
+                                                      });
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            ok
+                                                                ? 'Đã xóa'
+                                                                : 'Đã xóa (cục bộ)',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  child: Container(
+                                                    padding:
+                                                        const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFFFFF1F2,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons
+                                                          .delete_outline_rounded,
+                                                      size: 16,
+                                                      color: Color(0xFFDC2626),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ));
+                                        );
                                       }
 
                                       if (meds.length > maxShow) {
-                                        chips.add(Container(
-                                          width: 80,
-                                          margin: const EdgeInsets.only(right: 8, bottom: 8),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF1F5F9),
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                        chips.add(
+                                          Container(
+                                            width: 80,
+                                            margin: const EdgeInsets.only(
+                                              right: 8,
+                                              bottom: 8,
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF1F5F9),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: const Color(0xFFE2E8F0),
+                                              ),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                '+${meds.length - maxShow} thêm',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: Color(0xFF475569),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
                                           ),
-                                          child: Center(child: Text('+${meds.length - maxShow} thêm', style: const TextStyle(fontSize: 12, color: Color(0xFF475569), fontWeight: FontWeight.bold))),
-                                        ));
+                                        );
                                       }
 
                                       return SingleChildScrollView(
@@ -923,12 +1151,24 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       side: const BorderSide(color: Color(0xFF0EA5E9)),
                     ),
                     onPressed: () => MainNavigator.of(context)?.setTab(1),
-                    icon: const Icon(Icons.history_rounded, color: Color(0xFF0EA5E9), size: 18),
-                    label: const Text('Lịch sử uống', style: TextStyle(color: Color(0xFF0EA5E9), fontWeight: FontWeight.bold)),
+                    icon: const Icon(
+                      Icons.history_rounded,
+                      color: Color(0xFF0EA5E9),
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Lịch sử uống',
+                      style: TextStyle(
+                        color: Color(0xFF0EA5E9),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -938,12 +1178,19 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       backgroundColor: const Color(0xFF0EA5E9),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       elevation: 0,
                     ),
-                    onPressed: _elderlyList.isEmpty ? null : _showAddMedicationDialog,
+                    onPressed: _elderlyList.isEmpty
+                        ? null
+                        : _showAddMedicationDialog,
                     icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Thêm lịch', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Thêm lịch',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -1013,20 +1260,38 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
+                        const Icon(
+                          Icons.access_time_rounded,
+                          size: 14,
+                          color: Color(0xFF64748B),
+                        ),
                         const SizedBox(width: 4),
                         const Text(
                           '08:30 ngày 12/06',
-                          style: TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF475569),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF3C7),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('Còn 3 ngày', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                          child: const Text(
+                            'Còn 3 ngày',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1048,19 +1313,37 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 const CircleAvatar(
                   backgroundColor: Color(0xFFE0F2FE),
                   radius: 18,
-                  child: Icon(Icons.person_rounded, color: Color(0xFF0284C7), size: 20),
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: Color(0xFF0284C7),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('BS. Nguyễn Thị Lan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
-                      Text('Khoa Tim mạch', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        'BS. Nguyễn Thị Lan',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      Text(
+                        'Khoa Tim mạch',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey.shade400),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: Colors.grey.shade400,
+                ),
               ],
             ),
           ),
@@ -1076,7 +1359,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 side: const BorderSide(color: Color(0xFF0EA5E9)),
               ),
               onPressed: () {
-                MainNavigator.of(context)?.setTab(1); // Chuyển sang tab Checklist
+                MainNavigator.of(
+                  context,
+                )?.setTab(1); // Chuyển sang tab Checklist
               },
               icon: const Icon(
                 Icons.add_task_rounded,
@@ -1156,6 +1441,59 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     ],
                   ),
                 ),
+                // Nút nhập chỉ số
+                GestureDetector(
+                  onTap: _selectedElderlyId == null
+                      ? null
+                      : _showInputMetricsSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.edit_rounded,
+                          size: 14,
+                          color: Color(0xFF0284C7),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Nhập',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0284C7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Nút refresh
+                GestureDetector(
+                  onTap: _loadElderlyDetails,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0F9FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: const Icon(
+                      Icons.refresh_rounded,
+                      size: 16,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(
                     Icons.arrow_forward_ios_rounded,
@@ -1176,9 +1514,24 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     label: 'Huyết áp',
                     value: '$_bpSys/$_bpDia',
                     unit: ' mmHg',
-                    status: _bpSys == '--' ? 'Chưa đo' : (int.tryParse(_bpSys) != null && int.parse(_bpSys) > 130 ? 'Hơi cao' : 'Bình thường'),
-                    statusColor: _bpSys == '--' ? Colors.grey : (int.tryParse(_bpSys) != null && int.parse(_bpSys) > 130 ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
-                    statusBg: _bpSys == '--' ? Colors.grey.shade200 : (int.tryParse(_bpSys) != null && int.parse(_bpSys) > 130 ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7)),
+                    status: _bpSys == '--'
+                        ? 'Chưa đo'
+                        : (int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
+                              ? 'Hơi cao'
+                              : 'Bình thường'),
+                    statusColor: _bpSys == '--'
+                        ? Colors.grey
+                        : (int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
+                              ? const Color(0xFFD97706)
+                              : const Color(0xFF16A34A)),
+                    statusBg: _bpSys == '--'
+                        ? Colors.grey.shade200
+                        : (int.tryParse(_bpSys) != null &&
+                                  int.parse(_bpSys) > 130
+                              ? const Color(0xFFFEF3C7)
+                              : const Color(0xFFDCFCE7)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1190,8 +1543,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     value: _bloodSugar,
                     unit: ' mmol/L',
                     status: _bloodSugar == '--' ? 'Chưa đo' : 'Ổn định',
-                    statusColor: _bloodSugar == '--' ? Colors.grey : const Color(0xFF16A34A),
-                    statusBg: _bloodSugar == '--' ? Colors.grey.shade200 : const Color(0xFFDCFCE7),
+                    statusColor: _bloodSugar == '--'
+                        ? Colors.grey
+                        : const Color(0xFF16A34A),
+                    statusBg: _bloodSugar == '--'
+                        ? Colors.grey.shade200
+                        : const Color(0xFFDCFCE7),
                   ),
                 ),
               ],
@@ -1207,8 +1564,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     value: _heartRate,
                     unit: ' bpm',
                     status: _heartRate == '--' ? 'Chưa đo' : 'Bình thường',
-                    statusColor: _heartRate == '--' ? Colors.grey : const Color(0xFF16A34A),
-                    statusBg: _heartRate == '--' ? Colors.grey.shade200 : const Color(0xFFDCFCE7),
+                    statusColor: _heartRate == '--'
+                        ? Colors.grey
+                        : const Color(0xFF16A34A),
+                    statusBg: _heartRate == '--'
+                        ? Colors.grey.shade200
+                        : const Color(0xFFDCFCE7),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1220,8 +1581,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     value: _temperature,
                     unit: ' °C',
                     status: _temperature == '--' ? 'Chưa đo' : 'Bình thường',
-                    statusColor: _temperature == '--' ? Colors.grey : const Color(0xFF16A34A),
-                    statusBg: _temperature == '--' ? Colors.grey.shade200 : const Color(0xFFDCFCE7),
+                    statusColor: _temperature == '--'
+                        ? Colors.grey
+                        : const Color(0xFF16A34A),
+                    statusBg: _temperature == '--'
+                        ? Colors.grey.shade200
+                        : const Color(0xFFDCFCE7),
                   ),
                 ),
               ],
@@ -1257,6 +1622,270 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Bottom sheet nhập chỉ số sức khỏe cho elderly ────────────────────────
+  void _showInputMetricsSheet() {
+    if (_selectedElderlyId == null) return;
+
+    final bpSysCtrl = TextEditingController(text: _bpSys == '--' ? '' : _bpSys);
+    final bpDiaCtrl = TextEditingController(text: _bpDia == '--' ? '' : _bpDia);
+    final heartCtrl = TextEditingController(
+      text: _heartRate == '--' ? '' : _heartRate,
+    );
+    final sugarCtrl = TextEditingController(
+      text: _bloodSugar == '--' ? '' : _bloodSugar,
+    );
+    final tempCtrl = TextEditingController(
+      text: _temperature == '--' ? '' : _temperature,
+    );
+
+    final elderlyName =
+        _elderlyList.firstWhere(
+          (e) => e['id'] == _selectedElderlyId,
+          orElse: () => {'fullname': 'người cao tuổi'},
+        )['fullname'] ??
+        'người cao tuổi';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: EdgeInsets.only(
+          bottom:
+              MediaQuery.of(ctx).viewInsets.bottom +
+              24 +
+              MediaQuery.of(ctx).padding.bottom,
+          top: 20,
+          left: 20,
+          right: 20,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0F2FE),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.monitor_heart_rounded,
+                      color: Color(0xFF0284C7),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Nhập chỉ số sức khỏe',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        Text(
+                          'Cho: $elderlyName',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Huyết áp
+              const _FieldLabel(label: 'Huyết áp (mmHg)'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _metricsInputField(
+                      'Tâm thu',
+                      bpSysCtrl,
+                      Icons.arrow_upward_rounded,
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      '/',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: _metricsInputField(
+                      'Tâm trương',
+                      bpDiaCtrl,
+                      Icons.arrow_downward_rounded,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const _FieldLabel(label: 'Nhịp tim (bpm)'),
+              const SizedBox(height: 8),
+              _metricsInputField(
+                'Nhịp tim',
+                heartCtrl,
+                Icons.favorite_border_rounded,
+              ),
+              const SizedBox(height: 14),
+              const _FieldLabel(label: 'Đường huyết (mmol/L)'),
+              const SizedBox(height: 8),
+              _metricsInputField(
+                'Đường huyết',
+                sugarCtrl,
+                Icons.water_drop_outlined,
+              ),
+              const SizedBox(height: 14),
+              const _FieldLabel(label: 'Nhiệt độ (°C)'),
+              const SizedBox(height: 8),
+              _metricsInputField(
+                'Nhiệt độ',
+                tempCtrl,
+                Icons.thermostat_outlined,
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0EA5E9),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () async {
+                    final bpSys = bpSysCtrl.text.trim();
+                    final bpDia = bpDiaCtrl.text.trim();
+                    final heart = heartCtrl.text.trim();
+                    final sugar = sugarCtrl.text.trim();
+                    final temperature = tempCtrl.text.trim();
+
+                    if (bpSys.isEmpty &&
+                        heart.isEmpty &&
+                        sugar.isEmpty &&
+                        temperature.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng nhập ít nhất một chỉ số'),
+                        ),
+                      );
+                      return;
+                    }
+
+                    final ok = await ApiService.addHealthMetric(
+                      elderlyId: _selectedElderlyId!,
+                      heartRate: int.tryParse(heart),
+                      bloodPressure: (bpSys.isNotEmpty && bpDia.isNotEmpty)
+                          ? '$bpSys/$bpDia'
+                          : null,
+                      bloodSugar: double.tryParse(sugar),
+                      temperature: double.tryParse(temperature),
+                    );
+
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                    }
+                    if (ok) {
+                      // Reload data
+                      _loadElderlyDetails();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFF10B981),
+                            content: Text('✓ Đã lưu chỉ số sức khỏe!'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Lưu chỉ số thất bại, vui lòng thử lại',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text(
+                    'Lưu chỉ số',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _metricsInputField(
+    String hint,
+    TextEditingController ctrl,
+    IconData icon,
+  ) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: const Color(0xFF0EA5E9), size: 18),
+        filled: true,
+        fillColor: const Color(0xFFF0F9FF),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
         ),
       ),
     );
@@ -1558,9 +2187,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         vertical: 16,
                       ),
                       decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color(0xFFCBD5E1),
-                        ),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -1918,10 +2545,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   },
                   child: const Text(
                     'Hoàn tất & Lưu QR',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
               ),
@@ -1935,7 +2559,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   Future<void> _saveQrAsImage(String qrToken) async {
     if (kIsWeb) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tính năng lưu ảnh QR chỉ hỗ trợ trên thiết bị di động.')),
+        const SnackBar(
+          content: Text(
+            'Tính năng lưu ảnh QR chỉ hỗ trợ trên thiết bị di động.',
+          ),
+        ),
       );
       return;
     }
@@ -1947,7 +2575,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       final photosGranted = (statuses[Permission.photos]?.isGranted ?? false);
       if (!storageGranted && !photosGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quyền lưu ảnh bị từ chối. Vui lòng cho phép quyền bộ nhớ.')),
+          const SnackBar(
+            content: Text(
+              'Quyền lưu ảnh bị từ chối. Vui lòng cho phép quyền bộ nhớ.',
+            ),
+          ),
         );
         return;
       }
@@ -1955,7 +2587,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       final status = await Permission.photos.request();
       if (!status.isGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Quyền lưu ảnh bị từ chối. Vui lòng cho phép quyền ảnh.')),
+          const SnackBar(
+            content: Text(
+              'Quyền lưu ảnh bị từ chối. Vui lòng cho phép quyền ảnh.',
+            ),
+          ),
         );
         return;
       }
@@ -1990,9 +2626,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi lưu ảnh QR: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi khi lưu ảnh QR: $e')));
     }
   }
 
@@ -2014,11 +2650,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide:
-            const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+        borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
@@ -2205,7 +2839,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 backgroundColor: Color(0xFFE0F2FE),
                 child: Icon(Icons.camera_alt_rounded, color: Color(0xFF0284C7)),
               ),
-              title: const Text('Quét từ đơn thuốc (OCR)', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text(
+                'Quét từ đơn thuốc (OCR)',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: const Text('Tự động nhận diện qua ảnh chụp'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2218,7 +2855,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 backgroundColor: Color(0xFFFEF3C7),
                 child: Icon(Icons.edit_note_rounded, color: Color(0xFFD97706)),
               ),
-              title: const Text('Nhập thủ công', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text(
+                'Nhập thủ công',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               subtitle: const Text('Tự nhập thông tin thuốc'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -2246,17 +2886,32 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(height: 12),
-                  const Text('Chọn ảnh đơn thuốc', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Chọn ảnh đơn thuốc',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   ListTile(
-                    leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0284C7)),
-                    title: const Text('Chụp ảnh mới', style: TextStyle(fontWeight: FontWeight.bold)),
+                    leading: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Color(0xFF0284C7),
+                    ),
+                    title: const Text(
+                      'Chụp ảnh mới',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: const Text('Sử dụng camera để chụp đơn thuốc'),
                     onTap: () => Navigator.pop(ctx, ImageSource.camera),
                   ),
                   ListTile(
-                    leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF10B981)),
-                    title: const Text('Chọn từ thư viện', style: TextStyle(fontWeight: FontWeight.bold)),
+                    leading: const Icon(
+                      Icons.photo_library_rounded,
+                      color: Color(0xFF10B981),
+                    ),
+                    title: const Text(
+                      'Chọn từ thư viện',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: const Text('Chọn ảnh đã có trong điện thoại'),
                     onTap: () => Navigator.pop(ctx, ImageSource.gallery),
                   ),
@@ -2268,12 +2923,17 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
     if (imageSource == null) return;
     if (isWeb && imageSource == ImageSource.camera) {
-      _showScanErrorDialog('Không thể chụp ảnh trực tiếp trên Web. Vui lòng chọn ảnh từ thư viện.');
+      _showScanErrorDialog(
+        'Không thể chụp ảnh trực tiếp trên Web. Vui lòng chọn ảnh từ thư viện.',
+      );
       return;
     }
 
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: imageSource, imageQuality: 80);
+    final XFile? image = await picker.pickImage(
+      source: imageSource,
+      imageQuality: 80,
+    );
     if (image == null || !mounted) return;
 
     showDialog(
@@ -2286,13 +2946,27 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(color: Color(0xFFE0F2FE), shape: BoxShape.circle),
-              child: const Icon(Icons.document_scanner_rounded, color: Color(0xFF0284C7), size: 40),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE0F2FE),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.document_scanner_rounded,
+                color: Color(0xFF0284C7),
+                size: 40,
+              ),
             ),
             const SizedBox(height: 20),
-            const Text("Đang quét đơn thuốc...", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              "Đang quét đơn thuốc...",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 8),
-            const Text("Vui lòng giữ máy ổn định và chờ trong giây lát", style: TextStyle(color: Colors.grey, fontSize: 13), textAlign: TextAlign.center),
+            const Text(
+              "Vui lòng giữ máy ổn định và chờ trong giây lát",
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             const LinearProgressIndicator(color: Color(0xFF0F605A)),
           ],
@@ -2312,10 +2986,13 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     final medications = (res['medications'] ?? res['results']) as List?;
     final appointment = res['appointment'] as Map<String, dynamic>?;
 
-    if ((medications != null && medications.isNotEmpty) || appointment != null) {
+    if ((medications != null && medications.isNotEmpty) ||
+        appointment != null) {
       _showScannedResultsDialog(medications ?? [], appointment: appointment);
     } else {
-      _showScanErrorDialog('Không tìm thấy thông tin trong ảnh. Vui lòng thử chụp lại hoặc nhập thủ công.');
+      _showScanErrorDialog(
+        'Không tìm thấy thông tin trong ảnh. Vui lòng thử chụp lại hoặc nhập thủ công.',
+      );
     }
   }
 
@@ -2324,15 +3001,23 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Quét đơn thuốc không thành công', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Quét đơn thuốc không thành công',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text(
+              'Hủy',
+              style: TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F605A)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F605A),
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               _showScanPrescriptionDialog();
@@ -2345,13 +3030,24 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   }
 
   String _sessionLabelForTime(String time) {
-    if (time.startsWith('07') || time.startsWith('08') || time.startsWith('09') || time.startsWith('10') || time.startsWith('11')) {
+    if (time.startsWith('07') ||
+        time.startsWith('08') ||
+        time.startsWith('09') ||
+        time.startsWith('10') ||
+        time.startsWith('11')) {
       return 'Sáng';
     }
-    if (time.startsWith('12') || time.startsWith('13') || time.startsWith('14') || time.startsWith('15') || time.startsWith('16')) {
+    if (time.startsWith('12') ||
+        time.startsWith('13') ||
+        time.startsWith('14') ||
+        time.startsWith('15') ||
+        time.startsWith('16')) {
       return 'Trưa';
     }
-    if (time.startsWith('17') || time.startsWith('18') || time.startsWith('19') || time.startsWith('20')) {
+    if (time.startsWith('17') ||
+        time.startsWith('18') ||
+        time.startsWith('19') ||
+        time.startsWith('20')) {
       return 'Chiều';
     }
     return 'Tối';
@@ -2371,30 +3067,63 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     }
   }
 
-  void _showScannedResultsDialog(List results, {Map<String, dynamic>? appointment}) {
-    final List<Map<String, dynamic>> editableResults = results.map<Map<String, dynamic>>((item) {
-      final originalTime = item['time']?.toString() ?? '';
-      final session = _sessionLabelForTime(originalTime);
-      return {
-        'nameController': TextEditingController(text: item['name'] ?? ''),
-        'dosageController': TextEditingController(text: item['dosage'] ?? ''),
-        'frequencyController': TextEditingController(text: item['frequency']?.toString() ?? item['times_per_day']?.toString() ?? ''),
-        'time': originalTime.isNotEmpty ? originalTime : _defaultTimeForSession(session),
-        'session': session,
-        'daysController': TextEditingController(text: item['days']?.toString() ?? ''),
-        'noteController': TextEditingController(text: item['note'] ?? item['instruction'] ?? ''),
-      };
-    }).toList();
+  void _showScannedResultsDialog(
+    List results, {
+    Map<String, dynamic>? appointment,
+  }) {
+    final List<Map<String, dynamic>> editableResults = results
+        .map<Map<String, dynamic>>((item) {
+          final originalTime = item['time']?.toString() ?? '';
+          final session = _sessionLabelForTime(originalTime);
+          return {
+            'nameController': TextEditingController(text: item['name'] ?? ''),
+            'dosageController': TextEditingController(
+              text: item['dosage'] ?? '',
+            ),
+            'frequencyController': TextEditingController(
+              text:
+                  item['frequency']?.toString() ??
+                  item['times_per_day']?.toString() ??
+                  '',
+            ),
+            'time': originalTime.isNotEmpty
+                ? originalTime
+                : _defaultTimeForSession(session),
+            'session': session,
+            'daysController': TextEditingController(
+              text: item['days']?.toString() ?? '',
+            ),
+            'noteController': TextEditingController(
+              text: item['note'] ?? item['instruction'] ?? '',
+            ),
+          };
+        })
+        .toList();
 
-    final Map<String, TextEditingController>? appointmentFields = appointment != null
+    final Map<String, TextEditingController>? appointmentFields =
+        appointment != null
         ? <String, TextEditingController>{
-            'clinicController': TextEditingController(text: appointment['clinic'] ?? ''),
-            'doctorController': TextEditingController(text: appointment['doctor_name'] ?? ''),
-            'addressController': TextEditingController(text: appointment['address'] ?? ''),
-            'phoneController': TextEditingController(text: appointment['phone'] ?? ''),
-            'dateController': TextEditingController(text: appointment['appointment_date'] ?? ''),
-            'timeController': TextEditingController(text: appointment['appointment_time'] ?? ''),
-            'noteController': TextEditingController(text: appointment['note'] ?? ''),
+            'clinicController': TextEditingController(
+              text: appointment['clinic'] ?? '',
+            ),
+            'doctorController': TextEditingController(
+              text: appointment['doctor_name'] ?? '',
+            ),
+            'addressController': TextEditingController(
+              text: appointment['address'] ?? '',
+            ),
+            'phoneController': TextEditingController(
+              text: appointment['phone'] ?? '',
+            ),
+            'dateController': TextEditingController(
+              text: appointment['appointment_date'] ?? '',
+            ),
+            'timeController': TextEditingController(
+              text: appointment['appointment_time'] ?? '',
+            ),
+            'noteController': TextEditingController(
+              text: appointment['note'] ?? '',
+            ),
           }
         : null;
 
@@ -2411,18 +3140,25 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: sessionOptions.map((option) {
-                  final isSelected = editableResults[index]['session'] == option;
+                  final isSelected =
+                      editableResults[index]['session'] == option;
                   return ChoiceChip(
                     label: Text(option),
                     selected: isSelected,
                     selectedColor: const Color(0xFFDCFCE7),
                     backgroundColor: const Color(0xFFF8FAFC),
-                    labelStyle: TextStyle(color: isSelected ? const Color(0xFF047857) : const Color(0xFF475569), fontWeight: FontWeight.w600),
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? const Color(0xFF047857)
+                          : const Color(0xFF475569),
+                      fontWeight: FontWeight.w600,
+                    ),
                     onSelected: (selected) {
                       if (selected) {
                         setStateModal(() {
                           editableResults[index]['session'] = option;
-                          editableResults[index]['time'] = _defaultTimeForSession(option);
+                          editableResults[index]['time'] =
+                              _defaultTimeForSession(option);
                         });
                       }
                     },
@@ -2437,7 +3173,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 elevation: 0,
                 color: const Color(0xFFEFF6FF),
                 margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -2447,8 +3185,15 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: const BoxDecoration(color: Color(0xFFBFDBFE), shape: BoxShape.circle),
-                            child: const Icon(Icons.medication_rounded, color: Color(0xFF1D4ED8), size: 22),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFBFDBFE),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.medication_rounded,
+                              color: Color(0xFF1D4ED8),
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -2456,7 +3201,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               controller: item['nameController'],
                               decoration: const InputDecoration(
                                 labelText: 'Tên thuốc',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -2470,7 +3219,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               controller: item['dosageController'],
                               decoration: const InputDecoration(
                                 labelText: 'Liều lượng mỗi lần',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -2480,7 +3233,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               controller: item['frequencyController'],
                               decoration: const InputDecoration(
                                 labelText: 'Số lần/ngày',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -2491,7 +3248,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         controller: item['daysController'],
                         decoration: const InputDecoration(
                           labelText: 'Số ngày dùng thuốc',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2500,11 +3259,19 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         maxLines: 2,
                         decoration: const InputDecoration(
                           labelText: 'Ghi chú cách dùng',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text('Buổi uống', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                      Text(
+                        'Buổi uống',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       buildSessionChips(index),
                     ],
@@ -2518,15 +3285,27 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 return Card(
                   elevation: 0,
                   color: const Color(0xFFFFFBEB),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
-                        Text('Lịch tái khám', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF92400E))),
+                        Text(
+                          'Lịch tái khám',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
                         SizedBox(height: 10),
-                        Text('Không phát hiện lịch tái khám trong đơn. Bạn có thể thêm sau.', style: TextStyle(color: Color(0xFF7C2D12))),
+                        Text(
+                          'Không phát hiện lịch tái khám trong đơn. Bạn có thể thêm sau.',
+                          style: TextStyle(color: Color(0xFF7C2D12)),
+                        ),
                       ],
                     ),
                   ),
@@ -2536,19 +3315,30 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               return Card(
                 elevation: 0,
                 color: const Color(0xFFFFF7ED),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Lịch tái khám', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF92400E))),
+                      const Text(
+                        'Lịch tái khám',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: appointmentFields['clinicController'],
                         decoration: const InputDecoration(
                           labelText: 'Phòng khám / Bệnh viện',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2556,7 +3346,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         controller: appointmentFields['doctorController'],
                         decoration: const InputDecoration(
                           labelText: 'Bác sĩ',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2564,7 +3356,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         controller: appointmentFields['dateController'],
                         decoration: const InputDecoration(
                           labelText: 'Ngày tái khám',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2572,7 +3366,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         controller: appointmentFields['timeController'],
                         decoration: const InputDecoration(
                           labelText: 'Giờ tái khám',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -2581,7 +3377,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                         maxLines: 2,
                         decoration: const InputDecoration(
                           labelText: 'Ghi chú lịch khám',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                          ),
                         ),
                       ),
                     ],
@@ -2591,13 +3389,29 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             }
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              title: Row(children: [
-                const Icon(Icons.document_scanner_rounded, color: Color(0xFF0F605A)),
-                const SizedBox(width: 10),
-                const Expanded(child: Text('Kết quả quét đơn thuốc', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F605A)))),
-              ]),
+              title: Row(
+                children: [
+                  const Icon(
+                    Icons.document_scanner_rounded,
+                    color: Color(0xFF0F605A),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'Kết quả quét đơn thuốc',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Color(0xFF0F605A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 height: 520,
@@ -2608,7 +3422,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           children: [
                             CircularProgressIndicator(color: Color(0xFF0F605A)),
                             SizedBox(height: 16),
-                            Text('Đang lưu thông tin...', style: TextStyle(fontWeight: FontWeight.w600)),
+                            Text(
+                              'Đang lưu thông tin...',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ],
                         ),
                       )
@@ -2630,19 +3447,34 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 if (!isSaving)
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Hủy', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Hủy',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 if (!isSaving)
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0F605A),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
                     onPressed: () async {
                       if (_selectedElderlyId == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn người cao tuổi trước')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vui lòng chọn người cao tuổi trước'),
+                          ),
+                        );
                         return;
                       }
 
@@ -2652,10 +3484,13 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       for (var item in editableResults) {
                         final name = item['nameController']?.text.trim() ?? '';
                         if (name.isEmpty) continue;
-                        final dosage = item['dosageController']?.text.trim() ?? '';
-                        final instruction = item['noteController']?.text.trim() ?? '';
+                        final dosage =
+                            item['dosageController']?.text.trim() ?? '';
+                        final instruction =
+                            item['noteController']?.text.trim() ?? '';
                         final time = item['time']?.toString() ?? '08:00';
-                        final frequency = item['frequencyController']?.text.trim() ?? '';
+                        final frequency =
+                            item['frequencyController']?.text.trim() ?? '';
 
                         final success = await ApiService.addMedication(
                           elderlyId: _selectedElderlyId!,
@@ -2663,7 +3498,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           dosage: dosage,
                           instruction: instruction,
                           time: time,
-                          frequency: frequency.isNotEmpty ? frequency : 'Hàng ngày',
+                          frequency: frequency.isNotEmpty
+                              ? frequency
+                              : 'Hàng ngày',
                         );
                         if (success) successCount++;
                       }
@@ -2672,11 +3509,31 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       if (appointmentFields != null) {
                         appointmentSaved = await ApiService.createAppointment(
                           elderlyId: _selectedElderlyId!,
-                          doctorName: appointmentFields['doctorController']?.text.trim() ?? '',
-                          location: appointmentFields['clinicController']?.text.trim() ?? '',
-                          appointmentDate: appointmentFields['dateController']?.text.trim() ?? '',
-                          appointmentTime: appointmentFields['timeController']?.text.trim().isNotEmpty == true ? appointmentFields['timeController']?.text.trim() ?? '08:00' : '08:00',
-                          note: appointmentFields['noteController']?.text.trim() ?? '',
+                          doctorName:
+                              appointmentFields['doctorController']?.text
+                                  .trim() ??
+                              '',
+                          location:
+                              appointmentFields['clinicController']?.text
+                                  .trim() ??
+                              '',
+                          appointmentDate:
+                              appointmentFields['dateController']?.text
+                                  .trim() ??
+                              '',
+                          appointmentTime:
+                              appointmentFields['timeController']?.text
+                                      .trim()
+                                      .isNotEmpty ==
+                                  true
+                              ? appointmentFields['timeController']?.text
+                                        .trim() ??
+                                    '08:00'
+                              : '08:00',
+                          note:
+                              appointmentFields['noteController']?.text
+                                  .trim() ??
+                              '',
                         );
                       }
 
@@ -2684,22 +3541,35 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       Navigator.pop(ctx);
 
                       if (successCount == 0 && !appointmentSaved) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Không có dữ liệu hợp lệ để lưu.')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Không có dữ liệu hợp lệ để lưu.'),
+                          ),
+                        );
                       } else {
-                        final apptMsg = appointmentSaved ? ' + Lịch tái khám' : '';
+                        final apptMsg = appointmentSaved
+                            ? ' + Lịch tái khám'
+                            : '';
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             backgroundColor: const Color(0xFF10B981),
-                            content: Text('✓ Đã lưu $successCount thuốc$apptMsg!'),
+                            content: Text(
+                              '✓ Đã lưu $successCount thuốc$apptMsg!',
+                            ),
                             behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         );
                       }
                       _loadElderlyDetails();
                     },
                     icon: const Icon(Icons.save_rounded, size: 20),
-                    label: const Text('Lưu tất cả', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Lưu tất cả',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
               ],
             );
@@ -2715,28 +3585,41 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       children: [
         Icon(icon, size: 15, color: const Color(0xFF92400E)),
         const SizedBox(width: 6),
-        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E))),
-        Expanded(child: Text(value, style: const TextStyle(fontSize: 13, color: Color(0xFF78350F)))),
+        Text(
+          '$label: ',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            color: Color(0xFF92400E),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF78350F)),
+          ),
+        ),
       ],
     );
   }
+
   Future<void> _scanPrescriptionIntoFields({
     required BuildContext context,
-    required TextEditingController nameCtrl,
-    required TextEditingController doseCtrl,
-    required TextEditingController instructionCtrl,
-    required Function(String) onTimeSelected,
+    required Function(List<Map<String, dynamic>>) onSelectionsSelected,
   }) async {
     final ImagePicker picker = ImagePicker();
     XFile? image;
 
     try {
-      image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không thể mở thư viện ảnh: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể mở thư viện ảnh: $e')));
       return;
     }
 
@@ -2762,64 +3645,125 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       Navigator.pop(context);
 
       if (res['error'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(res['error'].toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(res['error'].toString())));
         return;
       }
 
       final medications = (res['medications'] ?? res['results']) as List?;
       if (medications == null || medications.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không tìm thấy thông tin thuốc trong ảnh.')),
+          const SnackBar(
+            content: Text('Không tìm thấy thông tin thuốc trong ảnh.'),
+          ),
         );
         return;
       }
 
-      final selected = await showDialog<Map<String, dynamic>>(
+      final selectedItems = <Map<String, dynamic>>[];
+      final selected = await showDialog<List<Map<String, dynamic>>>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Chọn thuốc từ ảnh', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: medications.length,
-              itemBuilder: (_, index) {
-                final item = medications[index] as Map<String, dynamic>;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    title: Text(item['name'] ?? 'Thuốc không tên', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('${item['dosage'] ?? ''} · ${item['instruction'] ?? ''}'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => Navigator.pop(ctx, item.cast<String, dynamic>()),
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              return AlertDialog(
+                title: const Text(
+                  'Chọn thuốc từ ảnh',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: medications.length,
+                    itemBuilder: (_, index) {
+                      final item = medications[index] as Map<String, dynamic>;
+                      final itemName =
+                          item['name']?.toString() ?? 'Thuốc không tên';
+                      final itemDosage = item['dosage']?.toString() ?? '';
+                      final itemInstruction =
+                          item['instruction']?.toString() ?? '';
+                      final isSelected = selectedItems.any((selectedItem) {
+                        final selectedName =
+                            selectedItem['name']?.toString() ?? '';
+                        final selectedDosage =
+                            selectedItem['dosage']?.toString() ?? '';
+                        return selectedName.toLowerCase() ==
+                                itemName.toLowerCase() &&
+                            selectedDosage.toLowerCase() ==
+                                itemDosage.toLowerCase();
+                      });
+                      return CheckboxListTile(
+                        value: isSelected,
+                        title: Text(
+                          itemName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          itemInstruction.isNotEmpty
+                              ? '$itemDosage · $itemInstruction'
+                              : itemDosage,
+                        ),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            final candidate = item.cast<String, dynamic>();
+                            if (value == true) {
+                              if (!selectedItems.any((selectedItem) {
+                                final selectedName =
+                                    selectedItem['name']?.toString() ?? '';
+                                final selectedDosage =
+                                    selectedItem['dosage']?.toString() ?? '';
+                                return selectedName.toLowerCase() ==
+                                        itemName.toLowerCase() &&
+                                    selectedDosage.toLowerCase() ==
+                                        itemDosage.toLowerCase();
+                              })) {
+                                selectedItems.add(candidate);
+                              }
+                            } else {
+                              selectedItems.removeWhere((selectedItem) {
+                                final selectedName =
+                                    selectedItem['name']?.toString() ?? '';
+                                final selectedDosage =
+                                    selectedItem['dosage']?.toString() ?? '';
+                                return selectedName.toLowerCase() ==
+                                        itemName.toLowerCase() &&
+                                    selectedDosage.toLowerCase() ==
+                                        itemDosage.toLowerCase();
+                              });
+                            }
+                          });
+                        },
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
-          ],
-        ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Hủy'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, selectedItems),
+                    child: const Text('Chọn'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
       );
 
-      if (selected != null) {
-        nameCtrl.text = selected['name']?.toString() ?? '';
-        doseCtrl.text = selected['dosage']?.toString() ?? '';
-        instructionCtrl.text = selected['instruction']?.toString() ?? '';
-        final timeValue = selected['time']?.toString();
-        if (timeValue != null && timeValue.isNotEmpty) {
-          onTimeSelected(timeValue);
-        }
+      if (selected != null && selected.isNotEmpty) {
+        onSelectionsSelected(selected);
       }
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi quét toa thuốc: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi khi quét toa thuốc: $e')));
     }
   }
 
@@ -2832,7 +3776,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   }) {
     final nameCtrl = TextEditingController(text: initialName);
     final doseAmountCtrl = TextEditingController(
-      text: initialDosage != null ? initialDosage.replaceAll(RegExp(r'[^0-9.]'), '') : '',
+      text: initialDosage != null
+          ? initialDosage.replaceAll(RegExp(r'[^0-9.]'), '')
+          : '',
     );
     final remainingCtrl = TextEditingController();
     final scannedInstructionCtrl = TextEditingController();
@@ -2856,12 +3802,19 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     }
     if (initialInstruction != null) {
       final low = initialInstruction.toLowerCase();
-      if (low.contains('trước')) selectedInstruction = 'Trước ăn';
-      else if (low.contains('sau')) selectedInstruction = 'Sau ăn';
-      else if (low.contains('trong')) selectedInstruction = 'Trong bữa ăn';
-      else if (low.contains('ngủ')) selectedInstruction = 'Trước ngủ';
-      else if (low.contains('cần')) selectedInstruction = 'Khi cần';
+      if (low.contains('trước'))
+        selectedInstruction = 'Trước ăn';
+      else if (low.contains('sau'))
+        selectedInstruction = 'Sau ăn';
+      else if (low.contains('trong'))
+        selectedInstruction = 'Trong bữa ăn';
+      else if (low.contains('ngủ'))
+        selectedInstruction = 'Trước ngủ';
+      else if (low.contains('cần'))
+        selectedInstruction = 'Khi cần';
     }
+
+    List<Map<String, dynamic>> scannedSelections = [];
 
     showModalBottomSheet(
       context: context,
@@ -2888,8 +3841,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             );
             if (picked != null) {
               setDlg(() {
-                if (isStart) startDate = picked;
-                else endDate = picked;
+                if (isStart)
+                  startDate = picked;
+                else
+                  endDate = picked;
               });
             }
           }
@@ -2913,7 +3868,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             );
             if (t != null) {
               setDlg(() {
-                final formatted = '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+                final formatted =
+                    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
                 if (!timeSlots.contains(formatted)) {
                   timeSlots.add(formatted);
                 }
@@ -2928,22 +3884,33 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
             setDlg(() {
               if (selectedGroup == 'Khác') {
-                if (normalized.contains('huyết áp') || normalized.contains('amlodipine') || normalized.contains('lisinopril')) {
+                if (normalized.contains('huyết áp') ||
+                    normalized.contains('amlodipine') ||
+                    normalized.contains('lisinopril')) {
                   selectedGroup = 'Huyết áp';
-                } else if (normalized.contains('đường') || normalized.contains('metformin') || normalized.contains('glipizide')) {
+                } else if (normalized.contains('đường') ||
+                    normalized.contains('metformin') ||
+                    normalized.contains('glipizide')) {
                   selectedGroup = 'Tiểu đường';
-                } else if (normalized.contains('tim') || normalized.contains('mạch') || normalized.contains('atorvastatin')) {
+                } else if (normalized.contains('tim') ||
+                    normalized.contains('mạch') ||
+                    normalized.contains('atorvastatin')) {
                   selectedGroup = 'Tim mạch';
-                } else if (normalized.contains('vitamin') || normalized.contains('d3')) {
+                } else if (normalized.contains('vitamin') ||
+                    normalized.contains('d3')) {
                   selectedGroup = 'Vitamin';
                 }
               }
 
               if (doseAmountCtrl.text.trim().isEmpty) {
-                final dosageMatch = RegExp(r'(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|iu)').firstMatch(normalized);
+                final dosageMatch = RegExp(
+                  r'(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|iu)',
+                ).firstMatch(normalized);
                 if (dosageMatch != null) {
                   doseAmountCtrl.text = dosageMatch.group(1)!;
-                } else if (normalized.contains('viên') || normalized.contains('tablet') || normalized.contains('capsule')) {
+                } else if (normalized.contains('viên') ||
+                    normalized.contains('tablet') ||
+                    normalized.contains('capsule')) {
                   doseAmountCtrl.text = '1';
                 }
               }
@@ -2972,14 +3939,29 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
           Widget fieldLabel(String text) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF374151))),
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF374151),
+              ),
+            ),
           );
 
-          final instructions = ['Trước ăn', 'Sau ăn', 'Trong bữa ăn', 'Khi cần', 'Trước ngủ'];
+          final instructions = [
+            'Trước ăn',
+            'Sau ăn',
+            'Trong bữa ăn',
+            'Khi cần',
+            'Trước ngủ',
+          ];
           final doseUnits = ['viên', 'gói', 'ml', 'mg', 'lần'];
 
           return ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.9,
+            ),
             child: Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -2993,7 +3975,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       width: 44,
                       height: 4,
                       margin: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                   Padding(
@@ -3006,15 +3991,32 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                             color: const Color(0xFFE0F2FE),
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.add_circle_rounded, color: Color(0xFF2563EB), size: 22),
+                          child: const Icon(
+                            Icons.add_circle_rounded,
+                            color: Color(0xFF2563EB),
+                            size: 22,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
-                              Text('Thêm lịch uống', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                              Text('Nhập nhanh, ít thao tác', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+                              Text(
+                                'Thêm lịch uống',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                              Text(
+                                'Nhập nhanh, ít thao tác',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -3022,30 +4024,51 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           onTap: () async {
                             await _scanPrescriptionIntoFields(
                               context: ctx,
-                              nameCtrl: nameCtrl,
-                              doseCtrl: doseAmountCtrl,
-                              instructionCtrl: scannedInstructionCtrl,
-                              onTimeSelected: (value) => setDlg(() {
-                                if (!timeSlots.contains(value)) {
-                                  timeSlots.add(value);
+                              onSelectionsSelected: (selected) => setDlg(() {
+                                scannedSelections = selected;
+                                if (selected.isNotEmpty) {
+                                  final first = selected.first;
+                                  final firstName =
+                                      first['name']?.toString().trim() ?? '';
+                                  if (firstName.isNotEmpty) {
+                                    nameCtrl.text = firstName;
+                                  }
+                                  final dosageValue =
+                                      first['dosage']?.toString() ?? '';
+                                  if (dosageValue.isNotEmpty) {
+                                    final doseMatch = RegExp(
+                                      r'(\d+(?:\.\d+)?)',
+                                    ).firstMatch(dosageValue);
+                                    if (doseMatch != null) {
+                                      doseAmountCtrl.text = doseMatch.group(1)!;
+                                    }
+                                  }
+                                  final instructionValue =
+                                      first['instruction']?.toString() ?? '';
+                                  if (instructionValue.isNotEmpty) {
+                                    scannedInstructionCtrl.text =
+                                        instructionValue;
+                                    final lower = instructionValue
+                                        .toLowerCase();
+                                    if (lower.contains('trước')) {
+                                      selectedInstruction = 'Trước ăn';
+                                    } else if (lower.contains('sau')) {
+                                      selectedInstruction = 'Sau ăn';
+                                    } else if (lower.contains('ngủ')) {
+                                      selectedInstruction = 'Trước ngủ';
+                                    } else if (lower.contains('cần')) {
+                                      selectedInstruction = 'Khi cần';
+                                    }
+                                  }
+                                  final timeValue =
+                                      first['time']?.toString() ?? '';
+                                  if (timeValue.isNotEmpty) {
+                                    timeSlots = [timeValue];
+                                    selectedTime = timeValue;
+                                  }
                                 }
-                                selectedTime = value;
                               }),
                             );
-                            if (scannedInstructionCtrl.text.isNotEmpty) {
-                              final instructionText = scannedInstructionCtrl.text.toLowerCase();
-                              setDlg(() {
-                                if (instructionText.contains('trước')) {
-                                  selectedInstruction = 'Trước ăn';
-                                } else if (instructionText.contains('sau')) {
-                                  selectedInstruction = 'Sau ăn';
-                                } else if (instructionText.contains('ngủ')) {
-                                  selectedInstruction = 'Trước ngủ';
-                                } else if (instructionText.contains('cần')) {
-                                  selectedInstruction = 'Khi cần';
-                                }
-                              });
-                            }
                             applySuggestions(nameCtrl.text);
                           },
                           child: Container(
@@ -3055,7 +4078,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Icon(Icons.document_scanner_rounded, color: Color(0xFF2563EB), size: 20),
+                            child: const Icon(
+                              Icons.document_scanner_rounded,
+                              color: Color(0xFF2563EB),
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
@@ -3071,9 +4098,47 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           children: [
                             Text(
                               'Chỉ nhập những gì thật cần để bắt đầu ngay.',
-                              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                             const SizedBox(height: 16),
+                            if (scannedSelections.isNotEmpty)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0F2FE),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Đã chọn ${scannedSelections.length} thuốc từ ảnh',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F766E),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      scannedSelections
+                                          .map(
+                                            (item) =>
+                                                item['name']?.toString() ??
+                                                'Thuốc không tên',
+                                          )
+                                          .join(', '),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             fieldLabel('Tên thuốc *'),
                             TextField(
                               controller: nameCtrl,
@@ -3081,12 +4146,37 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               onChanged: applySuggestions,
                               decoration: InputDecoration(
                                 hintText: 'VD: Amlodipine 5mg',
-                                hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-                                prefixIcon: const Icon(Icons.medication_rounded, color: Color(0xFF2563EB), size: 20),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                hintStyle: const TextStyle(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.medication_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 20,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF2563EB),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -3099,12 +4189,38 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                     keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       hintText: 'VD: 1',
-                                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-                                      prefixIcon: const Icon(Icons.medication_liquid_rounded, color: Color(0xFF2563EB), size: 20),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      hintStyle: const TextStyle(
+                                        color: Color(0xFFCBD5E1),
+                                      ),
+                                      prefixIcon: const Icon(
+                                        Icons.medication_liquid_rounded,
+                                        color: Color(0xFF2563EB),
+                                        size: 20,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF2563EB),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 14,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -3117,13 +4233,43 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                     decoration: InputDecoration(
                                       filled: true,
                                       fillColor: const Color(0xFFF8FAFC),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 14,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF2563EB),
+                                          width: 1.5,
+                                        ),
+                                      ),
                                     ),
-                                    items: doseUnits.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
-                                    onChanged: (value) => setDlg(() => selectedDoseUnit = value ?? selectedDoseUnit),
+                                    items: doseUnits
+                                        .map(
+                                          (unit) => DropdownMenuItem(
+                                            value: unit,
+                                            child: Text(unit),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (value) => setDlg(
+                                      () => selectedDoseUnit =
+                                          value ?? selectedDoseUnit,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -3136,7 +4282,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                 GestureDetector(
                                   onTap: pickTime,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFEFF6FF),
                                       borderRadius: BorderRadius.circular(10),
@@ -3144,9 +4293,20 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.add, color: Color(0xFF2563EB), size: 15),
+                                        Icon(
+                                          Icons.add,
+                                          color: Color(0xFF2563EB),
+                                          size: 15,
+                                        ),
                                         SizedBox(width: 4),
-                                        Text('Thêm giờ', style: TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.bold)),
+                                        Text(
+                                          'Thêm giờ',
+                                          style: TextStyle(
+                                            color: Color(0xFF2563EB),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -3159,20 +4319,46 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               children: timeSlots.map((slot) {
                                 final isSelected = selectedTime == slot;
                                 return GestureDetector(
-                                  onTap: () => setDlg(() => selectedTime = slot),
+                                  onTap: () =>
+                                      setDlg(() => selectedTime = slot),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 9,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                                      color: isSelected
+                                          ? const Color(0xFFEFF6FF)
+                                          : const Color(0xFFF8FAFC),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0), width: isSelected ? 1.5 : 1),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFF2563EB)
+                                            : const Color(0xFFE2E8F0),
+                                        width: isSelected ? 1.5 : 1,
+                                      ),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.access_time_rounded, size: 15, color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+                                        Icon(
+                                          Icons.access_time_rounded,
+                                          size: 15,
+                                          color: isSelected
+                                              ? const Color(0xFF2563EB)
+                                              : const Color(0xFF64748B),
+                                        ),
                                         const SizedBox(width: 6),
-                                        Text(slot, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569))),
+                                        Text(
+                                          slot,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: isSelected
+                                                ? const Color(0xFF2563EB)
+                                                : const Color(0xFF475569),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -3187,36 +4373,89 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: const Color(0xFFF8FAFC),
-                                prefixIcon: const Icon(Icons.restaurant_rounded, color: Color(0xFF2563EB), size: 20),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                prefixIcon: const Icon(
+                                  Icons.restaurant_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 20,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF2563EB),
+                                    width: 1.5,
+                                  ),
+                                ),
                               ),
-                              items: instructions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
-                              onChanged: (value) => setDlg(() => selectedInstruction = value ?? selectedInstruction),
+                              items: instructions
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(value),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) => setDlg(
+                                () => selectedInstruction =
+                                    value ?? selectedInstruction,
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       fieldLabel('Ngày bắt đầu'),
                                       GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
                                         onTap: () => pickDate(true),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 13,
+                                          ),
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: const Color(0xFFE2E8F0),
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                           ),
                                           child: Row(
                                             children: [
-                                              const Icon(Icons.calendar_today_rounded, color: Color(0xFF2563EB), size: 16),
+                                              const Icon(
+                                                Icons.calendar_today_rounded,
+                                                color: Color(0xFF2563EB),
+                                                size: 16,
+                                              ),
                                               const SizedBox(width: 8),
-                                              Text('${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                                              Text(
+                                                '${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year}',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF1E293B),
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -3227,22 +4466,42 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       fieldLabel('Ngày kết thúc'),
                                       GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
                                         onTap: () => pickDate(false),
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 13,
+                                          ),
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                                            borderRadius: BorderRadius.circular(14),
+                                            border: Border.all(
+                                              color: const Color(0xFFE2E8F0),
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                           ),
                                           child: Row(
                                             children: [
-                                              const Icon(Icons.calendar_today_rounded, color: Color(0xFF64748B), size: 16),
+                                              const Icon(
+                                                Icons.calendar_today_rounded,
+                                                color: Color(0xFF64748B),
+                                                size: 16,
+                                              ),
                                               const SizedBox(width: 8),
-                                              Text('${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                                              Text(
+                                                '${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF1E293B),
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -3259,12 +4518,37 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 hintText: 'VD: 30',
-                                hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-                                prefixIcon: const Icon(Icons.inventory_2_rounded, color: Color(0xFF64748B), size: 20),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                hintStyle: const TextStyle(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.inventory_2_rounded,
+                                  color: Color(0xFF64748B),
+                                  size: 20,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF2563EB),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -3275,14 +4559,53 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: const Color(0xFFF8FAFC),
-                                prefixIcon: const Icon(Icons.category_rounded, color: Color(0xFF2563EB), size: 20),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                prefixIcon: const Icon(
+                                  Icons.category_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 20,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFE2E8F0),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF2563EB),
+                                    width: 1.5,
+                                  ),
+                                ),
                               ),
-                              items: ['Khác', 'Huyết áp', 'Tiểu đường', 'Tim mạch', 'Vitamin'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
-                              onChanged: (value) => setDlg(() => selectedGroup = value ?? selectedGroup),
+                              items:
+                                  [
+                                        'Khác',
+                                        'Huyết áp',
+                                        'Tiểu đường',
+                                        'Tim mạch',
+                                        'Vitamin',
+                                      ]
+                                      .map(
+                                        (value) => DropdownMenuItem(
+                                          value: value,
+                                          child: Text(value),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (value) => setDlg(
+                                () => selectedGroup = value ?? selectedGroup,
+                              ),
                             ),
                             const SizedBox(height: 24),
                           ],
@@ -3294,7 +4617,13 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      boxShadow: [BoxShadow(color: Color(0x11000000), blurRadius: 16, offset: Offset(0, -4))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x11000000),
+                          blurRadius: 16,
+                          offset: Offset(0, -4),
+                        ),
+                      ],
                     ),
                     child: SafeArea(
                       top: false,
@@ -3305,82 +4634,162 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             elevation: 0,
                           ),
-                          onPressed: isSubmitting ? null : () async {
-                            final name = nameCtrl.text.trim();
-                            if (name.isEmpty) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                const SnackBar(content: Text('Vui lòng nhập tên thuốc'), backgroundColor: Colors.red),
-                              );
-                              return;
-                            }
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  final name = nameCtrl.text.trim();
+                                  if (name.isEmpty) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Vui lòng nhập tên thuốc',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
 
-                            setDlg(() => isSubmitting = true);
-                            final dosageStr = doseAmountCtrl.text.trim().isNotEmpty
-                                ? '${doseAmountCtrl.text.trim()} $selectedDoseUnit'
-                                : selectedDoseUnit;
-                            final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
-                            final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
-                            final description = remainingCtrl.text.trim().isNotEmpty
-                                ? 'Nhóm: $selectedGroup · Còn lại: ${remainingCtrl.text.trim()}'
-                                : 'Nhóm: $selectedGroup';
+                                  setDlg(() => isSubmitting = true);
+                                  final dosageStr =
+                                      doseAmountCtrl.text.trim().isNotEmpty
+                                      ? '${doseAmountCtrl.text.trim()} $selectedDoseUnit'
+                                      : selectedDoseUnit;
+                                  final startStr =
+                                      '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+                                  final endStr =
+                                      '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+                                  final description =
+                                      remainingCtrl.text.trim().isNotEmpty
+                                      ? 'Nhóm: $selectedGroup · Còn lại: ${remainingCtrl.text.trim()}'
+                                      : 'Nhóm: $selectedGroup';
 
-                            bool ok = false;
-                            if (editScheduleId != null) {
-                              ok = await ApiService.updateMedication(
-                                scheduleId: editScheduleId,
-                                name: name,
-                                dosage: dosageStr,
-                                instruction: selectedInstruction,
-                                time: selectedTime,
-                                frequency: timeSlots.length > 1 ? '${timeSlots.length} lần/ngày' : 'Hàng ngày',
-                                description: description,
-                                startDate: startStr,
-                                endDate: endStr,
-                              );
-                            } else {
-                              for (final slot in timeSlots) {
-                                final success = await ApiService.addMedication(
-                                  elderlyId: _selectedElderlyId!,
-                                  name: name,
-                                  dosage: dosageStr,
-                                  instruction: selectedInstruction,
-                                  time: slot,
-                                  frequency: timeSlots.length > 1 ? '${timeSlots.length} lần/ngày' : 'Hàng ngày',
-                                  description: description,
-                                  startDate: startStr,
-                                  endDate: endStr,
-                                );
-                                if (success) ok = true;
-                              }
-                            }
+                                  bool ok = false;
+                                  if (editScheduleId != null) {
+                                    ok = await ApiService.updateMedication(
+                                      scheduleId: editScheduleId,
+                                      name: name,
+                                      dosage: dosageStr,
+                                      instruction: selectedInstruction,
+                                      time: selectedTime,
+                                      frequency: timeSlots.length > 1
+                                          ? '${timeSlots.length} lần/ngày'
+                                          : 'Hàng ngày',
+                                      description: description,
+                                      startDate: startStr,
+                                      endDate: endStr,
+                                    );
+                                  } else {
+                                    final medicationsToSave =
+                                        scannedSelections.isNotEmpty
+                                        ? scannedSelections
+                                        : <Map<String, dynamic>>[
+                                            {
+                                              'name': name,
+                                              'dosage': dosageStr,
+                                              'instruction':
+                                                  selectedInstruction,
+                                              'time': selectedTime,
+                                            },
+                                          ];
 
-                            if (mounted) {
-                              Navigator.pop(ctx);
-                              if (ok) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: const Color(0xFF10B981),
-                                    content: Text(editScheduleId != null ? '✓ Cập nhật thuốc thành công!' : '✓ Đã thêm thuốc thành công!'),
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                );
-                                _loadElderlyDetails();
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Lỗi khi lưu thuốc. Vui lòng thử lại.')),
-                                );
-                              }
-                            }
-                          },
+                                    for (final scannedItem
+                                        in medicationsToSave) {
+                                      final itemName =
+                                          (scannedItem['name'] ?? name)
+                                              .toString()
+                                              .trim();
+                                      if (itemName.isEmpty) continue;
+                                      final itemDosage =
+                                          (scannedItem['dosage'] ?? dosageStr)
+                                              .toString()
+                                              .trim();
+                                      final itemInstruction =
+                                          (scannedItem['instruction'] ??
+                                                  selectedInstruction)
+                                              .toString()
+                                              .trim();
+                                      final itemTime =
+                                          (scannedItem['time'] ?? selectedTime)
+                                              .toString()
+                                              .trim();
+                                      final success =
+                                          await ApiService.addMedication(
+                                            elderlyId: _selectedElderlyId!,
+                                            name: itemName,
+                                            dosage: itemDosage,
+                                            instruction: itemInstruction,
+                                            time: itemTime,
+                                            frequency: timeSlots.length > 1
+                                                ? '${timeSlots.length} lần/ngày'
+                                                : 'Hàng ngày',
+                                            description: description,
+                                            startDate: startStr,
+                                            endDate: endStr,
+                                          );
+                                      if (success) ok = true;
+                                    }
+                                  }
+
+                                  if (mounted) {
+                                    Navigator.pop(ctx);
+                                    if (ok) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: const Color(
+                                            0xFF10B981,
+                                          ),
+                                          content: Text(
+                                            editScheduleId != null
+                                                ? '✓ Cập nhật thuốc thành công!'
+                                                : '✓ Đã thêm thuốc thành công!',
+                                          ),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                      _loadElderlyDetails();
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Lỗi khi lưu thuốc. Vui lòng thử lại.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
                           child: isSubmitting
-                              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
                               : Text(
-                                  editScheduleId != null ? 'Lưu thay đổi' : 'Lưu lịch uống',
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                  editScheduleId != null
+                                      ? 'Lưu thay đổi'
+                                      : 'Lưu lịch uống',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                         ),
                       ),
@@ -3397,7 +4806,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
   void _showEditDeleteMedicationDialog(dynamic schedule) {
     final med = schedule['medication'] ?? {};
-    
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -3416,7 +4825,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           children: [
             Text(
               '${med['name'] ?? 'Thuốc'} — ${schedule['time']}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -3427,10 +4840,20 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.edit_rounded, color: Color(0xFF0284C7), size: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  color: Color(0xFF0284C7),
+                  size: 20,
+                ),
               ),
-              title: const Text('Chỉnh sửa lịch uống', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: const Text(
+                'Chỉnh sửa lịch uống',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 final scheduleId = schedule['schedule_id'] ?? schedule['id'];
@@ -3439,26 +4862,47 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   initialDosage: med['dosage'],
                   initialInstruction: med['instruction'],
                   initialTime: schedule['time'],
-                  editScheduleId: scheduleId != null ? int.tryParse(scheduleId.toString()) : null,
+                  editScheduleId: scheduleId != null
+                      ? int.tryParse(scheduleId.toString())
+                      : null,
                 );
               },
             ),
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: const Color(0xFFFFE4E6), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.delete_rounded, color: Color(0xFFDC2626), size: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE4E6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.delete_rounded,
+                  color: Color(0xFFDC2626),
+                  size: 20,
+                ),
               ),
-              title: const Text('Xóa lịch uống thuốc', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFDC2626))),
+              title: const Text(
+                'Xóa lịch uống thuốc',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
               onTap: () async {
-                final ok = await ApiService.deleteMedication(schedule['schedule_id']);
+                final ok = await ApiService.deleteMedication(
+                  schedule['schedule_id'],
+                );
                 if (mounted) {
                   Navigator.pop(ctx);
                   if (ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa thành công.')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã xóa thành công.')),
+                    );
                     _loadElderlyDetails();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi xóa.')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Lỗi khi xóa.')),
+                    );
                   }
                 }
               },
@@ -3511,9 +4955,7 @@ class _GenderButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF7C3AED)
-              : const Color(0xFFF8FAFC),
+          color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
-import 'screens/medicine_management_screen.dart';
-import 'screens/history_screen.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/profile_screen.dart';
+import 'screens/caregiver/medicine_management_screen.dart';
+import 'screens/caregiver/history_screen.dart';
+import 'screens/caregiver/dashboard_screen.dart';
+import 'screens/caregiver/profile_screen.dart';
 import 'screens/login_screen.dart';
 import 'utils/alarm_service.dart';
 import 'package:timezone/timezone.dart' as tz;

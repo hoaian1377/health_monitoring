@@ -8,7 +8,7 @@ import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform;
 import 'package:qr_flutter/qr_flutter.dart';
-import '../utils/api_service.dart';
+import '../../utils/api_service.dart';
 
 class AddElderlyScreen extends StatefulWidget {
   const AddElderlyScreen({super.key});
