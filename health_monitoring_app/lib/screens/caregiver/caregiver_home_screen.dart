@@ -2835,8 +2835,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       text: initialDosage != null ? initialDosage.replaceAll(RegExp(r'[^0-9.]'), '') : '',
     );
     final remainingCtrl = TextEditingController();
-    
-    // Parse existing values
+    final scannedInstructionCtrl = TextEditingController();
+
     String selectedGroup = 'Khác';
     String selectedInstruction = 'Sau ăn';
     String selectedDoseUnit = 'viên';
@@ -2844,17 +2844,16 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 30));
     List<String> timeSlots = [initialTime ?? '08:00'];
+    bool isSubmitting = false;
 
-    // Parse initial dosage unit
     if (initialDosage != null) {
-      for (final u in ['viên', 'gói', 'ml', 'mg', 'lần']) {
-        if (initialDosage.toLowerCase().contains(u)) {
-          selectedDoseUnit = u;
+      for (final unit in ['viên', 'gói', 'ml', 'mg', 'lần']) {
+        if (initialDosage.toLowerCase().contains(unit)) {
+          selectedDoseUnit = unit;
           break;
         }
       }
     }
-    // Parse initial instruction
     if (initialInstruction != null) {
       final low = initialInstruction.toLowerCase();
       if (low.contains('trước')) selectedInstruction = 'Trước ăn';
@@ -2863,8 +2862,6 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       else if (low.contains('ngủ')) selectedInstruction = 'Trước ngủ';
       else if (low.contains('cần')) selectedInstruction = 'Khi cần';
     }
-
-    bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
@@ -2882,7 +2879,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               builder: (c, child) => Theme(
                 data: Theme.of(c).copyWith(
                   colorScheme: const ColorScheme.light(
-                    primary: Color(0xFF0EA5E9),
+                    primary: Color(0xFF2563EB),
                     onPrimary: Colors.white,
                   ),
                 ),
@@ -2907,7 +2904,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               builder: (c, child) => Theme(
                 data: Theme.of(c).copyWith(
                   colorScheme: const ColorScheme.light(
-                    primary: Color(0xFF0EA5E9),
+                    primary: Color(0xFF2563EB),
                     onPrimary: Colors.white,
                   ),
                 ),
@@ -2925,464 +2922,468 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             }
           }
 
-          final groups = [
-            {'label': 'Huyết áp', 'icon': Icons.favorite_rounded, 'color': const Color(0xFFEF4444)},
-            {'label': 'Tiểu đường', 'icon': Icons.water_drop_rounded, 'color': const Color(0xFF3B82F6)},
-            {'label': 'Tim mạch', 'icon': Icons.monitor_heart_rounded, 'color': const Color(0xFFEC4899)},
-            {'label': 'Vitamin', 'icon': Icons.spa_rounded, 'color': const Color(0xFF10B981)},
-            {'label': 'Khác', 'icon': Icons.medication_rounded, 'color': const Color(0xFF6366F1)},
-          ];
-          final instructions = ['Trước ăn', 'Sau ăn', 'Trong bữa ăn', 'Khi cần', 'Trước ngủ'];
-          final doseUnits = ['viên', 'gói', 'ml', 'mg', 'lần'];
+          void applySuggestions(String value) {
+            final normalized = value.trim().toLowerCase();
+            if (normalized.isEmpty) return;
 
-          Widget sectionLabel(String text) => Padding(
+            setDlg(() {
+              if (selectedGroup == 'Khác') {
+                if (normalized.contains('huyết áp') || normalized.contains('amlodipine') || normalized.contains('lisinopril')) {
+                  selectedGroup = 'Huyết áp';
+                } else if (normalized.contains('đường') || normalized.contains('metformin') || normalized.contains('glipizide')) {
+                  selectedGroup = 'Tiểu đường';
+                } else if (normalized.contains('tim') || normalized.contains('mạch') || normalized.contains('atorvastatin')) {
+                  selectedGroup = 'Tim mạch';
+                } else if (normalized.contains('vitamin') || normalized.contains('d3')) {
+                  selectedGroup = 'Vitamin';
+                }
+              }
+
+              if (doseAmountCtrl.text.trim().isEmpty) {
+                final dosageMatch = RegExp(r'(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|iu)').firstMatch(normalized);
+                if (dosageMatch != null) {
+                  doseAmountCtrl.text = dosageMatch.group(1)!;
+                } else if (normalized.contains('viên') || normalized.contains('tablet') || normalized.contains('capsule')) {
+                  doseAmountCtrl.text = '1';
+                }
+              }
+
+              if (normalized.contains('trước ăn')) {
+                selectedInstruction = 'Trước ăn';
+              } else if (normalized.contains('sau ăn')) {
+                selectedInstruction = 'Sau ăn';
+              } else if (normalized.contains('trong bữa ăn')) {
+                selectedInstruction = 'Trong bữa ăn';
+              } else if (normalized.contains('ngủ')) {
+                selectedInstruction = 'Trước ngủ';
+              } else if (normalized.contains('khi cần')) {
+                selectedInstruction = 'Khi cần';
+              }
+
+              if (normalized.contains('ml')) {
+                selectedDoseUnit = 'ml';
+              } else if (normalized.contains('gói')) {
+                selectedDoseUnit = 'gói';
+              } else if (normalized.contains('ống')) {
+                selectedDoseUnit = 'ống';
+              }
+            });
+          }
+
+          Widget fieldLabel(String text) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF374151))),
           );
 
-          return Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: EdgeInsets.only(
-              left: 20, right: 20, top: 8,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-            ),
-            child: SingleChildScrollView(
+          final instructions = ['Trước ăn', 'Sau ăn', 'Trong bữa ăn', 'Khi cần', 'Trước ngủ'];
+          final doseUnits = ['viên', 'gói', 'ml', 'mg', 'lần'];
+
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.9),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Handle bar
                   Center(
                     child: Container(
-                      width: 44, height: 4,
+                      width: 44,
+                      height: 4,
                       margin: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
                     ),
                   ),
-                  // Title
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE0F2FE),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Icon(Icons.add_circle_rounded, color: Color(0xFF0EA5E9), size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Thêm thuốc mới', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                            Text('Thiết lập lịch uống thuốc', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                          ],
-                        ),
-                      ),
-                      // OCR scan button
-                      GestureDetector(
-                        onTap: () {
-                          _scanPrescriptionIntoFields(
-                            context: ctx,
-                            nameCtrl: nameCtrl,
-                            doseCtrl: doseAmountCtrl,
-                            instructionCtrl: TextEditingController(),
-                            onTimeSelected: (v) => setDlg(() {
-                              if (!timeSlots.contains(v)) timeSlots.add(v);
-                              selectedTime = v;
-                            }),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF3E8FF),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.document_scanner_rounded, color: Color(0xFF7C3AED), size: 16),
-                              SizedBox(width: 4),
-                              Text('Quét', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 12, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Tên thuốc
-                  sectionLabel('Tên thuốc *'),
-                  TextField(
-                    controller: nameCtrl,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      hintText: 'VD: Amlodipine 5mg',
-                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-                      prefixIcon: const Icon(Icons.medication_rounded, color: Color(0xFF0EA5E9), size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Nhóm thuốc
-                  sectionLabel('Nhóm thuốc'),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: groups.map((g) {
-                      final label = g['label'] as String;
-                      final icon = g['icon'] as IconData;
-                      final color = g['color'] as Color;
-                      final isSelected = selectedGroup == label;
-                      return GestureDetector(
-                        onTap: () => setDlg(() => selectedGroup = label),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? color.withValues(alpha: 0.12) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? color : const Color(0xFFE2E8F0),
-                              width: isSelected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(icon, color: isSelected ? color : const Color(0xFF94A3B8), size: 14),
-                              const SizedBox(width: 6),
-                              Text(
-                                label,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                  color: isSelected ? color : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Liều lượng + Đơn vị
-                  sectionLabel('Liều lượng'),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextField(
-                          controller: doseAmountCtrl,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: 'VD: 1 viên',
-                            hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-                            prefixIcon: const Icon(Icons.medication_liquid_rounded, color: Color(0xFF0EA5E9), size: 20),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 2,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedDoseUnit,
-                              isExpanded: true,
-                              isDense: true,
-                              items: doseUnits.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 14)))).toList(),
-                              onChanged: (v) => setDlg(() => selectedDoseUnit = v ?? selectedDoseUnit),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Cách dùng
-                  sectionLabel('Cách dùng'),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: instructions.map((ins) {
-                      final isSelected = selectedInstruction == ins;
-                      return GestureDetector(
-                        onTap: () => setDlg(() => selectedInstruction = ins),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          child: Text(
-                            ins,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected ? Colors.white : const Color(0xFF64748B),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Giờ uống
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      sectionLabel('Giờ uống'),
-                      GestureDetector(
-                        onTap: pickTime,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE0F2FE),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.add, color: Color(0xFF0EA5E9), size: 14),
-                              SizedBox(width: 4),
-                              Text('Thêm giờ', style: TextStyle(color: Color(0xFF0EA5E9), fontSize: 12, fontWeight: FontWeight.bold)),
+                          child: const Icon(Icons.add_circle_rounded, color: Color(0xFF2563EB), size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text('Thêm lịch uống', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                              Text('Nhập nhanh, ít thao tác', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: timeSlots.map((slot) {
-                      final isSelected = selectedTime == slot;
-                      return GestureDetector(
-                        onTap: () => setDlg(() => selectedTime = slot),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0),
-                              width: isSelected ? 1.5 : 1,
+                        GestureDetector(
+                          onTap: () async {
+                            await _scanPrescriptionIntoFields(
+                              context: ctx,
+                              nameCtrl: nameCtrl,
+                              doseCtrl: doseAmountCtrl,
+                              instructionCtrl: scannedInstructionCtrl,
+                              onTimeSelected: (value) => setDlg(() {
+                                if (!timeSlots.contains(value)) {
+                                  timeSlots.add(value);
+                                }
+                                selectedTime = value;
+                              }),
+                            );
+                            if (scannedInstructionCtrl.text.isNotEmpty) {
+                              final instructionText = scannedInstructionCtrl.text.toLowerCase();
+                              setDlg(() {
+                                if (instructionText.contains('trước')) {
+                                  selectedInstruction = 'Trước ăn';
+                                } else if (instructionText.contains('sau')) {
+                                  selectedInstruction = 'Sau ăn';
+                                } else if (instructionText.contains('ngủ')) {
+                                  selectedInstruction = 'Trước ngủ';
+                                } else if (instructionText.contains('cần')) {
+                                  selectedInstruction = 'Khi cần';
+                                }
+                              });
+                            }
+                            applySuggestions(nameCtrl.text);
+                          },
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(14),
                             ),
+                            child: const Icon(Icons.document_scanner_rounded, color: Color(0xFF2563EB), size: 20),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.access_time_rounded,
-                                color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF94A3B8),
-                                size: 15,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                slot,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF475569),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Ngày bắt đầu / Ngày kết thúc
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            sectionLabel('Ngày bắt đầu'),
-                            GestureDetector(
-                              onTap: () => pickDate(true),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_rounded, color: Color(0xFF0EA5E9), size: 16),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${startDate.day.toString().padLeft(2,'0')}/${startDate.month.toString().padLeft(2,'0')}/${startDate.year}',
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            sectionLabel('Ngày kết thúc'),
-                            GestureDetector(
-                              onTap: () => pickDate(false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_rounded, color: Color(0xFF64748B), size: 16),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '${endDate.day.toString().padLeft(2,'0')}/${endDate.month.toString().padLeft(2,'0')}/${endDate.year}',
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Số viên còn lại
-                  sectionLabel('Số viên còn lại (tùy chọn)'),
-                  TextField(
-                    controller: remainingCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: 'VD: 30',
-                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-                      prefixIcon: const Icon(Icons.inventory_2_rounded, color: Color(0xFF64748B), size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Submit
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0EA5E9),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      onPressed: isSubmitting ? null : () async {
-                        final name = nameCtrl.text.trim();
-                        if (name.isEmpty) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(content: Text('Vui lòng nhập tên thuốc'), backgroundColor: Colors.red),
-                          );
-                          return;
-                        }
-                        setDlg(() => isSubmitting = true);
-                        final dosageStr = doseAmountCtrl.text.trim().isNotEmpty
-                            ? '${doseAmountCtrl.text.trim()} $selectedDoseUnit'
-                            : selectedDoseUnit;
-                        final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2,'0')}-${startDate.day.toString().padLeft(2,'0')}';
-                        final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2,'0')}-${endDate.day.toString().padLeft(2,'0')}';
-                        final description = 'Nhóm: $selectedGroup';
-
-                        bool ok;
-                        if (editScheduleId != null) {
-                          ok = await ApiService.updateMedication(
-                            scheduleId: editScheduleId,
-                            name: name,
-                            dosage: dosageStr,
-                            instruction: selectedInstruction,
-                            time: selectedTime,
-                            frequency: 'Hàng ngày',
-                            description: description,
-                            startDate: startStr,
-                            endDate: endStr,
-                          );
-                        } else {
-                          ok = await ApiService.addMedication(
-                            elderlyId: _selectedElderlyId!,
-                            name: name,
-                            dosage: dosageStr,
-                            instruction: selectedInstruction,
-                            time: selectedTime,
-                            frequency: 'Hàng ngày',
-                            description: description,
-                            startDate: startStr,
-                            endDate: endStr,
-                          );
-                        }
-                        if (mounted) {
-                          Navigator.pop(ctx);
-                          if (ok) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: const Color(0xFF10B981),
-                                content: Text(editScheduleId != null ? '✓ Cập nhật thuốc thành công!' : '✓ Đã thêm thuốc thành công!'),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                            _loadElderlyDetails();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Lỗi khi lưu thuốc. Vui lòng thử lại.')),
-                            );
-                          }
-                        }
-                      },
-                      child: isSubmitting
-                          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                          : Text(
-                              editScheduleId != null ? 'Cập nhật thuốc' : 'Lưu thuốc',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chỉ nhập những gì thật cần để bắt đầu ngay.',
+                              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                             ),
+                            const SizedBox(height: 16),
+                            fieldLabel('Tên thuốc *'),
+                            TextField(
+                              controller: nameCtrl,
+                              textCapitalization: TextCapitalization.words,
+                              onChanged: applySuggestions,
+                              decoration: InputDecoration(
+                                hintText: 'VD: Amlodipine 5mg',
+                                hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                                prefixIcon: const Icon(Icons.medication_rounded, color: Color(0xFF2563EB), size: 20),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            fieldLabel('Liều lượng'),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: doseAmountCtrl,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      hintText: 'VD: 1',
+                                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                                      prefixIcon: const Icon(Icons.medication_liquid_rounded, color: Color(0xFF2563EB), size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                SizedBox(
+                                  width: 110,
+                                  child: DropdownButtonFormField<String>(
+                                    value: selectedDoseUnit,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFFF8FAFC),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                    ),
+                                    items: doseUnits.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
+                                    onChanged: (value) => setDlg(() => selectedDoseUnit = value ?? selectedDoseUnit),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                fieldLabel('Giờ uống'),
+                                GestureDetector(
+                                  onTap: pickTime,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.add, color: Color(0xFF2563EB), size: 15),
+                                        SizedBox(width: 4),
+                                        Text('Thêm giờ', style: TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: timeSlots.map((slot) {
+                                final isSelected = selectedTime == slot;
+                                return GestureDetector(
+                                  onTap: () => setDlg(() => selectedTime = slot),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0), width: isSelected ? 1.5 : 1),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.access_time_rounded, size: 15, color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+                                        const SizedBox(width: 6),
+                                        Text(slot, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF475569))),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 16),
+                            fieldLabel('Cách dùng'),
+                            DropdownButtonFormField<String>(
+                              value: selectedInstruction,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                prefixIcon: const Icon(Icons.restaurant_rounded, color: Color(0xFF2563EB), size: 20),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                              ),
+                              items: instructions.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                              onChanged: (value) => setDlg(() => selectedInstruction = value ?? selectedInstruction),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      fieldLabel('Ngày bắt đầu'),
+                                      GestureDetector(
+                                        onTap: () => pickDate(true),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.calendar_today_rounded, color: Color(0xFF2563EB), size: 16),
+                                              const SizedBox(width: 8),
+                                              Text('${startDate.day.toString().padLeft(2, '0')}/${startDate.month.toString().padLeft(2, '0')}/${startDate.year}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      fieldLabel('Ngày kết thúc'),
+                                      GestureDetector(
+                                        onTap: () => pickDate(false),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.calendar_today_rounded, color: Color(0xFF64748B), size: 16),
+                                              const SizedBox(width: 8),
+                                              Text('${endDate.day.toString().padLeft(2, '0')}/${endDate.month.toString().padLeft(2, '0')}/${endDate.year}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            fieldLabel('Số viên còn lại (tùy chọn)'),
+                            TextField(
+                              controller: remainingCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: 'VD: 30',
+                                hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                                prefixIcon: const Icon(Icons.inventory_2_rounded, color: Color(0xFF64748B), size: 20),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            fieldLabel('Nhóm thuốc (tùy chọn)'),
+                            DropdownButtonFormField<String>(
+                              value: selectedGroup,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                prefixIcon: const Icon(Icons.category_rounded, color: Color(0xFF2563EB), size: 20),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                              ),
+                              items: ['Khác', 'Huyết áp', 'Tiểu đường', 'Tim mạch', 'Vitamin'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                              onChanged: (value) => setDlg(() => selectedGroup = value ?? selectedGroup),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [BoxShadow(color: Color(0x11000000), blurRadius: 16, offset: Offset(0, -4))],
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2563EB),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          onPressed: isSubmitting ? null : () async {
+                            final name = nameCtrl.text.trim();
+                            if (name.isEmpty) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(content: Text('Vui lòng nhập tên thuốc'), backgroundColor: Colors.red),
+                              );
+                              return;
+                            }
+
+                            setDlg(() => isSubmitting = true);
+                            final dosageStr = doseAmountCtrl.text.trim().isNotEmpty
+                                ? '${doseAmountCtrl.text.trim()} $selectedDoseUnit'
+                                : selectedDoseUnit;
+                            final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+                            final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+                            final description = remainingCtrl.text.trim().isNotEmpty
+                                ? 'Nhóm: $selectedGroup · Còn lại: ${remainingCtrl.text.trim()}'
+                                : 'Nhóm: $selectedGroup';
+
+                            bool ok = false;
+                            if (editScheduleId != null) {
+                              ok = await ApiService.updateMedication(
+                                scheduleId: editScheduleId,
+                                name: name,
+                                dosage: dosageStr,
+                                instruction: selectedInstruction,
+                                time: selectedTime,
+                                frequency: timeSlots.length > 1 ? '${timeSlots.length} lần/ngày' : 'Hàng ngày',
+                                description: description,
+                                startDate: startStr,
+                                endDate: endStr,
+                              );
+                            } else {
+                              for (final slot in timeSlots) {
+                                final success = await ApiService.addMedication(
+                                  elderlyId: _selectedElderlyId!,
+                                  name: name,
+                                  dosage: dosageStr,
+                                  instruction: selectedInstruction,
+                                  time: slot,
+                                  frequency: timeSlots.length > 1 ? '${timeSlots.length} lần/ngày' : 'Hàng ngày',
+                                  description: description,
+                                  startDate: startStr,
+                                  endDate: endStr,
+                                );
+                                if (success) ok = true;
+                              }
+                            }
+
+                            if (mounted) {
+                              Navigator.pop(ctx);
+                              if (ok) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: const Color(0xFF10B981),
+                                    content: Text(editScheduleId != null ? '✓ Cập nhật thuốc thành công!' : '✓ Đã thêm thuốc thành công!'),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                );
+                                _loadElderlyDetails();
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Lỗi khi lưu thuốc. Vui lòng thử lại.')),
+                                );
+                              }
+                            }
+                          },
+                          child: isSubmitting
+                              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                              : Text(
+                                  editScheduleId != null ? 'Lưu thay đổi' : 'Lưu lịch uống',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
