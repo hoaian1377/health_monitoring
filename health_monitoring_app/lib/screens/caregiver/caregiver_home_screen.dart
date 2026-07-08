@@ -558,47 +558,50 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       : null,
                 ),
                 alignment: Alignment.center,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                        color: isSelected
-                            ? const Color(0xFF0F172A)
-                            : const Color(0xFF64748B),
-                      ),
-                    ),
-                    if (count > 0) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                           color: isSelected
-                              ? const Color(0xFF0EA5E9)
-                              : const Color(0xFFE2E8F0),
-                          borderRadius: BorderRadius.circular(6),
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFF64748B),
                         ),
-                        child: Text(
-                          '$count',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                      ),
+                      if (count > 0) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
                             color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF475569),
+                                ? const Color(0xFF0EA5E9)
+                                : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF475569),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -3772,6 +3775,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     String? initialDosage,
     String? initialInstruction,
     String? initialTime,
+    String? initialDescription,
     int? editScheduleId,
   }) {
     final nameCtrl = TextEditingController(text: initialName);
@@ -3781,6 +3785,13 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           : '',
     );
     final remainingCtrl = TextEditingController();
+    if (initialDescription != null) {
+      final regExp = RegExp(r'(?:Còn lại|Tổng số viên thuốc):\s*(\d+)');
+      final match = regExp.firstMatch(initialDescription);
+      if (match != null) {
+        remainingCtrl.text = match.group(1) ?? '';
+      }
+    }
     final scannedInstructionCtrl = TextEditingController();
 
     String selectedGroup = 'Khác';
@@ -4512,7 +4523,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            fieldLabel('Số viên còn lại (tùy chọn)'),
+                            fieldLabel('Tổng số viên thuốc (tùy chọn)'),
                             TextField(
                               controller: remainingCtrl,
                               keyboardType: TextInputType.number,
@@ -4666,7 +4677,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                       '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
                                   final description =
                                       remainingCtrl.text.trim().isNotEmpty
-                                      ? 'Nhóm: $selectedGroup · Còn lại: ${remainingCtrl.text.trim()}'
+                                      ? 'Nhóm: $selectedGroup · Tổng số viên thuốc: ${remainingCtrl.text.trim()}'
                                       : 'Nhóm: $selectedGroup';
 
                                   bool ok = false;
@@ -4862,6 +4873,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   initialDosage: med['dosage'],
                   initialInstruction: med['instruction'],
                   initialTime: schedule['time'],
+                  initialDescription: med['description'],
                   editScheduleId: scheduleId != null
                       ? int.tryParse(scheduleId.toString())
                       : null,

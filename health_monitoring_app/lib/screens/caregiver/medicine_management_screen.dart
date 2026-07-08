@@ -2730,6 +2730,9 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
                         // Push to backend API for new medication and reload data
                         if (!isEdit && _selectedElderlyId != null) {
+                          final descriptionStr = _stockCtrl.text.trim().isNotEmpty
+                              ? 'Nhóm: Khác · Tổng số viên thuốc: ${_stockCtrl.text.trim()}'
+                              : 'Nhóm: Khác';
                           for (final timeStr in timesStr) {
                             await ApiService.addMedication(
                               elderlyId: _selectedElderlyId!,
@@ -2742,6 +2745,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                               frequency: timesStr.length == 1
                                   ? '1 lần/ngày'
                                   : '${timesStr.length} lần/ngày',
+                              description: descriptionStr,
                             );
                           }
                           await _loadMedicationSchedules(_selectedElderlyId!);

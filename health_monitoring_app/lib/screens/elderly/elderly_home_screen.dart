@@ -22,6 +22,34 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   bool _isLoadingMedications = true;
   Set<int> _takenScheduleIds = {};
 
+  String _getMedicationSession(String timeStr) {
+    if (timeStr.isEmpty || timeStr == '--:--') return 'Buổi chiều/tối';
+    try {
+      final hour = int.parse(timeStr.split(':')[0]);
+      if (hour < 12) {
+        return 'Buổi sáng';
+      } else if (hour >= 12 && hour < 15) {
+        return 'Buổi trưa';
+      } else {
+        return 'Buổi chiều/tối';
+      }
+    } catch (_) {
+      return 'Buổi chiều/tối';
+    }
+  }
+
+  String _getActiveSessionByTime() {
+    final currentHour = DateTime.now().hour;
+    if (currentHour < 10) {
+      return 'Buổi sáng';
+    } else if (currentHour >= 10 && currentHour < 15) {
+      return 'Buổi trưa';
+    } else {
+      return 'Buổi chiều/tối';
+    }
+  }
+
+
   // Chỉ số sức khoẻ (giữ lại để tránh lỗi biên dịch)
   String _bpSys = '--';
   String _bpDia = '--';
@@ -716,26 +744,30 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     );
   }
 
-  // ── Header (Tiêu đề ngày có Năm + nút chức năng, chữ trắng tương phản tốt) ───
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 60, 20, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            _formatHeaderDate(_selectedDate),
-            style: const TextStyle(
-              fontSize: 30, // Điều chỉnh size hài hòa
-              fontWeight: FontWeight.bold,
-              color: Colors.white, // Chữ trắng nổi bật trên nền xanh
+          Expanded(
+            child: Text(
+              _formatHeaderDate(_selectedDate),
+              style: const TextStyle(
+                fontSize: 24, // Điều chỉnh size hài hòa tránh tràn viền
+                fontWeight: FontWeight.bold,
+                color: Colors.white, // Chữ trắng nổi bật trên nền xanh
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          const SizedBox(width: 8),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Nút Test Form Nhắc Nhở
               IconButton(
-                icon: const Icon(Icons.notifications_active, size: 28),
+                icon: const Icon(Icons.notifications_active, size: 26),
                 color: Colors.white,
                 onPressed: () {
                   if (_medicationSchedules.isNotEmpty) {
@@ -747,10 +779,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                   }
                 },
               ),
-              const SizedBox(width: 8),
               // Nút Lịch khám bệnh
               IconButton(
-                icon: const Icon(Icons.calendar_month_outlined, size: 28),
+                icon: const Icon(Icons.calendar_month_outlined, size: 26),
                 color: Colors.white,
                 onPressed: () {
                   Navigator.push(
@@ -761,7 +792,6 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                   );
                 },
               ),
-              const SizedBox(width: 8),
               // Nút Hộp thư (Inbox) đi kèm chấm thông báo đỏ
               IconButton(
                 onPressed: () {
@@ -769,7 +799,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                 },
                 icon: Stack(
                   children: [
-                    const Icon(Icons.mail_outline_rounded, size: 28),
+                    const Icon(Icons.mail_outline_rounded, size: 26),
                     Positioned(
                       right: 0,
                       top: 0,
@@ -965,199 +995,347 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       );
     }
 
-    final grouped = _groupSchedulesByTime();
+    // Xác định buổi hoạt động dựa trên giờ hiện tại
+    final activeSession = _getActiveSessionByTime();
+
+    // Phân chia danh sách thuốc theo 3 buổi: Sáng, Trưa, Chiều/Tối
+    final Map<String, List<dynamic>> sessionSchedules = {
+      'Buổi sáng': [],
+      'Buổi trưa': [],
+      'Buổi chiều/tối': [],
+    };
+
+    for (var schedule in _medicationSchedules) {
+      final String time = schedule['time'] ?? '00:00';
+      final session = _getMedicationSession(time);
+      if (sessionSchedules.containsKey(session)) {
+        sessionSchedules[session]!.add(schedule);
+      } else {
+        sessionSchedules['Buổi chiều/tối']!.add(schedule);
+      }
+    }
+
+    final schedules = sessionSchedules[activeSession]!;
     
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      itemCount: grouped.keys.length,
-      itemBuilder: (context, index) {
-        final String time = grouped.keys.elementAt(index);
-        final List<dynamic> schedules = grouped[time]!;
-        
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Tiêu đề mốc giờ uống thuốc (Ví dụ: 08:00) nằm ngoài thẻ
-              Padding(
-                padding: const EdgeInsets.only(left: 4, bottom: 8),
-                child: Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF475569),
+    // Xác định icon và màu sắc cho buổi hoạt động
+    IconData sessionIcon;
+    Color sessionColor;
+    if (activeSession == 'Buổi sáng') {
+      sessionIcon = Icons.wb_sunny_rounded;
+      sessionColor = const Color(0xFFD97706); // Màu hổ phách/cam đậm
+    } else if (activeSession == 'Buổi trưa') {
+      sessionIcon = Icons.wb_cloudy_rounded;
+      sessionColor = const Color(0xFF0EA5E9); // Màu xanh da trời
+    } else {
+      sessionIcon = Icons.nights_stay_rounded;
+      sessionColor = const Color(0xFF4F46E5); // Màu chàm/tối
+    }
+
+    // Nhóm các thuốc trong buổi theo giờ uống cụ thể
+    final Map<String, List<dynamic>> groupedByTime = {};
+    for (var schedule in schedules) {
+      final String time = schedule['time'] ?? '00:00';
+      if (!groupedByTime.containsKey(time)) {
+        groupedByTime[time] = [];
+      }
+      groupedByTime[time]!.add(schedule);
+    }
+    final sortedTimes = groupedByTime.keys.toList()..sort();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header của buổi hiện tại (Hiển thị tên buổi và SỐ LƯỢNG LIST THUỐC)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: sessionColor.withOpacity(0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: sessionColor.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: sessionColor.withOpacity(0.1),
+                    shape: BoxShape.circle,
                   ),
+                  child: Icon(sessionIcon, color: sessionColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    activeSession,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: sessionColor,
+                    ),
+                  ),
+                ),
+                // HIỆN SỐ LƯỢNG LIST THUỐC
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: sessionColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${schedules.length} thuốc',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: sessionColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // Danh sách thuốc
+        if (schedules.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+            child: Center(
+              child: Text(
+                'Bác không có lịch uống thuốc nào trong $activeSession.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade500,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
-              // Thẻ trắng chứa các thuốc của khung giờ đó
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+            ),
+          )
+        else
+          ...sortedTimes.map((time) {
+            final List<dynamic> schedulesAtTime = groupedByTime[time]!;
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 8),
+                    child: Text(
+                      time,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF475569),
+                      ),
                     ),
-                  ],
-                  border: Border.all(
-                    color: Colors.grey.shade100,
-                    width: 1,
                   ),
-                ),
-                child: Column(
-                  children: List.generate(schedules.length, (idx) {
-                    final schedule = schedules[idx];
-                    final med = schedule['medication'] ?? {};
-                    final int id = schedule['schedule_id'];
-                    final String name = med['name'] ?? 'Không rõ tên';
-                    final String dosage = med['dosage'] ?? 'Không rõ';
-                    final String instruction = med['instruction'] ?? 'Không rõ';
-                    final String frequency = schedule['frequency'] ?? 'Chưa rõ';
-                    final String startDate = _formatDate(schedule['start_date']);
-                    final String endDate = _formatDate(schedule['end_date']);
-                    final String? description = med['description'];
-                    
-                    final isTaken = _isMedicationTaken(id, _selectedDate);
-                    
-                    final medIcon = _getMedicationIcon(name);
-                    final medColor = _getMedicationColor(name);
-                    
-                    return InkWell(
-                      onTap: () {
-                        _showConfirmationDialog(id, name, time, isTaken);
-                      },
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      child: Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                // Biểu tượng hình tròn bên trái
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: isTaken 
-                                        ? const Color(0xFFE8F5E9) 
-                                        : medColor.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    medIcon,
-                                    color: isTaken 
-                                        ? const Color(0xFF10B981) 
-                                        : medColor,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                // Tên thuốc và thông tin chi tiết quan trọng hiện trực tiếp trên list
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: isTaken 
-                                              ? Colors.grey.shade400 
-                                              : const Color(0xFF1E293B),
-                                          decoration: isTaken 
-                                              ? TextDecoration.lineThrough 
-                                              : null,
-                                        ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.grey.shade100,
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: List.generate(schedulesAtTime.length, (idx) {
+                        final schedule = schedulesAtTime[idx];
+                        final med = schedule['medication'] ?? {};
+                        final int id = schedule['schedule_id'];
+                        final String name = med['name'] ?? 'Không rõ tên';
+                        final String dosage = med['dosage'] ?? 'Không rõ';
+                        final String instruction = med['instruction'] ?? 'Không rõ';
+                        final String frequency = schedule['frequency'] ?? 'Chưa rõ';
+                        final String startDate = _formatDate(schedule['start_date']);
+                        final String endDate = _formatDate(schedule['end_date']);
+                        final String? description = med['description'];
+                        
+                        String? remainingValue;
+                        String cleanDescription = description ?? '';
+                        if (description != null && (description.contains('Còn lại:') || description.contains('Tổng số viên thuốc:'))) {
+                          final regExp = RegExp(r'^(.*?)\s*·?\s*(?:Còn lại|Tổng số viên thuốc):\s*([^·]+)(.*)$');
+                          final match = regExp.firstMatch(description);
+                          if (match != null) {
+                            cleanDescription = '${match.group(1) ?? ''}${match.group(3) ?? ''}'.trim();
+                            cleanDescription = cleanDescription
+                                .replaceAll(RegExp(r'^·\s*|\s*·$'), '')
+                                .trim();
+                            remainingValue = match.group(2)?.trim();
+                          }
+                        }
+                        
+                        final isTaken = _isMedicationTaken(id, _selectedDate);
+                        final medIcon = _getMedicationIcon(name);
+                        final medColor = _getMedicationColor(name);
+                        
+                        return InkWell(
+                          onTap: () {
+                            _showConfirmationDialog(id, name, time, isTaken);
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: isTaken 
+                                            ? const Color(0xFFE8F5E9) 
+                                            : medColor.withOpacity(0.1),
+                                        shape: BoxShape.circle,
                                       ),
-                                      const SizedBox(height: 8),
-                                      // Hàng chứa các chip thông tin thuốc
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
+                                      child: Icon(
+                                        medIcon,
+                                        color: isTaken 
+                                            ? const Color(0xFF10B981) 
+                                            : medColor,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          _buildMiniBadge(Icons.vaccines_rounded, dosage, medColor, isTaken),
-                                          _buildMiniBadge(Icons.repeat_rounded, frequency, medColor, isTaken),
-                                          _buildMiniBadge(Icons.restaurant_rounded, instruction, medColor, isTaken),
-                                          if (startDate.isNotEmpty)
-                                            _buildMiniBadge(
-                                              Icons.date_range_rounded, 
-                                              '${startDate.substring(0, 5)} - ${endDate.substring(0, 5)}', 
-                                              medColor, 
-                                              isTaken
+                                          Text(
+                                            name,
+                                            style: TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                              color: isTaken 
+                                                  ? Colors.grey.shade400 
+                                                  : const Color(0xFF1E293B),
+                                              decoration: isTaken 
+                                                  ? TextDecoration.lineThrough 
+                                                  : null,
                                             ),
-                                        ],
-                                      ),
-                                      if (description != null && description.isNotEmpty) ...[
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Icon(
-                                              Icons.notes_rounded, 
-                                              size: 13, 
-                                              color: isTaken ? Colors.grey.shade400 : Colors.grey.shade500
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                description,
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontStyle: FontStyle.italic,
-                                                  color: isTaken 
-                                                      ? Colors.grey.shade400 
-                                                      : const Color(0xFF64748B),
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.inventory_2_rounded,
+                                                size: 16,
+                                                color: isTaken ? Colors.grey.shade400 : medColor,
                                               ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  'Tổng số viên thuốc: ${remainingValue ?? "Chưa cập nhật"}',
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isTaken ? Colors.grey.shade400 : const Color(0xFF475569),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Wrap(
+                                            spacing: 6,
+                                            runSpacing: 6,
+                                            children: [
+                                              _buildMiniBadge(Icons.vaccines_rounded, dosage, medColor, isTaken),
+                                              _buildMiniBadge(Icons.repeat_rounded, frequency, medColor, isTaken),
+                                              _buildMiniBadge(Icons.restaurant_rounded, instruction, medColor, isTaken),
+                                              if (startDate.isNotEmpty)
+                                                _buildMiniBadge(
+                                                  Icons.date_range_rounded, 
+                                                  '${startDate.substring(0, 5)} - ${endDate.substring(0, 5)}', 
+                                                  medColor, 
+                                                  isTaken
+                                                ),
+                                            ],
+                                          ),
+                                          if (cleanDescription.isNotEmpty) ...[
+                                            const SizedBox(height: 8),
+                                            Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Icon(
+                                                  Icons.notes_rounded, 
+                                                  size: 13, 
+                                                  color: isTaken ? Colors.grey.shade400 : Colors.grey.shade500
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Expanded(
+                                                  child: Text(
+                                                    cleanDescription,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontStyle: FontStyle.italic,
+                                                      color: isTaken 
+                                                          ? Colors.grey.shade400 
+                                                          : const Color(0xFF64748B),
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
-                                        ),
-                                      ],
-                                    ],
-                                  ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      isTaken 
+                                          ? Icons.check_circle_rounded 
+                                          : Icons.circle_outlined,
+                                      color: isTaken 
+                                          ? const Color(0xFF10B981) 
+                                          : const Color(0xFFCBD5E1),
+                                      size: 26,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                // Biểu tượng tích chọn hoặc vòng tròn rỗng góc phải để đồng bộ
-                                Icon(
-                                  isTaken 
-                                      ? Icons.check_circle_rounded 
-                                      : Icons.circle_outlined,
-                                  color: isTaken 
-                                      ? const Color(0xFF10B981) 
-                                      : const Color(0xFFCBD5E1),
-                                  size: 26,
+                              ),
+                              if (idx < schedulesAtTime.length - 1)
+                                const Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  indent: 76,
+                                  endIndent: 16,
+                                  color: Color(0xFFF1F5F9),
                                 ),
-                              ],
-                            ),
+                            ],
                           ),
-                          // Đường phân cách giữa các dòng thuốc trong cùng một thẻ
-                          if (idx < schedules.length - 1)
-                            const Divider(
-                              height: 1,
-                              thickness: 1,
-                              indent: 76,
-                              endIndent: 16,
-                              color: Color(0xFFF1F5F9),
-                            ),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
+                        );
+                      }),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
+            );
+          }),
+      ],
     );
   }
 
