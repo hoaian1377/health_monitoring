@@ -43,6 +43,11 @@ class Elderly(models.Model):
     qr_token = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
     qr_expired_at = models.DateTimeField(blank=True, null=True)
     medical_note = models.TextField(db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+    blood_type = models.CharField(max_length=10, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+    height = models.FloatField(blank=True, null=True)
+    weight = models.FloatField(blank=True, null=True)
+    allergies = models.TextField(db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+    underlying_conditions = models.TextField(db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
 
     class Meta:
         managed = False

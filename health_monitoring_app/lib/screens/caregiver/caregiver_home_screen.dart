@@ -59,7 +59,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       setState(() {
         _elderlyList = list;
         if (list.isNotEmpty) {
-          _selectedElderlyId = list.first['id'] as int;
+          if (ApiService.currentElderlyId != null && list.any((e) => e['id'] == ApiService.currentElderlyId)) {
+            _selectedElderlyId = ApiService.currentElderlyId;
+          } else {
+            _selectedElderlyId = list.first['id'] as int;
+            ApiService.currentElderlyId = _selectedElderlyId;
+          }
           _loadElderlyDetails();
         }
       });
@@ -744,7 +749,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           }).toList(),
                           onChanged: (val) {
                             if (val != null) {
-                              setState(() => _selectedElderlyId = val);
+                              setState(() {
+                                _selectedElderlyId = val;
+                                ApiService.currentElderlyId = val;
+                              });
                               _loadElderlyDetails();
                             }
                           },

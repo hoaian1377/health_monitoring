@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'appointment_screen.dart';
 import 'caregiver_medical_records_screen.dart';
-import 'caregiver_medical_records_screen.dart';
+import '../../utils/api_service.dart';
 
 
 // ======================================================================
@@ -15,11 +15,41 @@ class HealthDashboardScreen extends StatefulWidget {
 class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<Map<String, dynamic>> _elderlyList = [];
+  int? _selectedElderlyId;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    if (ApiService.currentRole == 'caregiver') {
+      _loadElderlyList();
+    } else {
+      _selectedElderlyId = ApiService.currentAccountId;
+    }
+  }
+
+  Future<void> _loadElderlyList() async {
+    setState(() => _isLoading = true);
+    final result = await ApiService.getElderlyList();
+    if (mounted && result['success'] == true) {
+      final list = (result['elderly_list'] as List).cast<Map<String, dynamic>>();
+      setState(() {
+        _elderlyList = list;
+        if (list.isNotEmpty) {
+          if (ApiService.currentElderlyId != null && list.any((e) => e['id'] == ApiService.currentElderlyId)) {
+            _selectedElderlyId = ApiService.currentElderlyId;
+          } else {
+            _selectedElderlyId = list.first['id'] as int;
+            ApiService.currentElderlyId = _selectedElderlyId;
+          }
+        }
+        _isLoading = false;
+      });
+    } else {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -75,14 +105,56 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text(
-                            'Hồ sơ sức khỏe',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Hồ sơ sức khỏe',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              if (ApiService.currentRole == 'caregiver' && _elderlyList.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: _selectedElderlyId,
+                                      icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+                                      dropdownColor: const Color(0xFF0284C7),
+                                      isDense: true,
+                                      items: _elderlyList.map((e) {
+                                        return DropdownMenuItem<int>(
+                                          value: e['id'] as int,
+                                          child: Text(
+                                            e['fullname'] ?? 'N/A',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _selectedElderlyId = val;
+                                            ApiService.currentElderlyId = val;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],

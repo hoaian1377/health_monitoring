@@ -348,15 +348,57 @@ class MedicalProfileScreen extends StatefulWidget {
 }
 
 class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
-  // Bệnh nền
-  final List<String> _conditions = ['Tăng huyết áp', 'Tiểu đường type 2'];
-  // Dị ứng
-  final List<String> _allergies = ['Penicillin', 'Aspirin'];
+  bool _isLoading = true;
+  String _bloodType = 'N/A';
+  double _height = 0;
+  double _weight = 0;
+  List<String> _conditions = [];
+  List<String> _allergies = [];
+  Map<String, dynamic>? _currentElderly;
 
-  // BMI
-  double get _bmi => 62 / (1.68 * 1.68); // 21.98
+  @override
+  void initState() {
+    super.initState();
+    _fetchElderlyData();
+  }
+
+  Future<void> _fetchElderlyData() async {
+    setState(() => _isLoading = true);
+    final result = await ApiService.getElderlyList();
+    if (result['success'] == true) {
+      final list = (result['elderly_list'] as List).cast<Map<String, dynamic>>();
+      final elderlyId = ApiService.currentElderlyId ?? (list.isNotEmpty ? list.first['id'] : null);
+      if (elderlyId != null) {
+        final elderly = list.firstWhere((e) => e['id'] == elderlyId, orElse: () => {});
+        if (elderly.isNotEmpty) {
+          setState(() {
+            _currentElderly = elderly;
+            _bloodType = elderly['blood_type']?.toString().isNotEmpty == true ? elderly['blood_type'] : 'N/A';
+            _height = (elderly['height'] as num?)?.toDouble() ?? 0;
+            _weight = (elderly['weight'] as num?)?.toDouble() ?? 0;
+            
+            final condStr = elderly['underlying_conditions']?.toString() ?? '';
+            _conditions = condStr.isNotEmpty ? condStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() : [];
+            
+            final allgStr = elderly['allergies']?.toString() ?? '';
+            _allergies = allgStr.isNotEmpty ? allgStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() : [];
+          });
+        }
+      }
+    }
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  double get _bmi {
+    if (_height > 0 && _weight > 0) {
+      final h = _height / 100;
+      return _weight / (h * h);
+    }
+    return 0;
+  }
 
   String get _bmiLabel {
+    if (_bmi == 0) return 'N/A';
     if (_bmi < 18.5) return 'Thiếu cân';
     if (_bmi < 25) return 'Bình thường';
     if (_bmi < 30) return 'Thừa cân';
@@ -364,6 +406,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
   }
 
   Color get _bmiColor {
+    if (_bmi == 0) return const Color(0xFF94A3B8);
     if (_bmi < 18.5) return const Color(0xFFD97706);
     if (_bmi < 25) return const Color(0xFF16A34A);
     if (_bmi < 30) return const Color(0xFFEA580C);
@@ -390,12 +433,25 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Hủy')),
           ElevatedButton(
-            onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) {
-                setState(
-                    () => _conditions.add(ctrl.text.trim()));
+            onPressed: () async {
+              if (ctrl.text.trim().isNotEmpty && _currentElderly != null) {
+                final newCondition = ctrl.text.trim();
+                setState(() => _conditions.add(newCondition));
+                
+                await ApiService.updateElderly(
+                  elderlyId: _currentElderly!['id'],
+                  fullname: _currentElderly!['fullname'],
+                  dob: _currentElderly!['dob'] ?? '',
+                  gender: _currentElderly!['gender'],
+                  medicalNote: _currentElderly!['medical_note'] ?? '',
+                  bloodType: _bloodType,
+                  height: _height,
+                  weight: _weight,
+                  allergies: _allergies.join(', '),
+                  underlyingConditions: _conditions.join(', '),
+                );
               }
-              Navigator.pop(ctx);
+              if (mounted) Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0EA5E9)),
@@ -427,11 +483,25 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Hủy')),
           ElevatedButton(
-            onPressed: () {
-              if (ctrl.text.trim().isNotEmpty) {
-                setState(() => _allergies.add(ctrl.text.trim()));
+            onPressed: () async {
+              if (ctrl.text.trim().isNotEmpty && _currentElderly != null) {
+                final newAllergy = ctrl.text.trim();
+                setState(() => _allergies.add(newAllergy));
+                
+                await ApiService.updateElderly(
+                  elderlyId: _currentElderly!['id'],
+                  fullname: _currentElderly!['fullname'],
+                  dob: _currentElderly!['dob'] ?? '',
+                  gender: _currentElderly!['gender'],
+                  medicalNote: _currentElderly!['medical_note'] ?? '',
+                  bloodType: _bloodType,
+                  height: _height,
+                  weight: _weight,
+                  allergies: _allergies.join(', '),
+                  underlyingConditions: _conditions.join(', '),
+                );
               }
-              Navigator.pop(ctx);
+              if (mounted) Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0EA5E9)),
@@ -502,22 +572,25 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                 ],
               ),
             ),
-          Column(
-            children: [
-              // Card: Thông tin y tế cơ bản
+          if (_isLoading)
+            const Center(child: CircularProgressIndicator(color: Color(0xFF0EA5E9)))
+          else
+            Column(
+              children: [
+                // Card: Thông tin y tế cơ bản
               _buildCard(
                 title: 'Thông tin y tế cơ bản',
                 icon: Icons.favorite_rounded,
                 iconColor: const Color(0xFFDC2626),
                 child: Column(
                   children: [
-                    _infoTile('🩸', 'Nhóm máu', 'A+',
+                    _infoTile('🩸', 'Nhóm máu', _bloodType,
                         const Color(0xFFFFEBEB), const Color(0xFFC81E1E)),
                     _divider(),
-                    _infoTile('📏', 'Chiều cao', '168 cm',
+                    _infoTile('📏', 'Chiều cao', '$_height cm',
                         const Color(0xFFEBF3FF), const Color(0xFF0EA5E9)),
                     _divider(),
-                    _infoTile('⚖️', 'Cân nặng', '62 kg',
+                    _infoTile('⚖️', 'Cân nặng', '$_weight kg',
                         const Color(0xFFFFF4E6), const Color(0xFFEA580C)),
                     _divider(),
                     Padding(

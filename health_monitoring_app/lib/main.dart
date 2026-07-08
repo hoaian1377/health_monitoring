@@ -13,21 +13,58 @@ import 'screens/elderly/elderly_profile_screen.dart';
 import 'screens/elderly/elderly_notifications_screen.dart';
 import 'screens/elderly/elderly_checklist_screen.dart';
 import 'utils/api_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'screens/medication_confirmation_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+String? initialPayload;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Khởi tạo timezone, set về giờ Việt Nam
   tz.initializeTimeZones();
   tz.setLocalLocation(tz.getLocation('Asia/Ho_Chi_Minh'));
-  await AlarmService.init();
+  // Check if launched via notification
+  final NotificationAppLaunchDetails? notificationAppLaunchDetails =
+      await FlutterLocalNotificationsPlugin().getNotificationAppLaunchDetails();
+  
+  if (notificationAppLaunchDetails?.didNotificationLaunchApp ?? false) {
+    initialPayload = notificationAppLaunchDetails?.notificationResponse?.payload;
+  }
+
+  await AlarmService.init(
+    onNotificationClick: (payload) {
+      if (payload != null && navigatorKey.currentState != null) {
+        navigatorKey.currentState!.push(
+          MaterialPageRoute(builder: (_) => MedicationConfirmationScreen(payload: payload)),
+        );
+      }
+    }
+  );
   runApp(const HealthApp());
 }
 
 
-class HealthApp extends StatelessWidget {
+class HealthApp extends StatefulWidget {
   const HealthApp({super.key});
+
+  @override
+  State<HealthApp> createState() => _HealthAppState();
+}
+
+class _HealthAppState extends State<HealthApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (initialPayload != null) {
+        navigatorKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => MedicationConfirmationScreen(payload: initialPayload!)),
+        );
+        initialPayload = null; // Clear to avoid repeated navigation
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

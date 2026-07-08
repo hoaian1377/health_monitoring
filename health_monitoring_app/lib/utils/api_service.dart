@@ -9,12 +9,13 @@ class ApiService {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://192.168.1.34:8000";
+      return "http://192.168.123.4:8000";
     }
     return "http://localhost:8000";
   }
 
   static int? currentAccountId;
+  static int? currentElderlyId;
   static String currentUsername = 'Người dùng';
   static String currentRole = 'caregiver';
   static String currentFullname = '';
@@ -163,6 +164,11 @@ class ApiService {
     required String dob,
     required String gender,
     required String medicalNote,
+    String? bloodType,
+    double? height,
+    double? weight,
+    String? allergies,
+    String? underlyingConditions,
   }) async {
     final url = Uri.parse("$baseUrl/api/users/elderly/$elderlyId/update/");
     try {
@@ -174,6 +180,11 @@ class ApiService {
           "dob": dob,
           "gender": gender,
           "medical_note": medicalNote,
+          "blood_type": bloodType,
+          "height": height,
+          "weight": weight,
+          "allergies": allergies,
+          "underlying_conditions": underlyingConditions,
         }),
       );
       if (res.statusCode == 200) {
@@ -213,6 +224,57 @@ class ApiService {
       } else {
         return {"success": false, "error": "Mã QR không hợp lệ."};
       }
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= CHANGE PASSWORD =================
+  static Future<Map<String, dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/users/change-password/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "account_id": currentAccountId,
+          "old_password": oldPassword,
+          "new_password": newPassword,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return {"success": true, "message": "Đổi mật khẩu thành công."};
+      }
+      final err = jsonDecode(res.body);
+      return {"success": false, "error": err["error"] ?? "Đổi mật khẩu thất bại."};
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= FORGOT PASSWORD =================
+  static Future<Map<String, dynamic>> forgotPassword({
+    required String phone,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/users/forgot-password/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "phone": phone,
+          "new_password": newPassword,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return {"success": true, "message": "Đặt lại mật khẩu thành công."};
+      }
+      final err = jsonDecode(res.body);
+      return {"success": false, "error": err["error"] ?? "Đặt lại mật khẩu thất bại."};
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }

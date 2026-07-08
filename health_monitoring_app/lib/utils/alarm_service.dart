@@ -8,9 +8,11 @@ class AlarmService {
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
+  static Function(String?)? onNotificationClick;
 
   // ── Khởi tạo ──────────────────────────────────────────────────────────────
-  static Future<void> init() async {
+  static Future<void> init({Function(String?)? onNotificationClick}) async {
+    AlarmService.onNotificationClick = onNotificationClick;
     if (_initialized) return;
     _initialized = true;
 
@@ -34,6 +36,9 @@ class AlarmService {
       initSettings,
       onDidReceiveNotificationResponse: (details) {
         debugPrint('Notification tapped: ${details.payload}');
+        if (onNotificationClick != null) {
+          onNotificationClick!(details.payload);
+        }
       },
     );
   }
@@ -53,9 +58,9 @@ class AlarmService {
   // ── Chi tiết channel Android ───────────────────────────────────────────────
   static const AndroidNotificationDetails _androidDetails =
       AndroidNotificationDetails(
-    'medicine_reminder_channel',   // channel ID
-    'Nhắc nhở uống thuốc',         // channel name
-    channelDescription: 'Thông báo nhắc uống thuốc đúng giờ',
+    'medicine_reminder_channel_v2',   // channel ID (đổi ID để Android reset lại channel với Importance.max)
+    'Nhắc nhở uống thuốc',            // channel name
+    channelDescription: 'Thông báo nhắc uống thuốc đúng giờ (Quan trọng)',
     importance: Importance.max,
     priority: Priority.high,
     playSound: true,
@@ -63,6 +68,7 @@ class AlarmService {
     fullScreenIntent: true,
     category: AndroidNotificationCategory.alarm,
     visibility: NotificationVisibility.public,
+    ticker: 'Nhắc nhở uống thuốc',
   );
 
   static const NotificationDetails _notificationDetails = NotificationDetails(

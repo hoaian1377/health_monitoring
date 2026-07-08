@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../utils/api_service.dart';
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
 
@@ -29,24 +29,40 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
+    
+    final res = await ApiService.changePassword(
+      oldPassword: _oldPassCtrl.text,
+      newPassword: _newPassCtrl.text,
+    );
+
     if (!mounted) return;
     setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color(0xFF16A34A),
-        content: Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 12),
-            Text('Đổi mật khẩu thành công!',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ],
+
+    if (res["success"] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF16A34A),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Đổi mật khẩu thành công!',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          duration: Duration(seconds: 2),
         ),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    Navigator.pop(context);
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFDC2626),
+          content: Text(res["error"] ?? 'Đổi mật khẩu thất bại'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override

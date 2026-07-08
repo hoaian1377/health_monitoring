@@ -124,6 +124,11 @@ class LoginByQrView(generics.CreateAPIView):
                 "dob": str(elderly.date_of_birthday) if elderly.date_of_birthday else None,
                 "gender": "Nam" if elderly.gender else "Nu",
                 "medical_note": elderly.medical_note,
+                "blood_type": elderly.blood_type,
+                "height": elderly.height,
+                "weight": elderly.weight,
+                "allergies": elderly.allergies,
+                "underlying_conditions": elderly.underlying_conditions,
             }
         }, status=status.HTTP_200_OK)
 
@@ -150,6 +155,11 @@ class GetElderlyListView(generics.RetrieveAPIView):
                     "dob": str(e.date_of_birthday) if e.date_of_birthday else None,
                     "gender": "Nam" if e.gender else "Nu",
                     "medical_note": e.medical_note or "",
+                    "blood_type": e.blood_type or "",
+                    "height": e.height,
+                    "weight": e.weight,
+                    "allergies": e.allergies or "",
+                    "underlying_conditions": e.underlying_conditions or "",
                     "qr_token": e.qr_token or "",
                 })
         return Response({"elderly_list": elderly_list}, status=status.HTTP_200_OK)
@@ -167,6 +177,11 @@ class UpdateElderlyView(generics.UpdateAPIView):
         dob_str = request.data.get('dob')
         gender_str = request.data.get('gender')
         medical_note = request.data.get('medical_note', elderly.medical_note)
+        blood_type = request.data.get('blood_type', elderly.blood_type)
+        height = request.data.get('height', elderly.height)
+        weight = request.data.get('weight', elderly.weight)
+        allergies = request.data.get('allergies', elderly.allergies)
+        underlying_conditions = request.data.get('underlying_conditions', elderly.underlying_conditions)
 
         if fullname:
             elderly.fullname = fullname
@@ -178,6 +193,11 @@ class UpdateElderlyView(generics.UpdateAPIView):
         if gender_str is not None:
             elderly.gender = (gender_str == 'Nam')
         elderly.medical_note = medical_note
+        elderly.blood_type = blood_type
+        elderly.height = height
+        elderly.weight = weight
+        elderly.allergies = allergies
+        elderly.underlying_conditions = underlying_conditions
         elderly.save()
 
         return Response({
@@ -188,6 +208,56 @@ class UpdateElderlyView(generics.UpdateAPIView):
                 "dob": str(elderly.date_of_birthday) if elderly.date_of_birthday else None,
                 "gender": "Nam" if elderly.gender else "Nu",
                 "medical_note": elderly.medical_note,
+                "blood_type": elderly.blood_type,
+                "height": elderly.height,
+                "weight": elderly.weight,
+                "allergies": elderly.allergies,
+                "underlying_conditions": elderly.underlying_conditions,
                 "qr_token": elderly.qr_token,
             }
         }, status=status.HTTP_200_OK)
+
+# ── Đổi mật khẩu ───────────────────────────────────────────────────────────
+class ChangePasswordView(generics.UpdateAPIView):
+    """PUT /api/users/change-password/"""
+    def put(self, request):
+        account_id = request.data.get('account_id')
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+
+        if not all([account_id, old_password, new_password]):
+            return Response({"error": "Vui lòng cung cấp đủ thông tin"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            account = Account.objects.get(accountid=account_id)
+        except Account.DoesNotExist:
+            return Response({"error": "Tài khoản không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
+
+        if account.password != old_password:
+            return Response({"error": "Mật khẩu hiện tại không đúng"}, status=status.HTTP_400_BAD_REQUEST)
+
+        account.password = new_password
+        account.save()
+        return Response({"message": "Đổi mật khẩu thành công"}, status=status.HTTP_200_OK)
+
+# ── Quên mật khẩu ──────────────────────────────────────────────────────────
+class ForgotPasswordView(generics.UpdateAPIView):
+    """PUT /api/users/forgot-password/"""
+    def put(self, request):
+        phone = request.data.get('phone')
+        new_password = request.data.get('new_password')
+
+        if not all([phone, new_password]):
+            return Response({"error": "Vui lòng cung cấp đủ thông tin"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            caregiver = Caregiver.objects.get(phone=phone)
+            account = caregiver.accountid
+            if not account:
+                return Response({"error": "Tài khoản không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
+            
+            account.password = new_password
+            account.save()
+            return Response({"message": "Đặt lại mật khẩu thành công"}, status=status.HTTP_200_OK)
+        except Caregiver.DoesNotExist:
+            return Response({"error": "Số điện thoại chưa được đăng ký"}, status=status.HTTP_404_NOT_FOUND)

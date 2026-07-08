@@ -171,134 +171,207 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showForgotPasswordSheet() {
     final phoneResetController = TextEditingController();
+    final newPasswordController = TextEditingController();
     final resetFormKey = GlobalKey<FormState>();
+    bool isResetting = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: EdgeInsets.fromLTRB(24, 16, 24, 32 + MediaQuery.of(ctx).padding.bottom),
-          child: Form(
-            key: resetFormKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Align(
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.fromLTRB(24, 16, 24, 32 + MediaQuery.of(ctx).padding.bottom),
+              child: Form(
+                key: resetFormKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.key_rounded, color: Color(0xFFD97706), size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Quên mật khẩu?',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        Text(
-                          'Đặt lại mật khẩu qua số điện thoại',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.key_rounded, color: Color(0xFFD97706), size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Quên mật khẩu?',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                            ),
+                            Text(
+                              'Đặt lại mật khẩu qua số điện thoại',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Nhập số điện thoại đã đăng ký và mật khẩu mới của bạn.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: phoneResetController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Số điện thoại',
+                        hintText: 'Nhập số điện thoại của bác',
+                        prefixIcon: const Icon(Icons.phone_iphone_rounded, color: Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Vui lòng nhập số điện thoại';
+                        }
+                        if (value.length < 10) {
+                          return 'Số điện thoại không hợp lệ';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: newPasswordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Mật khẩu mới',
+                        hintText: 'Nhập mật khẩu mới',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Vui lòng nhập mật khẩu mới';
+                        }
+                        if (value.length < 6) {
+                          return 'Mật khẩu phải chứa ít nhất 6 ký tự';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isResetting ? null : () async {
+                          if (resetFormKey.currentState!.validate()) {
+                            setModalState(() {
+                              isResetting = true;
+                            });
+
+                            final res = await ApiService.forgotPassword(
+                              phone: phoneResetController.text.trim(),
+                              newPassword: newPasswordController.text,
+                            );
+
+                            setModalState(() {
+                              isResetting = false;
+                            });
+
+                            if (!mounted) return;
+
+                            if (res["success"] == true) {
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: Color(0xFF16A34A),
+                                  content: Text('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.'),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(this.context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFFDC2626),
+                                  content: Text(res["error"] ?? 'Đặt lại mật khẩu thất bại.'),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0EA5E9),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        child: isResetting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Đặt lại mật khẩu',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Nhập số điện thoại đã đăng ký tài khoản. Chúng tôi sẽ gửi mã OTP để bạn đặt lại mật khẩu mới.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
-                ),
-                const SizedBox(height: 20),
-                TextFormField(
-                  controller: phoneResetController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Số điện thoại',
-                    hintText: 'Nhập số điện thoại của bác',
-                    prefixIcon: const Icon(Icons.phone_iphone_rounded, color: Color(0xFF64748B)),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Vui lòng nhập số điện thoại';
-                    }
-                    if (value.length < 10) {
-                      return 'Số điện thoại không hợp lệ';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (resetFormKey.currentState!.validate()) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: const Color(0xFF0EA5E9),
-                            content: Text('Mã OTP khôi phục đã được gửi tới ${phoneResetController.text}'),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0EA5E9),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Gửi mã xác thực OTP',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
