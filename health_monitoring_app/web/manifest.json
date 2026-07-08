@@ -1,6 +1,6 @@
 {
-    "name": "health_monitoring_app",
-    "short_name": "health_monitoring_app",
+    "name": "CareLink",
+    "short_name": "CareLink",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
