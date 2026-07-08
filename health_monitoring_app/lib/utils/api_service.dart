@@ -9,7 +9,7 @@ class ApiService {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://192.168.123.4:8000";
+      return "http://192.168.1.34:8000";
     }
     return "http://localhost:8000";
   }
@@ -557,8 +557,11 @@ class ApiService {
 
   // ================= GET NOTIFICATIONS =================
   static Future<List<dynamic>> getNotifications() async {
+    final queryParam = currentRole == 'elderly'
+        ? 'elderly_id=$currentAccountId'
+        : 'caregiver_id=$currentAccountId';
     final url = Uri.parse(
-      "$baseUrl/api/notification/notifications/?caregiver_id=$currentAccountId",
+      "$baseUrl/api/notification/notifications/?$queryParam",
     );
     try {
       final res = await http.get(url);
@@ -574,8 +577,11 @@ class ApiService {
 
   // ================= GENERATE MOCK NOTIFICATIONS =================
   static Future<bool> generateMockNotifications() async {
+    final queryParam = currentRole == 'elderly'
+        ? 'elderly_id=$currentAccountId'
+        : 'caregiver_id=$currentAccountId';
     final url = Uri.parse(
-      "$baseUrl/api/notification/generate-mock/?caregiver_id=$currentAccountId",
+      "$baseUrl/api/notification/generate-mock/?$queryParam",
     );
     try {
       final res = await http.post(

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/api_service.dart';
 
 
@@ -8,6 +10,7 @@ class ElderlyTaskItem {
   String type; // 'medication' | 'measurement' | 'habit' | 'symptom' | 'document'
   String time;
   String details;
+  bool isCompleted;
 
   // Thuộc tính chi tiết cho thuốc
   String? medCode;
@@ -25,6 +28,7 @@ class ElderlyTaskItem {
     required this.type,
     required this.time,
     required this.details,
+    this.isCompleted = false,
     this.medCode,
     this.dosage,
     this.dosesPerDay,
@@ -45,79 +49,10 @@ class ElderlyChecklistScreen extends StatefulWidget {
 }
 
 class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
-  final List<ElderlyTaskItem> _tasks = [
-    ElderlyTaskItem(
-      id: '1',
-      title: 'Uống thuốc huyết áp Amlodipine 5mg',
-      type: 'medication',
-      time: '07:00',
-      details: '1 viên sau ăn sáng · Huyết áp',
-      medCode: 'AML-05',
-      dosage: '1 viên',
-      dosesPerDay: 1,
-      startDate: '01/06/2026',
-      endDate: '30/06/2026',
-    ),
-    ElderlyTaskItem(
-      id: '4',
-      title: 'Uống thuốc tiểu đường Metformin 500mg',
-      type: 'medication',
-      time: '12:00',
-      details: '1 viên uống ngay trong bữa ăn trưa',
-      medCode: 'MET-500',
-      dosage: '1 viên',
-      dosesPerDay: 2,
-      startDate: '01/06/2026',
-      endDate: '30/06/2026',
-    ),
-    ElderlyTaskItem(
-      id: '6',
-      title: 'Uống thuốc mỡ máu Atorvastatin 20mg',
-      type: 'medication',
-      time: '20:00',
-      details: '1 viên uống trước khi đi ngủ',
-      medCode: 'ATO-20',
-      dosage: '1 viên',
-      dosesPerDay: 1,
-      startDate: '01/06/2026',
-      endDate: '15/06/2026',
-    ),
-    ElderlyTaskItem(
-      id: 'doc_1',
-      title: 'Chuẩn bị CCCD/CMND',
-      type: 'document',
-      time: 'Trước khám',
-      details: 'Cần thiết để làm thủ tục tại Bệnh viện Chợ Rẫy',
-    ),
-    ElderlyTaskItem(
-      id: 'doc_2',
-      title: 'Chuẩn bị Thẻ Bảo hiểm Y tế (BHYT)',
-      type: 'document',
-      time: 'Trước khám',
-      details: 'Để nhận hỗ trợ chi phí khám chữa bệnh',
-    ),
-    ElderlyTaskItem(
-      id: 'doc_3',
-      title: 'Chuẩn bị Sổ khám bệnh',
-      type: 'document',
-      time: 'Trước khám',
-      details: 'Sổ khám bệnh cũ ghi nhận lịch sử điều trị',
-    ),
-    ElderlyTaskItem(
-      id: 'doc_4',
-      title: 'Chuẩn bị Đơn thuốc đang sử dụng',
-      type: 'document',
-      time: 'Trước khám',
-      details: 'Mang theo các loại thuốc đang uống để bác sĩ đối chiếu',
-    ),
-    ElderlyTaskItem(
-      id: 'doc_5',
-      title: 'Chuẩn bị Kết quả xét nghiệm liên quan',
-      type: 'document',
-      time: 'Trước khám',
-      details: 'Phim X-quang, kết quả xét nghiệm máu gần đây',
-    ),
-  ];
+  final List<ElderlyTaskItem> _tasks = [];
+  int? _dailyChecklistId;
+  List<dynamic> _medicationSchedules = [];
+  bool _isLoading = false;
 
   String _selectedCategory = 'medication';
 
@@ -140,35 +75,235 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     return dateStr;
   }
 
+  bool _isMedicationTaken(int scheduleId, DateTime date) {
+    final s = _medicationSchedules.firstWhere((item) => item['schedule_id'] == scheduleId, orElse: () => null);
+    if (s == null) return false;
+    final med = s['medication'] ?? {};
+    final description = med['description']?.toString() ?? '';
+    if (description.contains('· dose_history:')) {
+      final parts = description.split('· dose_history:');
+      final jsonStr = parts[1].trim();
+      try {
+        final list = jsonDecode(jsonStr) as List;
+        final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        final timeStr = s['time']?.toString() ?? '';
+        return list.any((item) =>
+          item['date'].toString().startsWith(dateStr) &&
+          item['time'] == timeStr &&
+          item['taken'] == true
+        );
+      } catch (e) {
+        print("Error parsing dose history: $e");
+      }
+    }
+    return false;
+  }
+
+  Future<void> _toggleMedicationTaken(int scheduleId, DateTime date, String medName) async {
+    final s = _medicationSchedules.firstWhere((item) => item['schedule_id'] == scheduleId, orElse: () => null);
+    if (s == null) return;
+    final med = s['medication'] ?? {};
+    final String description = med['description']?.toString() ?? '';
+    
+    // Extract existing dose history
+    List<dynamic> historyList = [];
+    String baseDesc = description;
+    if (description.contains('· dose_history:')) {
+      final parts = description.split('· dose_history:');
+      baseDesc = parts[0].trim();
+      try {
+        historyList = jsonDecode(parts[1].trim()) as List;
+      } catch (_) {}
+    } else if (description.isEmpty) {
+      baseDesc = 'Nhóm: Khác · Tổng số viên thuốc: 30';
+    }
+    
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final timeStr = s['time']?.toString() ?? '';
+    
+    // Find if already recorded
+    final idx = historyList.indexWhere((item) =>
+      item['date'].toString().startsWith(dateStr) &&
+      item['time'] == timeStr
+    );
+    
+    bool isTaken = true;
+    if (idx >= 0) {
+      final currentlyTaken = historyList[idx]['taken'] ?? false;
+      isTaken = !currentlyTaken;
+      historyList[idx]['taken'] = isTaken;
+      historyList[idx]['takenAt'] = isTaken ? DateTime.now().toIso8601String() : null;
+    } else {
+      historyList.add({
+        'date': DateTime(date.year, date.month, date.day).toIso8601String(),
+        'time': timeStr,
+        'taken': true,
+        'takenAt': DateTime.now().toIso8601String(),
+      });
+    }
+    
+    // Construct new description
+    final newDescription = '$baseDesc · dose_history: ${jsonEncode(historyList)}';
+    
+    // Save to backend
+    final ok = await ApiService.updateMedication(
+      scheduleId: scheduleId,
+      name: med['name'] ?? '',
+      dosage: med['dosage'] ?? '',
+      instruction: med['instruction'] ?? '',
+      time: s['time'] ?? '',
+      frequency: s['frequency'] ?? '',
+      description: newDescription,
+      startDate: s['start_date'] ?? '',
+      endDate: s['end_date'] ?? '',
+    );
+    
+    if (ok) {
+      _fetchMedications();
+    }
+  }
+
+  Future<void> _toggleTaskCompletion(ElderlyTaskItem task) async {
+    if (task.type == 'medication') {
+      final scheduleId = int.tryParse(task.id);
+      if (scheduleId != null) {
+        await _toggleMedicationTaken(scheduleId, DateTime.now(), task.title);
+      }
+    } else {
+      final newStatus = !task.isCompleted;
+      setState(() {
+        task.isCompleted = newStatus;
+      });
+      if (task.id.startsWith('chk_')) {
+        final itemId = int.parse(task.id.replaceFirst('chk_', ''));
+        await ApiService.updateChecklistItem(itemId, isComplete: newStatus);
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('mock_doc_completed_${task.id}', newStatus);
+      }
+      _fetchMedications();
+    }
+  }
+
   Future<void> _fetchMedications() async {
     final targetElderlyId = ApiService.currentAccountId;
     if (targetElderlyId == null) return;
 
+    if (!_isLoading) {
+      setState(() => _isLoading = true);
+    }
+
     final schedules =
         await ApiService.getElderlyMedicationSchedule(targetElderlyId);
-    if (schedules.isNotEmpty) {
-      if (mounted) {
-        setState(() {
-          _tasks.removeWhere((t) => t.type == 'medication');
-          for (var s in schedules) {
-            final med = s['medication'] ?? {};
-            _tasks.add(ElderlyTaskItem(
-              id: s['schedule_id'].toString(),
-              title: med['name'] ?? 'Thuốc',
-              type: 'medication',
-              time: s['time']?.isNotEmpty == true ? s['time'] : '08:00',
-              details: '${med['dosage'] ?? ''} - ${med['instruction'] ?? ''}',
-              medCode: 'MED-${s['schedule_id']}',
-              dosage: med['dosage'],
-              startDate: _formatDate(s['start_date']),
-              endDate: _formatDate(s['end_date']),
-              frequency: s['frequency'],
-              instruction: med['instruction'],
-              description: med['description'],
-            ));
-          }
-        });
+    
+    // Fetch all checklists for this elderly
+    final checklistsRes = await ApiService.getChecklists(targetElderlyId);
+    List<dynamic> checklistItems = [];
+    for (var cl in checklistsRes) {
+      final clId = cl['checklistid'] ?? cl['checklistID'] ?? cl['id'];
+      if (clId != null) {
+        final items = await ApiService.getChecklistItems(clId);
+        checklistItems.addAll(items);
       }
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+
+    if (mounted) {
+      setState(() {
+        _medicationSchedules = schedules;
+        _tasks.clear();
+
+        // 1. Add medications from schedules
+        for (var s in schedules) {
+          final med = s['medication'] ?? {};
+          _tasks.add(ElderlyTaskItem(
+            id: s['schedule_id'].toString(),
+            title: med['name'] ?? 'Thuốc',
+            type: 'medication',
+            time: s['time']?.isNotEmpty == true ? s['time'] : '08:00',
+            details: '${med['dosage'] ?? ''} - ${med['instruction'] ?? ''}',
+            medCode: 'MED-${s['schedule_id']}',
+            dosage: med['dosage'],
+            startDate: _formatDate(s['start_date']),
+            endDate: _formatDate(s['end_date']),
+            frequency: s['frequency'],
+            instruction: med['instruction'],
+            description: () {
+              var desc = med['description']?.toString() ?? '';
+              if (desc.contains('· dose_history:')) {
+                desc = desc.split('· dose_history:')[0].trim();
+              }
+              return desc.isNotEmpty ? desc : null;
+            }(),
+          ));
+        }
+
+        // 2. ALWAYS add the 5 default mock prep documents
+        _tasks.addAll([
+          ElderlyTaskItem(
+            id: 'doc_1',
+            title: 'Chuẩn bị CCCD/CMND',
+            type: 'document',
+            time: 'Trước khám',
+            details: 'Cần thiết để làm thủ tục tại Bệnh viện Chợ Rẫy',
+            isCompleted: prefs.getBool('mock_doc_completed_doc_1') ?? false,
+          ),
+          ElderlyTaskItem(
+            id: 'doc_2',
+            title: 'Chuẩn bị Thẻ Bảo hiểm Y tế (BHYT)',
+            type: 'document',
+            time: 'Trước khám',
+            details: 'Để nhận hỗ trợ chi phí khám chữa bệnh',
+            isCompleted: prefs.getBool('mock_doc_completed_doc_2') ?? false,
+          ),
+          ElderlyTaskItem(
+            id: 'doc_3',
+            title: 'Chuẩn bị Sổ khám bệnh',
+            type: 'document',
+            time: 'Trước khám',
+            details: 'Sổ khám bệnh cũ ghi nhận lịch sử điều trị',
+            isCompleted: prefs.getBool('mock_doc_completed_doc_3') ?? false,
+          ),
+          ElderlyTaskItem(
+            id: 'doc_4',
+            title: 'Chuẩn bị Đơn thuốc đang sử dụng',
+            type: 'document',
+            time: 'Trước khám',
+            details: 'Mang theo các loại thuốc đang uống để bác sĩ đối chiếu',
+            isCompleted: prefs.getBool('mock_doc_completed_doc_4') ?? false,
+          ),
+          ElderlyTaskItem(
+            id: 'doc_5',
+            title: 'Chuẩn bị Kết quả xét nghiệm liên quan',
+            type: 'document',
+            time: 'Trước khám',
+            details: 'Phim X-quang, kết quả xét nghiệm máu gần đây',
+            isCompleted: prefs.getBool('mock_doc_completed_doc_5') ?? false,
+          ),
+        ]);
+
+        // 3. Add database checklist items
+        for (var item in checklistItems) {
+          String type = item['item_type'] ?? 'task';
+          String time = item['time_string'] ?? 'Tùy lúc';
+          String details = item['details'] ?? '';
+          String id = 'chk_${item['checklist_itemid'] ?? item['checklist_itemID'] ?? item['id']}';
+
+          // Skip if it's already medication, since we load them from schedules
+          if (type == 'medication') continue;
+
+          _tasks.add(ElderlyTaskItem(
+            id: id,
+            title: item['title'] ?? '',
+            type: 'document', // Show all non-medication tasks under document tab for simplicity
+            time: time,
+            details: details,
+            isCompleted: item['is_complete'] ?? false,
+          ));
+        }
+        _isLoading = false;
+      });
     }
   }
 
@@ -400,6 +535,11 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
       typeLabel = 'Thông tin chuẩn bị';
     }
 
+    final int? scheduleId = task.type == 'medication' ? int.tryParse(task.id) : null;
+    final bool isTaken = task.type == 'medication'
+        ? (scheduleId != null && _isMedicationTaken(scheduleId, DateTime.now()))
+        : task.isCompleted;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -504,25 +644,52 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                 _noteBox(Icons.info_outline_rounded, 'Hướng dẫn chuẩn bị', task.details, themeColor),
               ],
               const SizedBox(height: 28),
-              // Nút Đóng
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              // Nút Đóng & Hoàn thành/Hủy hoàn thành
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: themeColor, width: 1.5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'Đóng',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: themeColor),
+                        ),
+                      ),
                     ),
-                    elevation: 0,
                   ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    'Đóng',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isTaken ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await _toggleTaskCompletion(task);
+                        },
+                        child: Text(
+                          isTaken ? 'Hủy xác nhận' : 'Đã làm xong',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -646,9 +813,11 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
         ? _getMedicationIcon(task.title)
         : Icons.assignment_rounded;
 
-    // Đọc trạng thái đã tích uống từ Trang chủ (thông qua GlobalState dùng chung)
+    // Đọc trạng thái đã tích uống từ Trang chủ / Database
     final int? scheduleId = task.type == 'medication' ? int.tryParse(task.id) : null;
-    final bool isTaken = scheduleId != null && false;
+    final bool isTaken = task.type == 'medication'
+        ? (scheduleId != null && _isMedicationTaken(scheduleId, DateTime.now()))
+        : task.isCompleted;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -796,7 +965,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
           const SizedBox(height: 6),
           const Text(
             'Bác đã hoàn thành hết công việc của danh mục này.',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],
       ),

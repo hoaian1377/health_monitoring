@@ -313,6 +313,26 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         final instruction = med['instruction']?.toString() ?? 'Sau ăn';
         final time = schedule['time']?.toString() ?? '08:00';
         final frequency = schedule['frequency']?.toString() ?? '1 lần/ngày';
+        
+        final description = med['description']?.toString() ?? '';
+        final List<MedicineDoseRecord> doseHistory = [];
+        if (description.contains('· dose_history:')) {
+          final parts = description.split('· dose_history:');
+          try {
+            final list = jsonDecode(parts[1].trim()) as List;
+            for (final item in list) {
+              doseHistory.add(MedicineDoseRecord(
+                date: DateTime.parse(item['date']),
+                time: item['time'],
+                taken: item['taken'],
+                takenAt: item['takenAt'] != null ? DateTime.parse(item['takenAt']) : null,
+              ));
+            }
+          } catch (e) {
+            print("Error parsing dose history: $e");
+          }
+        }
+
         final stock = schedule['stock_remaining'] is int
             ? schedule['stock_remaining'] as int
             : 30;
@@ -321,7 +341,8 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
             : stock;
         final startDate = DateTime.tryParse(schedule['start_date']?.toString() ?? '') ?? DateTime.now();
         final endDate = DateTime.tryParse(schedule['end_date']?.toString() ?? '') ?? DateTime.now().add(const Duration(days: 30));
-        _medicines.add(MedicineItem(
+        
+        final newItem = MedicineItem(
           id: schedule['schedule_id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
           name: name,
           category: 'khac',
@@ -336,7 +357,16 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
           stockTotal: totalStock,
           prescribedBy: 'Không rõ',
           color: '#0EA5E9',
-        ));
+          doseHistory: doseHistory,
+        );
+        newItem.notes = () {
+          var desc = description;
+          if (desc.contains('· dose_history:')) {
+            desc = desc.split('· dose_history:')[0].trim();
+          }
+          return desc.isNotEmpty ? desc : null;
+        }();
+        _medicines.add(newItem);
       }
       _isLoadingMedications = false;
       _loadLocalDoseHistory();
@@ -349,6 +379,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     if (!mounted) return;
     setState(() {
       for (final med in _medicines) {
+        if (med.doseHistory.isNotEmpty) continue; // Prioritize DB history
         final key = 'dose_history_${med.id}';
         final jsonList = prefs.getStringList(key);
         if (jsonList != null) {
@@ -380,6 +411,35 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
       'takenAt': r.takenAt?.toIso8601String(),
     })).toList();
     await prefs.setStringList(key, jsonList);
+
+    // Save to backend database description field
+    final scheduleId = int.tryParse(med.id);
+    if (scheduleId != null) {
+      var baseDesc = med.notes ?? '';
+      if (baseDesc.contains('· dose_history:')) {
+        baseDesc = baseDesc.split('· dose_history:')[0].trim();
+      } else if (baseDesc.isEmpty) {
+        baseDesc = 'Nhóm: ${med.category} · Tổng số viên thuốc: ${med.stockRemaining}';
+      }
+      final newDesc = '$baseDesc · dose_history: ${jsonEncode(med.doseHistory.map((r) => {
+        'date': r.date.toIso8601String(),
+        'time': r.time,
+        'taken': r.taken,
+        'takenAt': r.takenAt?.toIso8601String(),
+      }).toList())}';
+
+      await ApiService.updateMedication(
+        scheduleId: scheduleId,
+        name: med.name,
+        dosage: med.dosage,
+        instruction: med.instruction,
+        time: med.times.isNotEmpty ? med.times.first : '08:00',
+        frequency: med.frequency,
+        description: newDesc,
+        startDate: med.startDate.toIso8601String().substring(0, 10),
+        endDate: med.endDate.toIso8601String().substring(0, 10),
+      );
+    }
   }
 
   void _buildTodaySlots() {
@@ -1358,13 +1418,23 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                         ),
                       ).then((ok) {
                         if (ok == true) {
-                          setState(() {
-                            _medicines.removeWhere((x) => _selectedMedIds.contains(x.id));
-                            _selectedMedIds.clear();
-                            _isMultiSelectMode = false;
-                            _buildTodaySlots();
+                          // Call backend API for each selected ID
+                          Future.wait(_selectedMedIds.map((id) async {
+                            final schedId = int.tryParse(id);
+                            if (schedId != null) {
+                              await ApiService.deleteMedication(schedId);
+                            }
+                          })).then((_) {
+                            if (mounted) {
+                              setState(() {
+                                _medicines.removeWhere((x) => _selectedMedIds.contains(x.id));
+                                _selectedMedIds.clear();
+                                _isMultiSelectMode = false;
+                                _buildTodaySlots();
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa các thuốc đã chọn')));
+                            }
                           });
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa các thuốc đã chọn')));
                         }
                       });
                     },
@@ -1564,6 +1634,10 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
             ),
           );
           if (ok == true) {
+            final schedId = int.tryParse(med.id);
+            if (schedId != null) {
+              await ApiService.deleteMedication(schedId);
+            }
             setState(() {
               _medicines.removeWhere((x) => x.id == med.id);
               _buildTodaySlots();
@@ -2679,6 +2753,34 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                             _buildTodaySlots();
                             _scheduleAlarms(editTarget);
                           });
+
+                          // Call backend update API
+                          final schedId = int.tryParse(editTarget.id);
+                          if (schedId != null) {
+                            final descriptionStr = _stockCtrl.text.trim().isNotEmpty
+                                ? 'Nhóm: $_formCategory · Tổng số viên thuốc: ${_stockCtrl.text.trim()}'
+                                : 'Nhóm: $_formCategory';
+                            var finalDesc = descriptionStr;
+                            if (editTarget.doseHistory.isNotEmpty) {
+                              finalDesc = '$descriptionStr · dose_history: ${jsonEncode(editTarget.doseHistory.map((r) => {
+                                'date': r.date.toIso8601String(),
+                                'time': r.time,
+                                'taken': r.taken,
+                                'takenAt': r.takenAt?.toIso8601String(),
+                              }).toList())}';
+                            }
+                            ApiService.updateMedication(
+                              scheduleId: schedId,
+                              name: _nameCtrl.text.trim(),
+                              dosage: _dosageCtrl.text.trim().isEmpty ? '1 viên' : _dosageCtrl.text.trim(),
+                              instruction: _formInstruction,
+                              time: timesStr.isNotEmpty ? timesStr.first : '08:00',
+                              frequency: timesStr.length == 1 ? '1 lần/ngày' : '${timesStr.length} lần/ngày',
+                              description: finalDesc,
+                              startDate: _formStartDate.toIso8601String().substring(0, 10),
+                              endDate: _formEndDate.toIso8601String().substring(0, 10),
+                            );
+                          }
                         } else {
                           final catColors = {
                             'huyet_ap': '#DC2626',

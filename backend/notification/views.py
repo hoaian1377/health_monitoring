@@ -5,13 +5,19 @@ from .serializers import NotificationSerializer, NotificationDetailSerializer
 import datetime
 
 class NotificationListView(generics.ListAPIView):
-    """GET /api/notification/notifications/?caregiver_id=<id>"""
+    """GET /api/notification/notifications/?caregiver_id=<id> hoặc ?elderly_id=<id>"""
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
         caregiver_id = self.request.query_params.get('caregiver_id')
+        elderly_id = self.request.query_params.get('elderly_id')
+
         if caregiver_id:
             return Notification.objects.filter(caregiverid=caregiver_id).order_by('-created_at')
+        elif elderly_id:
+            from users.models import CaregiverElderly
+            caregivers = CaregiverElderly.objects.filter(elderlyid=elderly_id).values_list('caregiverid', flat=True)
+            return Notification.objects.filter(caregiverid__in=caregivers).order_by('-created_at')
         return Notification.objects.all().order_by('-created_at')
 
 class NotificationDetailView(generics.UpdateAPIView):
@@ -30,11 +36,17 @@ class NotificationDetailView(generics.UpdateAPIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class GenerateMockNotificationsView(generics.CreateAPIView):
-    """POST /api/notification/generate-mock/?caregiver_id=<id>"""
+    """POST /api/notification/generate-mock/?caregiver_id=<id> hoặc ?elderly_id=<id>"""
     def post(self, request):
         caregiver_id = request.query_params.get('caregiver_id')
+        elderly_id = request.query_params.get('elderly_id')
+
+        if not caregiver_id and elderly_id:
+            from users.models import CaregiverElderly
+            caregiver_id = CaregiverElderly.objects.filter(elderlyid=elderly_id).values_list('caregiverid', flat=True).first()
+
         if not caregiver_id:
-            return Response({"error": "Thiếu caregiver_id"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Thiếu caregiver_id hoặc elderly_id hợp lệ"}, status=status.HTTP_400_BAD_REQUEST)
         
         notif1 = Notification.objects.create(
             caregiverid_id=caregiver_id,

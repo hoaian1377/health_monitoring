@@ -67,6 +67,9 @@ class CreateMedicationView(generics.CreateAPIView):
         instruction = request.data.get('instruction', '')
         time_str = request.data.get('time')
         frequency = request.data.get('frequency', '')
+        description = request.data.get('description', '')
+        start_date_str = request.data.get('start_date')
+        end_date_str = request.data.get('end_date')
 
         try:
             elderly = Elderly.objects.get(elderlyid=elderly_id)
@@ -76,7 +79,8 @@ class CreateMedicationView(generics.CreateAPIView):
         medication = Medication.objects.create(
             name=name,
             dosage=dosage,
-            instruction=instruction
+            instruction=instruction,
+            description=description
         )
 
         time_obj = None
@@ -86,14 +90,31 @@ class CreateMedicationView(generics.CreateAPIView):
             except ValueError:
                 pass
 
+        start_date_obj = None
+        if start_date_str:
+            try:
+                start_date_obj = datetime.strptime(start_date_str, "%Y-%m-%d")
+            except ValueError:
+                pass
+
+        end_date_obj = None
+        if end_date_str:
+            try:
+                end_date_obj = datetime.strptime(end_date_str, "%Y-%m-%d")
+            except ValueError:
+                pass
+
         schedule = MedicationSchedule.objects.create(
             medicationid=medication,
             elderlyid=elderly,
             time=time_obj,
-            frequency=frequency
+            frequency=frequency,
+            start_date=start_date_obj,
+            end_date=end_date_obj
         )
 
         return Response({"message": "Đã thêm lịch uống thuốc"}, status=status.HTTP_201_CREATED)
+
 
 class UpdateMedicationView(generics.UpdateAPIView):
     """PUT /api/medication/schedule/<id>/update/"""
@@ -108,13 +129,17 @@ class UpdateMedicationView(generics.UpdateAPIView):
             name = request.data.get('name')
             dosage = request.data.get('dosage')
             instruction = request.data.get('instruction')
+            description = request.data.get('description')
             if name is not None: medication.name = name
             if dosage is not None: medication.dosage = dosage
             if instruction is not None: medication.instruction = instruction
+            if description is not None: medication.description = description
             medication.save()
 
         time_str = request.data.get('time')
         frequency = request.data.get('frequency')
+        start_date_str = request.data.get('start_date')
+        end_date_str = request.data.get('end_date')
         
         if time_str:
             try:
@@ -123,6 +148,18 @@ class UpdateMedicationView(generics.UpdateAPIView):
                 pass
         if frequency is not None:
             schedule.frequency = frequency
+
+        if start_date_str:
+            try:
+                schedule.start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+            except ValueError:
+                pass
+
+        if end_date_str:
+            try:
+                schedule.end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+            except ValueError:
+                pass
         
         schedule.save()
         return Response({"message": "Cập nhật thành công"}, status=status.HTTP_200_OK)

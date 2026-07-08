@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
@@ -55,6 +56,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   String _bpDia = '--';
   String _heartRate = '--';
   String _bloodSugar = '--';
+  String _temperature = '--';
 
   bool _isAppointmentNear = true;
   bool _isDocChecklistExpanded = true;
@@ -135,6 +137,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
           }
           if (latest['blood_sugar'] != null) {
             _bloodSugar = latest['blood_sugar'].toString();
+          }
+          if (latest['temperature'] != null) {
+            _temperature = latest['temperature'].toString();
           }
         }
       });
@@ -459,21 +464,76 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   }
 
   bool _isMedicationTaken(int scheduleId, DateTime date) {
-    return _takenScheduleIds.contains(scheduleId);
+    final s = _medicationSchedules.firstWhere((item) => item['schedule_id'] == scheduleId, orElse: () => null);
+    if (s == null) return false;
+    final med = s['medication'] ?? {};
+    final description = med['description']?.toString() ?? '';
+    if (description.contains('· dose_history:')) {
+      final parts = description.split('· dose_history:');
+      final jsonStr = parts[1].trim();
+      try {
+        final list = jsonDecode(jsonStr) as List;
+        final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+        final timeStr = s['time']?.toString() ?? '';
+        return list.any((item) =>
+          item['date'].toString().startsWith(dateStr) &&
+          item['time'] == timeStr &&
+          item['taken'] == true
+        );
+      } catch (e) {
+        print("Error parsing dose history: $e");
+      }
+    }
+    return false;
   }
 
-  void _toggleMedicationTaken(int scheduleId, DateTime date, String medName) {
-    final bool currentlyTaken = _takenScheduleIds.contains(scheduleId);
-    setState(() {
-      if (currentlyTaken) {
-        _takenScheduleIds.remove(scheduleId);
-      } else {
-        _takenScheduleIds.add(scheduleId);
-      }
-    });
-
-    final isTaken = !currentlyTaken;
-
+  void _toggleMedicationTaken(int scheduleId, DateTime date, String medName) async {
+    final s = _medicationSchedules.firstWhere((item) => item['schedule_id'] == scheduleId, orElse: () => null);
+    if (s == null) return;
+    final med = s['medication'] ?? {};
+    final String description = med['description']?.toString() ?? '';
+    
+    // Extract existing dose history
+    List<dynamic> historyList = [];
+    String baseDesc = description;
+    if (description.contains('· dose_history:')) {
+      final parts = description.split('· dose_history:');
+      baseDesc = parts[0].trim();
+      try {
+        historyList = jsonDecode(parts[1].trim()) as List;
+      } catch (_) {}
+    } else if (description.isEmpty) {
+      baseDesc = 'Nhóm: Khác · Tổng số viên thuốc: 30';
+    }
+    
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final timeStr = s['time']?.toString() ?? '';
+    
+    // Find if already recorded
+    final idx = historyList.indexWhere((item) =>
+      item['date'].toString().startsWith(dateStr) &&
+      item['time'] == timeStr
+    );
+    
+    bool isTaken = true;
+    if (idx >= 0) {
+      final currentlyTaken = historyList[idx]['taken'] ?? false;
+      isTaken = !currentlyTaken;
+      historyList[idx]['taken'] = isTaken;
+      historyList[idx]['takenAt'] = isTaken ? DateTime.now().toIso8601String() : null;
+    } else {
+      historyList.add({
+        'date': DateTime(date.year, date.month, date.day).toIso8601String(),
+        'time': timeStr,
+        'taken': true,
+        'takenAt': DateTime.now().toIso8601String(),
+      });
+    }
+    
+    // Construct new description
+    final newDescription = '$baseDesc · dose_history: ${jsonEncode(historyList)}';
+    
+    // Show SnackBar immediately for good UX
     if (!isTaken) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -506,6 +566,23 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
           ),
         ),
       );
+    }
+
+    // Save to backend
+    final ok = await ApiService.updateMedication(
+      scheduleId: scheduleId,
+      name: med['name'] ?? '',
+      dosage: med['dosage'] ?? '',
+      instruction: med['instruction'] ?? '',
+      time: s['time'] ?? '',
+      frequency: s['frequency'] ?? '',
+      description: newDescription,
+      startDate: s['start_date'] ?? '',
+      endDate: s['end_date'] ?? '',
+    );
+    
+    if (ok) {
+      _loadMedications();
     }
   }
 
@@ -1173,9 +1250,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                         
                         String? remainingValue;
                         String cleanDescription = description ?? '';
-                        if (description != null && (description.contains('Còn lại:') || description.contains('Tổng số viên thuốc:'))) {
+                        if (cleanDescription.contains('· dose_history:')) {
+                          cleanDescription = cleanDescription.split('· dose_history:')[0].trim();
+                        }
+                        if (cleanDescription.contains('Còn lại:') || cleanDescription.contains('Tổng số viên thuốc:')) {
                           final regExp = RegExp(r'^(.*?)\s*·?\s*(?:Còn lại|Tổng số viên thuốc):\s*([^·]+)(.*)$');
-                          final match = regExp.firstMatch(description);
+                          final match = regExp.firstMatch(cleanDescription);
                           if (match != null) {
                             cleanDescription = '${match.group(1) ?? ''}${match.group(3) ?? ''}'.trim();
                             cleanDescription = cleanDescription
