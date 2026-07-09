@@ -304,9 +304,9 @@ class _ChecklistScreenState extends State<ChecklistScreen>
   String _typeLabel(String type) {
     switch (type) {
       case 'document':
-        return 'Giấy tờ';
+        return 'Hồ sơ mang theo';
       case 'appointment':
-        return 'Lịch khám';
+        return 'Tái khám';
       default:
         return 'Công việc';
     }
@@ -502,8 +502,8 @@ class _ChecklistScreenState extends State<ChecklistScreen>
     final cats = [
       {'key': 'all', 'label': 'Tất cả', 'icon': Icons.list_rounded},
       {'key': 'task', 'label': 'Công việc', 'icon': Icons.check_circle_outline_rounded},
-      {'key': 'document', 'label': 'Giấy tờ', 'icon': Icons.assignment_rounded},
-      {'key': 'appointment', 'label': 'Lịch khám', 'icon': Icons.local_hospital_rounded},
+      {'key': 'document', 'label': 'Hồ sơ mang theo', 'icon': Icons.assignment_rounded},
+      {'key': 'appointment', 'label': 'Tái khám', 'icon': Icons.local_hospital_rounded},
     ];
 
     return SizedBox(
@@ -1122,10 +1122,10 @@ class _AddTaskSheetState extends State<_AddTaskSheet>
           _typeChip('task', Icons.check_circle_outline_rounded, 'Công việc',
               const Color(0xFF0EA5E9)),
           const SizedBox(width: 8),
-          _typeChip('document', Icons.assignment_rounded, 'Giấy tờ',
+          _typeChip('document', Icons.assignment_rounded, 'Hồ sơ mang theo',
               const Color(0xFFF59E0B)),
           const SizedBox(width: 8),
-          _typeChip('appointment', Icons.local_hospital_rounded, 'Lịch khám',
+          _typeChip('appointment', Icons.local_hospital_rounded, 'Tái khám',
               const Color(0xFFE11D48)),
         ]),
         const SizedBox(height: 20),
@@ -1375,7 +1375,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet>
           _importTypeChip('task', Icons.check_circle_outline_rounded, 'Công việc',
               const Color(0xFF0EA5E9)),
           const SizedBox(width: 8),
-          _importTypeChip('document', Icons.assignment_rounded, 'Giấy tờ',
+          _importTypeChip('document', Icons.assignment_rounded, 'Hồ sơ mang theo',
               const Color(0xFFF59E0B)),
         ]),
         const SizedBox(height: 20),

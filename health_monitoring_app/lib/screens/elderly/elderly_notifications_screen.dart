@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../utils/api_service.dart';
 
 class ElderlyNotificationsScreen extends StatefulWidget {
@@ -293,9 +293,9 @@ class _ElderlyNotificationsScreenState
   Widget _buildNotificationCard(NotificationItem item) {
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
-      opacity: item.isRead ? 0.65 : 1.0,
+      opacity: item.isRead ? 0.8 : 1.0,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -335,7 +335,7 @@ class _ElderlyNotificationsScreenState
                   ),
                   const SizedBox(width: 14),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: item.isRead
                           ? const Color(0xFFF1F5F9)
@@ -345,14 +345,14 @@ class _ElderlyNotificationsScreenState
                     child: Icon(
                       item.icon,
                       color:
-                          item.isRead ? Colors.grey : item.themeColor,
-                      size: 26,
+                          item.isRead ? Colors.grey.shade600 : item.themeColor,
+                      size: 32,
                     ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 4),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -374,11 +374,11 @@ class _ElderlyNotificationsScreenState
                                 child: Text(
                                   item.title,
                                   style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 21,
                                     color: item.isRead
-                                        ? const Color(0xFF64748B)
-                                        : const Color(0xFF1E293B),
+                                        ? const Color(0xFF475569)
+                                        : const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -388,22 +388,23 @@ class _ElderlyNotificationsScreenState
                           Text(
                             item.description,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 18,
                               color: item.isRead
-                                  ? Colors.grey.shade400
-                                  : const Color(0xFF475569),
-                              height: 1.35,
+                                  ? Colors.grey.shade700
+                                  : const Color(0xFF334155),
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
                             item.time,
                             style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
                               color: item.isRead
-                                  ? Colors.grey.shade300
-                                  : const Color(0xFF94A3B8),
+                                  ? Colors.grey.shade500
+                                  : item.themeColor,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],

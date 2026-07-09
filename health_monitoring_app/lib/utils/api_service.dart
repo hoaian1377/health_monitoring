@@ -10,7 +10,7 @@ class ApiService {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://10.0.2.2:8000";
+      return "http://192.168.123.4:8000";
     }
     return "http://localhost:8000";
   }
@@ -248,13 +248,55 @@ class ApiService {
       );
       if (res.statusCode == 200) {
         return {"success": true, "message": "Đổi mật khẩu thành công."};
+      } else {
+        return {"success": false, "error": "Lỗi đổi mật khẩu."};
       }
-      final err = jsonDecode(res.body);
-      return {"success": false, "error": err["error"] ?? "Đổi mật khẩu thất bại."};
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
+
+  // ================= MEDICAL DOCUMENTS =================
+  static Future<List<dynamic>> getMedicalDocument() async {
+    if (currentElderlyId == null) return [];
+    final url = Uri.parse("$baseUrl/api/medication/elderly-document/list/?elderly_id=$currentElderlyId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
+      }
+    } catch (e) {
+      print("Error fetching medical documents: $e");
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> uploadMedicalDocument({
+    required String filePath,
+    required String documentType,
+  }) async {
+    if (currentElderlyId == null) return {"success": false, "error": "Chưa chọn người cao tuổi"};
+    
+    final url = Uri.parse("$baseUrl/api/medication/elderly-document/upload/");
+    try {
+      var request = http.MultipartRequest('POST', url);
+      request.fields['elderly_id'] = currentElderlyId.toString();
+      request.fields['document_type'] = documentType;
+      
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      
+      var response = await request.send();
+      if (response.statusCode == 201) {
+        return {"success": true, "message": "Upload thành công"};
+      } else {
+        return {"success": false, "error": "Lỗi upload tài liệu"};
+      }
+    } catch (e) {
+      print("Error uploading document: $e");
+      return {"success": false, "error": "Lỗi kết nối máy chủ: $e"};
+    }
+  }
+
 
   // ================= FORGOT PASSWORD =================
   static Future<Map<String, dynamic>> forgotPassword({
@@ -456,6 +498,7 @@ class ApiService {
   }
 
   // ================= CREATE APPOINTMENT =================
+
   static Future<bool> createAppointment({
     required int elderlyId,
     required String doctorName,
@@ -484,6 +527,30 @@ class ApiService {
     }
   }
 
+  static Future<bool> updateAppointment(int id, Map<String, dynamic> data) async {
+    final url = Uri.parse("$baseUrl/api/medication/appointment/$id/update/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(data),
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> deleteAppointment(int id) async {
+    final url = Uri.parse("$baseUrl/api/medication/appointment/$id/delete/");
+    try {
+      final res = await http.delete(url);
+      return res.statusCode == 200 || res.statusCode == 204;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ================= GET APPOINTMENTS =================
   static Future<List<dynamic>> getAppointments(int elderlyId) async {
     final url = Uri.parse(
@@ -501,20 +568,6 @@ class ApiService {
     }
   }
 
-  // ================= GET MEDICAL DOCUMENT =================
-  static Future<List<dynamic>> getMedicalDocument() async {
-    final url = Uri.parse("$baseUrl/api/medication/document/");
-    try {
-      final res = await http.get(url);
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body);
-      }
-      return [];
-    } catch (e) {
-      print("ERROR: $e");
-      return [];
-    }
-  }
 
   // ================= UC-6: SAO LƯU CSDL =================
   static Future<Map<String, dynamic>> backupDatabase() async {

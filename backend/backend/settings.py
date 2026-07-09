@@ -90,7 +90,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'Healthgfgf',
+        'NAME': 'Health_monitoring',
         'USER':'',
         'PASSWORD':'',
         'HOST':'localhost',
@@ -136,3 +136,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

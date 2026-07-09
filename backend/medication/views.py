@@ -376,10 +376,17 @@ class CreateAppointmentView(generics.CreateAPIView):
         caregivers = CaregiverElderly.objects.filter(elderlyid=elderly)
         for ce in caregivers:
             if ce.caregiverid:
+                time_formatted = appointment_time.strftime("%H:%M") if appointment_time else "08:00"
+                date_formatted = appointment_date.strftime("%d/%m/%Y") if appointment_date else "Chưa rõ"
+                location_str = request.data.get('location', '')
+                location_str = location_str if location_str else "bệnh viện/phòng khám"
+                doctor_str = request.data.get('doctor_name', '')
+                doctor_str = doctor_str if doctor_str else "Bác sĩ"
+                
                 notif = Notification.objects.create(
                     caregiverid=ce.caregiverid,
-                    title="Lịch khám bệnh mới",
-                    message=f"Đã thêm lịch khám cho {elderly.fullname} vào ngày {appointment_date} lúc {appointment_time}.",
+                    title=f"Lịch khám bệnh: {elderly.fullname}",
+                    message=f"Thời gian: {time_formatted} ngày {date_formatted}\nTại: {location_str}\nPhụ trách: {doctor_str}",
                     created_at=timezone.now()
                 )
                 NotificationDetail.objects.create(
@@ -402,3 +409,90 @@ class AppointmentListView(generics.ListAPIView):
         if elderly_id:
             return Appointment.objects.filter(elderlyid=elderly_id).order_by('appointment_date')
         return Appointment.objects.all().order_by('appointment_date')
+
+class UpdateAppointmentView(generics.UpdateAPIView):
+    """PUT /api/medication/appointment/<id>/update/"""
+    queryset = Appointment.objects.all()
+    serializer_class = AppointmentSerializer
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        date_str = request.data.get('appointment_date')
+        time_str = request.data.get('appointment_time')
+        
+        if date_str:
+            try:
+                instance.appointment_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        
+        if time_str:
+            try:
+                instance.appointment_time = datetime.strptime(time_str, "%H:%M").time()
+            except ValueError:
+                pass
+                
+        if 'doctor_name' in request.data:
+            instance.doctor_name = request.data.get('doctor_name')
+        if 'location' in request.data:
+            instance.location = request.data.get('location')
+        if 'note' in request.data:
+            instance.note = request.data.get('note')
+            
+        instance.save()
+        return Response({"message": "Cập nhật thành công"}, status=status.HTTP_200_OK)
+
+class DeleteAppointmentView(generics.DestroyAPIView):
+    """DELETE /api/medication/appointment/<id>/delete/"""
+    queryset = Appointment.objects.all()
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response({"message": "Xóa lịch khám thành công"}, status=status.HTTP_200_OK)
+
+
+import uuid
+from django.core.files.storage import default_storage
+
+class ElderlyMedicalDocumentListView(generics.ListAPIView):
+    """GET /api/medication/elderly-document/list/?elderly_id=<id>"""
+    serializer_class = MedicalDocumentSerializer
+
+    def get_queryset(self):
+        elderly_id = self.request.query_params.get('elderly_id')
+        if elderly_id:
+            return MedicalDocument.objects.filter(elderlyid=elderly_id).order_by('-upload_at')
+        return MedicalDocument.objects.none()
+
+class UploadMedicalDocumentView(generics.CreateAPIView):
+    """POST /api/medication/elderly-document/upload/"""
+    def post(self, request):
+        elderly_id = request.data.get('elderly_id')
+        document_type = request.data.get('document_type', 'Khác')
+        file_obj = request.FILES.get('file')
+
+        if not elderly_id or not file_obj:
+            return Response({"error": "Thiếu elderly_id hoặc file"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            elderly = Elderly.objects.get(elderlyid=elderly_id)
+        except Elderly.DoesNotExist:
+            return Response({"error": "Không tìm thấy elderly"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Save file
+        file_extension = file_obj.name.split('.')[-1]
+        file_name = f"documents/{elderly_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+        file_path = default_storage.save(file_name, file_obj)
+        file_url = f"/media/{file_path}"
+
+        doc = MedicalDocument.objects.create(
+            elderlyid=elderly,
+            document_type=document_type,
+            file_url=file_url,
+            upload_at=timezone.now()
+        )
+        
+        serializer = MedicalDocumentSerializer(doc)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

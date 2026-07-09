@@ -69,6 +69,8 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
 
   late AnimationController _pulseController;
   Timer? _clockTimer;
+  Timer? _appointmentPollTimer;
+  final Set<String> _knownAppointmentIds = {};
   DateTime _now = DateTime.now();
 
   // Trạng thái ngày được chọn
@@ -96,6 +98,11 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       }
     });
 
+    _pollAppointments();
+    _appointmentPollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) _pollAppointments();
+    });
+
     // Request permissions appropriately (must happen when UI is running)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AlarmService.requestPermissions();
@@ -112,10 +119,15 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     // Load medications
     final schedules = await ApiService.getElderlyMedicationSchedule(accountId);
     
-    // Schedule alarms
+    // Schedule medication alarms
     AlarmService.scheduleAlarmsFromApiData(schedules);
 
+    // Load appointments and schedule alarms
+    final appointments = await ApiService.getAppointments(accountId);
+    AlarmService.scheduleAppointmentsFromApiData(appointments);
+
     // Load health metrics
+
     final data = await ApiService.getHealthMetrics(accountId);
     
     if (mounted) {
@@ -159,9 +171,44 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   @override
   void dispose() {
     _clockTimer?.cancel();
+    _appointmentPollTimer?.cancel();
     _pulseController.dispose();
     _pageController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _pollAppointments() async {
+    final accountId = ApiService.currentAccountId;
+    if (accountId == null) return;
+    
+    final data = await ApiService.getAppointments(accountId);
+    if (!mounted) return;
+    
+    bool hasNew = false;
+    String newDoctor = '';
+    String newTime = '';
+    String newLocation = '';
+    
+    for (var item in data) {
+      final id = item['appointmentid'].toString();
+      if (!_knownAppointmentIds.contains(id)) {
+        if (_knownAppointmentIds.isNotEmpty) {
+           hasNew = true;
+           newDoctor = item['doctor_name'] ?? 'Bác sĩ';
+           newTime = item['appointment_time']?.toString().substring(0, 5) ?? '08:00';
+           newLocation = item['location'] ?? 'Bệnh viện';
+        }
+        _knownAppointmentIds.add(id);
+      }
+    }
+    
+    if (hasNew) {
+      await AlarmService.showImmediateNotification(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        title: '🗓️ Lịch khám mới: $newDoctor',
+        body: 'Thời gian: $newTime tại $newLocation',
+      );
+    }
   }
 
   // Set lưu ID các lịch đã báo để không báo lại nhiều lần trong cùng 1 phút

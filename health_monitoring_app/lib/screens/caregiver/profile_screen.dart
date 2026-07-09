@@ -162,10 +162,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.checklist_rounded,
                       iconBg: const Color(0xFFFFF7ED),
                       iconColor: const Color(0xFFF97316),
-                      title: 'Checklist & Lịch khám',
-                      subtitle: 'Lên lịch nhắc nhở, tái khám, công việc',
+                      title: 'Checklist & Công việc',
+                      subtitle: 'Lên lịch nhắc nhở, theo dõi công việc',
                       onTap: () => _navigate(const ChecklistScreen()),
                     ),
+
                   ]),
                   const SizedBox(height: 24),
 

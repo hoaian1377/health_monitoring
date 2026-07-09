@@ -156,6 +156,55 @@ class AlarmService {
     }
   }
 
+  // ── Đặt alarms từ danh sách Appointment API ────────────────────────────────
+  static Future<void> scheduleAppointmentsFromApiData(
+      List<dynamic> appointments) async {
+    final now = DateTime.now();
+
+    for (var appt in appointments) {
+      final dateStr = appt['appointment_date']?.toString();
+      final timeStr = appt['appointment_time']?.toString();
+      final doctorName = appt['doctor_name']?.toString() ?? 'bác sĩ';
+      final location = appt['location']?.toString() ?? '';
+      final apptId = appt['appointment_id'] ?? appt['appointmentid'] ?? 0;
+
+      if (dateStr == null || timeStr == null) continue;
+
+      try {
+        final dateParts = dateStr.split('-');
+        final timeParts = timeStr.split(':');
+        
+        final year = int.parse(dateParts[0]);
+        final month = int.parse(dateParts[1]);
+        final day = int.parse(dateParts[2]);
+        
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1]);
+        
+        final apptDateTime = DateTime(year, month, day, hour, minute);
+        
+        // Cài báo thức nhắc trước 2 tiếng
+        final alarmTime = apptDateTime.subtract(const Duration(hours: 2));
+
+        if (alarmTime.isAfter(now)) {
+          final alarmId = 'appt_$apptId'.hashCode.abs() % 2147483647;
+          
+          String body = 'Thời gian: $hour:${minute.toString().padLeft(2, '0')}';
+          if (location.isNotEmpty) body += ' tại $location';
+          
+          await scheduleAlarm(
+            id: alarmId,
+            dateTime: alarmTime,
+            title: '🏥 Nhắc nhở tái khám: $doctorName',
+            body: body,
+          );
+        }
+      } catch (e) {
+        debugPrint("Lỗi parse ngày giờ lịch khám: $e");
+      }
+    }
+  }
+
   // ── Hủy một alarm ─────────────────────────────────────────────────────────
   static Future<void> stopAlarm(int id) async {
     await _plugin.cancel(id);

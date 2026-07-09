@@ -177,9 +177,10 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                     ),
                     tabs: const [
                       Tab(text: 'Tổng quan'),
-                      Tab(text: 'Giấy tờ'),
+                      Tab(text: 'Tài liệu y tế'),
                       Tab(text: 'Lịch khám'),
                     ],
+
                   ),
                 ],
               ),

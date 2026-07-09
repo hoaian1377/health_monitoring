@@ -191,38 +191,189 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                           borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_hospitalCtrl.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                             content: Text('Vui lòng nhập tên bệnh viện')));
                         return;
                       }
-                      setState(() {
-                        _appointments.add(AppointmentItem(
-                          id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          hospital: _hospitalCtrl.text.trim(),
-                          doctor: _doctorCtrl.text.trim().isEmpty
-                              ? 'Chưa xác định'
-                              : _doctorCtrl.text.trim(),
-                          specialty: _specialtyCtrl.text.trim().isEmpty
-                              ? 'Đa khoa'
-                              : _specialtyCtrl.text.trim(),
-                          date: _pickedDate,
-                          time:
-                              '${_pickedTime.hour.toString().padLeft(2, '0')}:${_pickedTime.minute.toString().padLeft(2, '0')}',
-                          notes: _notesCtrl.text.trim(),
-                        ));
-                      });
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          backgroundColor: Color(0xFF10B981),
-                          content: Text('✓ Đã thêm lịch khám thành công!'),
-                        ),
+                      
+                      final doctorName = _doctorCtrl.text.trim().isEmpty ? 'Chưa xác định' : _doctorCtrl.text.trim();
+                      final location = _hospitalCtrl.text.trim();
+                      final dateStr = '${_pickedDate.year}-${_pickedDate.month.toString().padLeft(2, '0')}-${_pickedDate.day.toString().padLeft(2, '0')}';
+                      final timeStr = '${_pickedTime.hour.toString().padLeft(2, '0')}:${_pickedTime.minute.toString().padLeft(2, '0')}';
+                      final notes = _notesCtrl.text.trim();
+
+                      final success = await ApiService.createAppointment(
+                        elderlyId: ApiService.currentElderlyId ?? 0,
+                        doctorName: doctorName,
+                        location: location,
+                        appointmentDate: dateStr,
+                        appointmentTime: timeStr,
+                        note: notes,
                       );
+
+                      if (success) {
+                        Navigator.pop(ctx);
+                        _loadAppointments();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFF10B981),
+                            content: Text('✓ Đã thêm lịch khám thành công!'),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Colors.red,
+                            content: Text('Thêm lịch khám thất bại. Vui lòng thử lại!'),
+                          ),
+                        );
+                      }
                     },
-                    child: Text('Lưu lịch khám',
-                        style: const TextStyle(
+                    child: const Text('Lưu lịch khám',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditSheet(AppointmentItem item) {
+    _hospitalCtrl.text = item.hospital;
+    _doctorCtrl.text = item.doctor == 'Chưa xác định' ? '' : item.doctor;
+    _specialtyCtrl.text = item.specialty;
+    _notesCtrl.text = item.notes;
+    _pickedDate = item.date;
+    try {
+      final parts = item.time.split(':');
+      _pickedTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    } catch (_) {
+      _pickedTime = const TimeOfDay(hour: 8, minute: 30);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24 + MediaQuery.of(ctx).padding.bottom,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Sửa Lịch Khám',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1E293B)),
+                ),
+                const SizedBox(height: 20),
+                _field('Tên bệnh viện / phòng khám *', _hospitalCtrl,
+                    Icons.local_hospital_rounded, 'VD: Bệnh viện Chợ Rẫy'),
+                const SizedBox(height: 14),
+                _field('Bác sĩ phụ trách', _doctorCtrl,
+                    Icons.person_rounded, 'VD: BS. Nguyễn Văn A'),
+                const SizedBox(height: 14),
+                _field('Chuyên khoa', _specialtyCtrl,
+                    Icons.medical_services_rounded,
+                    'VD: Tim mạch, Nội tiết...'),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(child: _dateBox(ctx, setModal)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _timeBox(ctx, setModal)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _field('Ghi chú / Lý do khám', _notesCtrl,
+                    Icons.note_alt_rounded, 'VD: Tái khám định kỳ...',
+                    lines: 2),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0EA5E9),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: () async {
+                      if (_hospitalCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                            content: Text('Vui lòng nhập tên bệnh viện')));
+                        return;
+                      }
+                      
+                      final doctorName = _doctorCtrl.text.trim().isEmpty ? 'Chưa xác định' : _doctorCtrl.text.trim();
+                      final location = _hospitalCtrl.text.trim();
+                      final dateStr = '${_pickedDate.year}-${_pickedDate.month.toString().padLeft(2, '0')}-${_pickedDate.day.toString().padLeft(2, '0')}';
+                      final timeStr = '${_pickedTime.hour.toString().padLeft(2, '0')}:${_pickedTime.minute.toString().padLeft(2, '0')}';
+                      final notes = _notesCtrl.text.trim();
+
+                      final success = await ApiService.updateAppointment(
+                        int.parse(item.id),
+                        {
+                          'doctor_name': doctorName,
+                          'location': location,
+                          'appointment_date': dateStr,
+                          'appointment_time': timeStr,
+                          'note': notes,
+                        }
+                      );
+
+                      if (success) {
+                        Navigator.pop(ctx);
+                        _loadAppointments();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFF10B981),
+                            content: Text('✓ Đã cập nhật lịch khám thành công!'),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Colors.red,
+                            content: Text('Cập nhật thất bại. Vui lòng thử lại!'),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Cập nhật lịch khám',
+                        style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ),
@@ -409,18 +560,30 @@ class _AppointmentScreenState extends State<AppointmentScreen>
               backgroundColor: const Color(0xFFEF4444),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            onPressed: () {
-              setState(() {
-                item.isCancelled = true;
-                item.cancelReason = ctrl.text.trim();
-              });
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: Color(0xFFEF4444),
-                  content: Text('Đã hủy lịch khám'),
-                ),
-              );
+            onPressed: () async {
+              int appId = int.parse(item.id);
+              final success = await ApiService.deleteAppointment(appId);
+              if (success) {
+                setState(() {
+                  item.isCancelled = true;
+                  item.cancelReason = ctrl.text.trim();
+                });
+                Navigator.pop(ctx);
+                _loadAppointments();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: Color(0xFFEF4444),
+                    content: Text('Đã hủy lịch khám'),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: Colors.red,
+                    content: Text('Xóa lịch khám thất bại. Vui lòng thử lại!'),
+                  ),
+                );
+              }
             },
             child: Text('Xác nhận hủy', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
@@ -871,6 +1034,22 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                           child: const Text('Hủy',
                               style: TextStyle(
                                   color: Color(0xFFEF4444),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showEditSheet(item),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('Sửa',
+                              style: TextStyle(
+                                  color: Color(0xFF475569),
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold)),
                         ),

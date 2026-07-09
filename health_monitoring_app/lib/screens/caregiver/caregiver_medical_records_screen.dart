@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../utils/api_service.dart';
+
 
 
 // ======================================================================
@@ -17,18 +19,8 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
   final List<String> _filters = ['Tất cả', 'Toa thuốc', 'Xét nghiệm'];
   final _searchCtrl = TextEditingController();
 
-  final List<_DocFile> _allDocs = [
-    _DocFile(
-        name: 'Toa thuốc 05/2025.pdf',
-        date: '12/05/2025',
-        size: '1.2 MB',
-        type: 'Toa thuốc'),
-    _DocFile(
-        name: 'Xét nghiệm máu 03/2025.pdf',
-        date: '22/03/2025',
-        size: '3.8 MB',
-        type: 'Xét nghiệm'),
-  ];
+  final List<_DocFile> _allDocs = [];
+
 
   @override
   void initState() {
@@ -38,30 +30,28 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
 
   Future<void> _fetchDocuments() async {
     final docs = await ApiService.getMedicalDocument();
-    if (docs.isNotEmpty) {
-      setState(() {
-        _allDocs.clear();
-        for (var doc in docs) {
-          String type = doc['document_type'] ?? 'Khác';
-          if (!['Toa thuốc', 'Xét nghiệm'].contains(type)) {
-             type = 'Toa thuốc'; 
-          }
-          String date = 'N/A';
-          if (doc['upload_at'] != null) {
-            try {
-               DateTime dt = DateTime.parse(doc['upload_at']);
-               date = '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
-            } catch (e) {}
-          }
-          _allDocs.add(_DocFile(
-            name: doc['file_url']?.split('/').last ?? 'Tai_lieu_${doc['medical_documentid']}.pdf',
-            date: date,
-            size: 'N/A',
-            type: type,
-          ));
+    setState(() {
+      _allDocs.clear();
+      for (var doc in docs) {
+        String type = doc['document_type'] ?? 'Khác';
+        if (!['Toa thuốc', 'Xét nghiệm'].contains(type)) {
+           type = 'Toa thuốc'; 
         }
-      });
-    }
+        String date = 'N/A';
+        if (doc['upload_at'] != null) {
+          try {
+             DateTime dt = DateTime.parse(doc['upload_at']);
+             date = '${dt.day.toString().padLeft(2,'0')}/${dt.month.toString().padLeft(2,'0')}/${dt.year}';
+          } catch (e) {}
+        }
+        _allDocs.add(_DocFile(
+          name: doc['file_url']?.split('/').last ?? 'Tai_lieu_${doc['medical_documentid']}.pdf',
+          date: date,
+          size: 'N/A',
+          type: type,
+        ));
+      }
+    });
   }
 
   List<_DocFile> get _filtered {
@@ -212,16 +202,71 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
 
       // FAB
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Chọn file để upload...'),
-            duration: Duration(seconds: 2),
-          ));
-        },
+        onPressed: _showUploadOptions,
         backgroundColor: const Color(0xFF0EA5E9),
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
+  }
+
+  void _showUploadOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Tải tài liệu lên', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.description_rounded, color: Color(0xFF0EA5E9)),
+                title: const Text('Toa thuốc'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUpload('Toa thuốc');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.science_rounded, color: Color(0xFF0EA5E9)),
+                title: const Text('File xét nghiệm'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUpload('Xét nghiệm');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUpload(String type) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đang tải $type lên...')));
+      
+      final res = await ApiService.uploadMedicalDocument(
+        filePath: result.files.single.path!,
+        documentType: type,
+      );
+      
+      if (res['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tải lên thành công!')));
+        _fetchDocuments(); // refresh list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['error'] ?? 'Lỗi tải lên')));
+      }
+    }
   }
 
   Widget _buildDocCard(_DocFile doc) {

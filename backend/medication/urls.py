@@ -15,4 +15,8 @@ urlpatterns = [
     path('scan-prescription/', views.ScanPrescriptionView.as_view(), name='scan_prescription'),
     path('appointment/create/', views.CreateAppointmentView.as_view(), name='create_appointment'),
     path('appointment/list/', views.AppointmentListView.as_view(), name='list_appointment'),
+    path('appointment/<int:pk>/update/', views.UpdateAppointmentView.as_view(), name='update_appointment'),
+    path('appointment/<int:pk>/delete/', views.DeleteAppointmentView.as_view(), name='delete_appointment'),
+    path('elderly-document/list/', views.ElderlyMedicalDocumentListView.as_view(), name='list_elderly_document'),
+    path('elderly-document/upload/', views.UploadMedicalDocumentView.as_view(), name='upload_elderly_document'),
 ]
