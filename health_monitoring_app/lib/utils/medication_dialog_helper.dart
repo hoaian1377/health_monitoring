@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../utils/api_service.dart';
@@ -8,19 +8,44 @@ class MedicationDialogHelper {
     required BuildContext context,
     required Function(List<Map<String, dynamic>>) onSelectionsSelected,
   }) async {
+    final bool isWeb = kIsWeb;
+    final ImageSource? imageSource = isWeb
+        ? ImageSource.gallery
+        : await showModalBottomSheet<ImageSource>(
+            context: context,
+            builder: (ctx) => SafeArea(
+              child: Wrap(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.photo_library),
+                    title: const Text('Thư viện ảnh'),
+                    onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt),
+                    title: const Text('Chụp ảnh mới'),
+                    onTap: () => Navigator.pop(ctx, ImageSource.camera),
+                  ),
+                ],
+              ),
+            ),
+          );
+
+    if (imageSource == null) return;
+
     final ImagePicker picker = ImagePicker();
     XFile? image;
 
     try {
       image = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: imageSource,
         imageQuality: 80,
       );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Không thể mở thư viện ảnh: $e')));
+      ).showSnackBar(SnackBar(content: Text('Không thể mở ảnh: $e')));
       return;
     }
 
@@ -34,7 +59,7 @@ class MedicationDialogHelper {
           children: [
             CircularProgressIndicator(color: Color(0xFF0EA5E9)),
             SizedBox(width: 16),
-            Expanded(child: Text('Äang quét toa thuốc...')),
+            Expanded(child: Text('Đang quét toa thuốc...')),
           ],
         ),
       ),
@@ -70,7 +95,7 @@ class MedicationDialogHelper {
             builder: (dialogContext, setDialogState) {
               return AlertDialog(
                 title: const Text(
-                  'Chá»n thuốc từ ảnh',
+                  'Chọn thuốc từ ảnh',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 content: SizedBox(
@@ -147,7 +172,7 @@ class MedicationDialogHelper {
                   ),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, selectedItems),
-                    child: const Text('Chá»n'),
+                    child: const Text('Chọn'),
                   ),
                 ],
               );
@@ -297,10 +322,10 @@ class MedicationDialogHelper {
                     normalized.contains('amlodipine') ||
                     normalized.contains('lisinopril')) {
                   selectedGroup = 'Huyết áp';
-                } else if (normalized.contains('Ä‘Æ°á»ng') ||
+                } else if (normalized.contains('đường') ||
                     normalized.contains('metformin') ||
                     normalized.contains('glipizide')) {
-                  selectedGroup = 'Tiểu Ä‘Æ°á»ng';
+                  selectedGroup = 'Tiểu đường';
                 } else if (normalized.contains('tim') ||
                     normalized.contains('mạch') ||
                     normalized.contains('atorvastatin')) {
@@ -525,7 +550,7 @@ class MedicationDialogHelper {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'ÄÃ£ chá»n ${scannedSelections.length} thuốc từ ảnh',
+                                      'Đã chọn ${scannedSelections.length} thuốc từ ảnh',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: Color(0xFF0F766E),
@@ -589,7 +614,7 @@ class MedicationDialogHelper {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            fieldLabel('Liá»u lượng'),
+                            fieldLabel('Liều lượng'),
                             Row(
                               children: [
                                 Expanded(
@@ -687,7 +712,7 @@ class MedicationDialogHelper {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                fieldLabel('Giá» uống'),
+                                fieldLabel('Giờ uống'),
                                 GestureDetector(
                                   onTap: pickTime,
                                   child: Container(
@@ -709,7 +734,7 @@ class MedicationDialogHelper {
                                         ),
                                         SizedBox(width: 4),
                                         Text(
-                                          'Thêm giá»',
+                                          'Thêm giờ',
                                           style: TextStyle(
                                             color: Color(0xFF2563EB),
                                             fontSize: 12,
@@ -921,7 +946,7 @@ class MedicationDialogHelper {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            fieldLabel('Tổng số viên thuốc (tùy chá»n)'),
+                            fieldLabel('Tổng số viên thuốc (tùy chọn)'),
                             TextField(
                               controller: remainingCtrl,
                               keyboardType: TextInputType.number,
@@ -961,7 +986,7 @@ class MedicationDialogHelper {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            fieldLabel('Nhóm thuốc (tùy chá»n)'),
+                            fieldLabel('Nhóm thuốc (tùy chọn)'),
                             DropdownButtonFormField<String>(
                               value: selectedGroup,
                               isExpanded: true,
@@ -1001,7 +1026,7 @@ class MedicationDialogHelper {
                                   [
                                         'Khác',
                                         'Huyết áp',
-                                        'Tiểu Ä‘Æ°á»ng',
+                                        'Tiểu đường',
                                         'Tim mạch',
                                         'Vitamin',
                                       ]
@@ -1158,7 +1183,7 @@ class MedicationDialogHelper {
                                           content: Text(
                                             editScheduleId != null
                                                 ? '✓ Cập nhật thuốc thành công!'
-                                                : '✓ ÄÃ£ thêm thuốc thành công!',
+                                                : '✓ Đã thêm thuốc thành công!',
                                           ),
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
