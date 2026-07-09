@@ -3,13 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
+
 class ApiService {
   static String get baseUrl {
     if (kIsWeb) {
       return "http://localhost:8000";
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return "http://192.168.1.34:8000";
+      return "http://10.0.2.2:8000";
     }
     return "http://localhost:8000";
   }

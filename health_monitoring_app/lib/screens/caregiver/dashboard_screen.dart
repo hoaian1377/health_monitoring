@@ -65,22 +65,32 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (mounted) {
       setState(() {
         if (data.isNotEmpty) {
-          final latest = data[0];
-          if (latest['heart_rate'] != null) {
-            _heartRate = latest['heart_rate'].toString();
-          }
-          if (latest['blood_pressure'] != null) {
-            final bp = latest['blood_pressure'].toString().split('/');
-            if (bp.length == 2) {
-              _bpSys = bp[0];
-              _bpDia = bp[1];
+          bool foundHr = false;
+          bool foundBp = false;
+          bool foundSugar = false;
+          bool foundTemp = false;
+
+          for (var item in data) {
+            if (!foundHr && item['heart_rate'] != null) {
+              _heartRate = item['heart_rate'].toString();
+              foundHr = true;
             }
-          }
-          if (latest['blood_sugar'] != null) {
-            _bloodSugar = latest['blood_sugar'].toString();
-          }
-          if (latest['temperature'] != null) {
-            _temperature = latest['temperature'].toString();
+            if (!foundBp && item['blood_pressure'] != null) {
+              final bp = item['blood_pressure'].toString().split('/');
+              if (bp.length == 2) {
+                _bpSys = bp[0];
+                _bpDia = bp[1];
+                foundBp = true;
+              }
+            }
+            if (!foundSugar && item['blood_sugar'] != null) {
+              _bloodSugar = item['blood_sugar'].toString();
+              foundSugar = true;
+            }
+            if (!foundTemp && item['temperature'] != null) {
+              _temperature = item['temperature'].toString();
+              foundTemp = true;
+            }
           }
         }
 
