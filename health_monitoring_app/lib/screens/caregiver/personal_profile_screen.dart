@@ -17,9 +17,13 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
   DateTime? _selectedDob;
   String? _selectedGender;
 
+  List<dynamic> _elderlyList = [];
+  bool _isLoadingElderly = true;
+
   @override
   void initState() {
     super.initState();
+    _loadElderlyList();
     _fullnameCtrl = TextEditingController(text: ApiService.currentFullname);
     _phoneCtrl = TextEditingController(text: ApiService.currentPhone);
     _emailCtrl = TextEditingController(text: ApiService.currentEmail);
@@ -35,6 +39,28 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
     }
     _selectedGender =
         ApiService.currentGender.isNotEmpty ? ApiService.currentGender : null;
+  }
+
+  Future<void> _loadElderlyList() async {
+    if (ApiService.currentRole != 'caregiver') {
+      if (mounted) {
+        setState(() => _isLoadingElderly = false);
+      }
+      return;
+    }
+    try {
+      final res = await ApiService.getElderlyList();
+      if (mounted) {
+        setState(() {
+          _elderlyList = (res['elderly_list'] as List?) ?? [];
+          _isLoadingElderly = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingElderly = false);
+      }
+    }
   }
 
   @override
@@ -482,7 +508,7 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                         final roleText =
                             ApiService.currentRole == 'admin'
                                 ? 'Quản trị viên'
-                                : 'Người chăm sóc';
+                                : (ApiService.currentRole == 'elderly' ? 'Người cao tuổi' : 'Người chăm sóc');
                         return _roleRow(
                           color: themeColor,
                           name: name,
@@ -492,21 +518,48 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
                         );
                       }),
                       _divider(),
-                      _roleRow(
-                        color: const Color(0xFF0D9488),
-                        name: 'Nguyễn Thị Bình',
-                        role: 'Con gái',
-                        badgeText: 'Đã kết nối',
-                        badgeColor: const Color(0xFF0EA5E9),
-                      ),
-                      _divider(),
-                      _roleRow(
-                        color: const Color(0xFFD97706),
-                        name: 'Trần Văn C',
-                        role: 'Người chăm sóc',
-                        badgeText: 'Chờ xác nhận',
-                        badgeColor: const Color(0xFFD97706),
-                      ),
+                      if (_isLoadingElderly)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFEA580C),
+                              ),
+                            ),
+                          ),
+                        )
+                      else if (_elderlyList.isEmpty && ApiService.currentRole == 'caregiver')
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            'Chưa liên kết với người cao tuổi nào',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic),
+                          ),
+                        )
+                      else ..._elderlyList.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final elderly = entry.value;
+                        final isLast = index == _elderlyList.length - 1;
+                        
+                        return Column(
+                          children: [
+                            _roleRow(
+                              color: const Color(0xFF0D9488),
+                              name: elderly['fullname']?.isNotEmpty == true 
+                                  ? elderly['fullname'] 
+                                  : 'Người cao tuổi #${elderly['id'] ?? ''}',
+                              role: elderly['relationship'] ?? 'Người cao tuổi',
+                              badgeText: 'Đã kết nối',
+                              badgeColor: const Color(0xFF0EA5E9),
+                            ),
+                            if (!isLast) _divider(),
+                          ],
+                        );
+                      }),
                     ],
                   ),
 

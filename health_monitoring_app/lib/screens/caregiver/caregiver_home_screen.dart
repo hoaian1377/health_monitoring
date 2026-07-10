@@ -1063,34 +1063,27 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                                           ok = false;
                                                         }
                                                       }
-                                                      setState(() {
-                                                        _medicationSchedules.removeWhere(
-                                                          (s) =>
-                                                              identical(
-                                                                s,
-                                                                schedule,
-                                                              ) ||
-                                                              (s['id'] !=
-                                                                      null &&
-                                                                  scheduleId !=
-                                                                      null &&
-                                                                  s['id']
-                                                                          .toString() ==
-                                                                      scheduleId
-                                                                          .toString()),
-                                                        );
-                                                      });
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                            ok
-                                                                ? 'Đã xóa'
-                                                                : 'Đã xóa (cục bộ)',
-                                                          ),
-                                                        ),
-                                                      );
+                                                      
+                                                      if (ok) {
+                                                        _loadElderlyDetails(); // Reload from server
+                                                        if (mounted) {
+                                                          ScaffoldMessenger.of(context).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text('Đã xóa lịch uống thuốc'),
+                                                              backgroundColor: Color(0xFF16A34A),
+                                                            ),
+                                                          );
+                                                        }
+                                                      } else {
+                                                        if (mounted) {
+                                                          ScaffoldMessenger.of(context).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text('Xóa thất bại, vui lòng thử lại'),
+                                                              backgroundColor: Color(0xFFEF4444),
+                                                            ),
+                                                          );
+                                                        }
+                                                      }
                                                     }
                                                   },
                                                   child: Container(

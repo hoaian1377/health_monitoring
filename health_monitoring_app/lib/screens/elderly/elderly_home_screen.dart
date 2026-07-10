@@ -8,7 +8,7 @@ import 'package:vibration/vibration.dart';
 import '../../utils/alarm_service.dart';
 
 import 'elderly_appointment_screen.dart';
-
+import 'elderly_chat_screen.dart';
 class ElderlyHomeScreen extends StatefulWidget {
   const ElderlyHomeScreen({super.key});
 
@@ -207,6 +207,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         id: DateTime.now().millisecondsSinceEpoch % 100000,
         title: '🗓️ Lịch khám mới: $newDoctor',
         body: 'Thời gian: $newTime tại $newLocation',
+        payload: 'appointment_immediate',
       );
     }
   }
@@ -833,6 +834,21 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB), // Nền xanh biển nhạt
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF2563EB),
+        foregroundColor: Colors.white,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ElderlyChatScreen()),
+          );
+        },
+        icon: const Icon(Icons.support_agent_rounded, size: 24),
+        label: const Text(
+          'Trợ lý ảo',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
       body: Container(
         color: const Color(0xFFF0F4FB),
         child: SingleChildScrollView(

@@ -86,6 +86,7 @@ class AlarmService {
     required DateTime dateTime,
     required String title,
     required String body,
+    String? payload,
   }) async {
     if (dateTime.isBefore(DateTime.now())) return;
 
@@ -101,7 +102,7 @@ class AlarmService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'medicine_$id',
+      payload: payload ?? 'medicine_$id',
     );
 
     debugPrint(
@@ -152,6 +153,7 @@ class AlarmService {
         dateTime: alarmTime,
         title: '💊 $name — Đến giờ uống thuốc!',
         body: body.isNotEmpty ? body : 'Nhớ uống thuốc đúng giờ nhé!',
+        payload: 'medicine_$scheduleId',
       );
     }
   }
@@ -197,6 +199,7 @@ class AlarmService {
             dateTime: alarmTime,
             title: '🏥 Nhắc nhở tái khám: $doctorName',
             body: body,
+            payload: 'appointment_$apptId',
           );
         }
       } catch (e) {
@@ -220,7 +223,8 @@ class AlarmService {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
-    await _plugin.show(id, title, body, _notificationDetails);
+    await _plugin.show(id, title, body, _notificationDetails, payload: payload);
   }
 }

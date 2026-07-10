@@ -188,10 +188,10 @@ class ScanPrescriptionView(generics.CreateAPIView):
         if not image_file:
             return Response({"error": "Vui lòng tải lên hình ảnh đơn thuốc (image field)"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Thay chuỗi rỗng bên dưới bằng API Key của bạn nếu không dùng biến môi trường
-        api_key = os.environ.get("GEMINI_API_KEY", "")
+        from django.conf import settings
+        api_key = settings.GEMINI_API_KEY
         if not api_key:
-            return Response({"error": "Chưa cấu hình GEMINI_API_KEY. Mở views.py và điền key vào hoặc set biến môi trường."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": "Chưa cấu hình GEMINI_API_KEY trong settings.py."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         suffix = '.' + (image_file.name.split('.')[-1] if '.' in image_file.name else 'jpg')
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -204,18 +204,27 @@ class ScanPrescriptionView(generics.CreateAPIView):
             img = Image.open(tmp_path)
 
             prompt = """Bạn là một dược sĩ/trợ lý y tế chuyên nghiệp. Hãy trích xuất danh sách thuốc và thông tin tái khám từ ảnh đơn thuốc này.
+            QUAN TRỌNG VỀ TẦN SUẤT UỐNG (PHẢI TÁCH DÒNG NẾU UỐNG NHIỀU LẦN):
+            - Nếu một thuốc uống nhiều lần/buổi trong ngày (VD: "Sáng 1 viên, Chiều 1 viên", "Ngày 2 lần", "3 buổi/ngày"), BẠN PHẢI TÁCH THÀNH NHIỀU OBJECT RIÊNG BIỆT cho cùng loại thuốc đó trong mảng `medications`. MỖI OBJECT LÀ MỘT LẦN UỐNG TRONG NGÀY.
+            - Quy tắc mặc định nếu không ghi rõ buổi:
+              + 3 lần (3 buổi/ngày): Tách làm 3 object riêng cho các buổi (Sáng, Trưa, Chiều/Tối).
+              + 2 lần (2 buổi/ngày): Tách làm 2 object riêng cho các buổi (Sáng, Chiều/Tối).
+            - Thuộc tính `frequency` của mỗi object CHỈ ĐƯỢC CHỨA 1 TRONG CÁC TỪ ĐẠI DIỆN CHO BUỔI ĐÓ: "Sáng", "Trưa", "Chiều", "Tối".
+
             Trả về CHỈ một chuỗi JSON hợp lệ (KHÔNG chứa markdown ```json, không giải thích).
             Định dạng JSON chuẩn:
             {
               "medications": [
                 {
                   "name": "tên thuốc",
-                  "dosage": "liều lượng mỗi lần uống (VD: 1 viên, 5ml)",
-                  "instruction": "hướng dẫn (VD: Uống sau ăn, Trước ăn)",
+                  "dosage": "liều lượng của LẦN UỐNG ĐÓ (VD: 1 viên, 5ml)",
+                  "instruction": "hướng dẫn (VD: Uống sau ăn)",
                   "time": "thời gian gợi ý (VD: 08:00, 20:00)",
-                  "frequency": "tần suất (VD: Sáng, Tối, Hàng ngày)"
+                  "frequency": "chỉ ghi MỘT BUỔI DUY NHẤT (VD: Sáng, hoặc Trưa, hoặc Chiều, hoặc Tối)"
                 }
               ],
+              "diagnosis": "chẩn đoán bệnh (nếu có) hoặc null",
+              "doctor_advice": "lời dặn của bác sĩ (nếu có) hoặc null",
               "appointment": {
                 "doctor_name": "tên bác sĩ hoặc null",
                 "clinic": "tên phòng khám/bệnh viện hoặc null",
@@ -226,23 +235,74 @@ class ScanPrescriptionView(generics.CreateAPIView):
               }
             }"""
 
-            model = genai.GenerativeModel('gemini-flash-latest')
-            response = model.generate_content([prompt, img])
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            
+            import time
+            max_retries = 5
+            response = None
+            
+            for attempt in range(max_retries):
+                try:
+                    response = model.generate_content([prompt, img])
+                    break
+                except Exception as e:
+                    if "429" in str(e) and attempt < max_retries - 1:
+                        time.sleep(10) # Đợi 10 giây rồi thử lại nếu bị rate limit
+                    else:
+                        raise e
+            
             text = response.text.strip()
             
-            # Xóa các markdown blocks nếu model lỡ sinh ra
-            if text.startswith("```json"):
-                text = text[7:]
-            if text.startswith("```"):
-                text = text[3:]
-            if text.endswith("```"):
-                text = text[:-3]
+            start = text.find('{')
+            end = text.rfind('}')
+            if start != -1 and end != -1:
+                text = text[start:end+1]
+            else:
+                return Response({"error": "Không thể phân tích định dạng từ AI. Vui lòng thử lại."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-            data = json.loads(text.strip())
+            data = json.loads(text)
 
             medications = data.get('medications', [])
+            if medications is None:
+                medications = []
+            
+            appointment = data.get('appointment')
+            diagnosis = data.get('diagnosis')
+            doctor_advice = data.get('doctor_advice')
+            
+            if not appointment and (diagnosis or doctor_advice):
+                appointment = {}
+                data['appointment'] = appointment
+                
+            if appointment is not None:
+                note_parts = []
+                if diagnosis:
+                    note_parts.append(f"Chẩn đoán: {diagnosis}")
+                if doctor_advice:
+                    note_parts.append(f"Lời dặn: {doctor_advice}")
+                
+                existing_note = appointment.get('note')
+                if existing_note:
+                    note_parts.append(f"Ghi chú: {existing_note}")
+                
+                if note_parts:
+                    appointment['note'] = "\n".join(note_parts)
+
             if not medications:
-                return Response({"error": "Không nhận ra thuốc trong ảnh. Vui lòng chụp rõ hơn."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                # Nếu không có thuốc nhưng có chẩn đoán/tái khám thì vẫn có thể trả về thông tin khám
+                if not appointment:
+                    return Response({"error": "Không nhận ra thuốc và thông tin khám trong ảnh. Vui lòng chụp rõ hơn."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+            for med in medications:
+                freq = str(med.get('frequency', '')).lower()
+                instr = str(med.get('instruction', '')).lower()
+                
+                if 'sáng' in freq or 'sáng' in instr:
+                    med['time'] = '08:00'
+                elif 'trưa' in freq or 'trưa' in instr:
+                    med['time'] = '12:00'
+                elif 'chiều' in freq or 'tối' in freq or 'chiều' in instr or 'tối' in instr:
+                    med['time'] = '19:30'
 
             return Response({
                 "message": "Quét thành công",
@@ -422,3 +482,84 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
         
         serializer = MedicalDocumentSerializer(doc)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class ElderlyChatbotView(generics.CreateAPIView):
+    """POST /api/medication/chatbot/"""
+    def post(self, request):
+        import os
+        import google.generativeai as genai
+        from users.models import Elderly
+        from healthmetric.models import HealthMetrics
+        from .models import MedicationSchedule, Appointment
+        from django.utils import timezone
+        
+        elderly_id = request.data.get('elderly_id')
+        message = request.data.get('message')
+        
+        if not elderly_id or not message:
+            return Response({"error": "Thiếu elderly_id hoặc message"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            elderly = Elderly.objects.get(elderlyid=elderly_id)
+        except Elderly.DoesNotExist:
+            return Response({"error": "Không tìm thấy elderly"}, status=status.HTTP_404_NOT_FOUND)
+            
+        # Get context data
+        now = timezone.now()
+        
+        # 1. Health metrics (latest 1)
+        latest_metric = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
+        health_context = "Chưa có dữ liệu."
+        if latest_metric:
+            health_context = f"Huyết áp: {latest_metric.blood_pressure or 'Trống'}, Đường huyết: {latest_metric.blood_sugar or 'Trống'}, Nhịp tim: {latest_metric.heart_rate or 'Trống'}."
+            
+        # 2. Medications
+        schedules = MedicationSchedule.objects.filter(elderlyid=elderly)
+        med_context_list = []
+        for s in schedules:
+            if s.medicationid:
+                med_context_list.append(f"{s.medicationid.name} (Liều: {s.medicationid.dosage}): uống lúc {s.time}, hướng dẫn: {s.medicationid.instruction}")
+        med_context = "; ".join(med_context_list) if med_context_list else "Chưa có thuốc nào."
+        
+        # 3. Appointments
+        appointments = Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date')
+        app_context_list = []
+        for a in appointments:
+            app_context_list.append(f"Khám ngày {a.appointment_date} lúc {a.appointment_time} tại {a.location} với BS {a.doctor_name}")
+        app_context = "; ".join(app_context_list) if app_context_list else "Không có lịch khám sắp tới."
+        
+        system_prompt = f"""Bạn là một trợ lý ảo y tế thông minh, xưng "cháu" và gọi người dùng là "ông/bà" hoặc "cô/chú". Bạn đang hỗ trợ một người cao tuổi tên là {elderly.fullname}.
+Dưới đây là DỮ LIỆU SỨC KHỎE CỦA NGƯỜI DÙNG:
+- Chỉ số sức khỏe gần nhất: {health_context}
+- Lịch uống thuốc: {med_context}
+- Lịch hẹn khám sắp tới: {app_context}
+
+Nhiệm vụ của bạn là:
+1. Trả lời các câu hỏi của người dùng dựa trên DỮ LIỆU SỨC KHỎE ở trên. Nếu họ hỏi về lịch uống thuốc, huyết áp, lịch khám, hãy TÌM VÀ LẤY thông tin từ phần trên để trả lời.
+2. Nếu người dùng hỏi giao tiếp thông thường (như chào hỏi, hỏi thăm), hãy phản hồi một cách tự nhiên và thân thiện.
+3. Nếu người dùng hỏi kiến thức y tế chung (ví dụ: "đau đầu uống gì?", "huyết áp cao nên ăn gì?"), bạn ĐƯỢC PHÉP dùng kiến thức chung của bạn để đưa ra lời khuyên cơ bản, nhưng luôn nhắc nhở họ hỏi ý kiến bác sĩ.
+4. Trả lời NGẮN GỌN, dễ hiểu, ưu tiên câu ngắn (vì sẽ được phát qua loa cho người cao tuổi nghe).
+
+Câu hỏi của người dùng: "{message}"
+"""
+
+        from django.conf import settings
+        api_key = settings.GEMINI_API_KEY
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        import time
+        max_retries = 3
+        response = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = model.generate_content(system_prompt)
+                break
+            except Exception as e:
+                if "429" in str(e) and attempt < max_retries - 1:
+                    time.sleep(5)
+                else:
+                    return Response({"error": f"Lỗi gọi AI: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({"response": response.text}, status=status.HTTP_200_OK)

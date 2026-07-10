@@ -15,6 +15,7 @@ import 'screens/elderly/elderly_checklist_screen.dart';
 import 'utils/api_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'screens/medication_confirmation_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 String? initialPayload;
@@ -35,9 +36,11 @@ Future<void> main() async {
   await AlarmService.init(
     onNotificationClick: (payload) {
       if (payload != null && navigatorKey.currentState != null) {
-        navigatorKey.currentState!.push(
-          MaterialPageRoute(builder: (_) => MedicationConfirmationScreen(payload: payload)),
-        );
+        if (payload.startsWith('medicine_')) {
+          navigatorKey.currentState!.push(
+            MaterialPageRoute(builder: (_) => MedicationConfirmationScreen(payload: payload)),
+          );
+        }
       }
     }
   );
@@ -72,6 +75,15 @@ class _HealthAppState extends State<HealthApp> {
       navigatorKey: navigatorKey,
       title: 'HealthCare',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('vi', ''),
+        Locale('en', ''),
+      ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2563EB)),
         useMaterial3: true,
@@ -189,20 +201,6 @@ class _MainNavigatorState extends State<MainNavigator> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _buildBody(),
-      floatingActionButton: ApiService.currentRole == 'caregiver' ? null : FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Colors.red,
-              content: Text('Đang gọi khẩn cấp...'),
-            ),
-          );
-        },
-        backgroundColor: Colors.red.shade600,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.phone_in_talk_rounded, color: Colors.white),
-      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,

@@ -274,13 +274,15 @@ class ApiService {
   static Future<Map<String, dynamic>> uploadMedicalDocument({
     required String filePath,
     required String documentType,
+    int? elderlyId,
   }) async {
-    if (currentElderlyId == null) return {"success": false, "error": "Chưa chọn người cao tuổi"};
+    final eId = elderlyId ?? currentElderlyId;
+    if (eId == null) return {"success": false, "error": "Chưa chọn người cao tuổi"};
     
     final url = Uri.parse("$baseUrl/api/medication/elderly-document/upload/");
     try {
       var request = http.MultipartRequest('POST', url);
-      request.fields['elderly_id'] = currentElderlyId.toString();
+      request.fields['elderly_id'] = eId.toString();
       request.fields['document_type'] = documentType;
       
       request.files.add(await http.MultipartFile.fromPath('file', filePath));
@@ -990,6 +992,28 @@ class ApiService {
     } catch (e) {
       print("ERROR deleteTreatmentHistory: $e");
       return false;
+    }
+  }
+
+  // ================= CHATBOT =================
+  static Future<String> chatWithAssistant(int elderlyId, String message) async {
+    final url = Uri.parse("$baseUrl/api/medication/chatbot/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({
+          'elderly_id': elderlyId,
+          'message': message,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+        return decoded['response'] ?? "Xin lỗi, tôi không thể trả lời lúc này.";
+      }
+      return "Xin lỗi, đã có lỗi kết nối máy chủ (Mã: ${res.statusCode}).";
+    } catch (e) {
+      return "Không thể kết nối với trợ lý ảo: $e";
     }
   }
 }

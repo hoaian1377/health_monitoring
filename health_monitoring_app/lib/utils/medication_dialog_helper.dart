@@ -6,6 +6,7 @@ import '../../utils/api_service.dart';
 class MedicationDialogHelper {
   static Future<void> scanPrescriptionIntoFields({
     required BuildContext context,
+    required int elderlyId,
     required Function(List<Map<String, dynamic>>) onSelectionsSelected,
   }) async {
     final bool isWeb = kIsWeb;
@@ -77,6 +78,29 @@ class MedicationDialogHelper {
           context,
         ).showSnackBar(SnackBar(content: Text(res['error'].toString())));
         return;
+      }
+
+      // Auto-upload image as a medical document
+      await ApiService.uploadMedicalDocument(
+        filePath: image.path,
+        documentType: 'Hồ sơ khám bệnh',
+        elderlyId: elderlyId,
+      );
+
+      // Auto-create appointment if found
+      final appointment = res['appointment'];
+      if (appointment != null && appointment is Map) {
+        final date = appointment['appointment_date']?.toString() ?? '';
+        if (date.isNotEmpty && date != 'null') {
+          await ApiService.createAppointment(
+            elderlyId: elderlyId,
+            doctorName: appointment['doctor_name']?.toString() ?? '',
+            location: appointment['clinic']?.toString() ?? '',
+            appointmentDate: date,
+            appointmentTime: appointment['appointment_time']?.toString() ?? '08:00',
+            note: appointment['note']?.toString() ?? '',
+          );
+        }
       }
 
       final medications = (res['medications'] ?? res['results']) as List?;
@@ -459,6 +483,7 @@ class MedicationDialogHelper {
                           onTap: () async {
                             await scanPrescriptionIntoFields(
                               context: ctx,
+                              elderlyId: elderlyId,
                               onSelectionsSelected: (selected) async {
                                 if (selected.isNotEmpty) {
                                   setDlg(() => isSubmitting = true);
