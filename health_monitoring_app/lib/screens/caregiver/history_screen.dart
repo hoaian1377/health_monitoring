@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 
 import '../../utils/api_service.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -26,6 +27,7 @@ class _HistoryScreenState extends State<HistoryScreen>
   String _searchQuery = '';
 
   List<dynamic> _treatmentHistory = [];
+  List<dynamic> _medicationSchedules = [];
   int? _currentElderlyId;
 
   final _hospitalController = TextEditingController();
@@ -52,9 +54,11 @@ class _HistoryScreenState extends State<HistoryScreen>
     
     if (_currentElderlyId != null) {
       final history = await ApiService.getTreatmentHistory(_currentElderlyId!);
+      final meds = await ApiService.getElderlyMedicationSchedule(_currentElderlyId!);
       if (mounted) {
         setState(() {
           _treatmentHistory = history;
+          _medicationSchedules = meds;
         });
       }
     }
@@ -195,6 +199,97 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   // ── Tab 1: Thuốc ──
   Widget _buildMedicineTab() {
+    int totalTaken = 0;
+    int totalMissed = 0;
+    
+    // Group records by date (yyyy-MM-dd)
+    final Map<String, List<Map<String, dynamic>>> recordsByDate = {};
+    
+    for (var schedule in _medicationSchedules) {
+      final med = schedule['medication'] ?? {};
+      final name = med['name']?.toString() ?? 'Không rõ';
+      final description = med['description']?.toString() ?? '';
+      if (description.contains('· dose_history:')) {
+        final parts = description.split('· dose_history:');
+        try {
+          final list = jsonDecode(parts[1].trim()) as List;
+          for (final item in list) {
+            final dateStr = item['date'].toString();
+            final taken = item['taken'] == true;
+            if (taken) {
+              totalTaken++;
+            } else {
+              totalMissed++;
+            }
+            if (!recordsByDate.containsKey(dateStr)) {
+              recordsByDate[dateStr] = [];
+            }
+            recordsByDate[dateStr]!.add({
+              'time': item['time'].toString().substring(0, 5),
+              'name': name,
+              'status': taken ? 'Đã uống' : 'Bỏ lỡ',
+              'isCompleted': taken,
+            });
+          }
+        } catch (e) {
+          print("Error parsing dose history: $e");
+        }
+      }
+    }
+    
+    int total = totalTaken + totalMissed;
+    String percentage = total > 0 ? '${(totalTaken / total * 100).round()}%' : '0%';
+    
+    // Sort dates descending
+    final sortedDates = recordsByDate.keys.toList()..sort((a, b) => b.compareTo(a));
+    
+    final List<Widget> historyWidgets = [];
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final yesterdayStr = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1)));
+    
+    for (String dateStr in sortedDates) {
+      final dateRecords = recordsByDate[dateStr]!;
+      // Sort records by time ascending
+      dateRecords.sort((a, b) => a['time'].compareTo(b['time']));
+      
+      String label = dateStr;
+      if (dateStr == todayStr) {
+        label = 'Hôm nay - ${DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr))}';
+      } else if (dateStr == yesterdayStr) {
+        label = 'Hôm qua - ${DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr))}';
+      } else {
+        label = DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr));
+      }
+      
+      historyWidgets.add(_sectionLabel(label));
+      historyWidgets.add(const SizedBox(height: 12));
+      
+      for (var record in dateRecords) {
+        historyWidgets.add(_buildHistoryItem(
+          time: record['time'],
+          name: record['name'],
+          status: record['status'],
+          isCompleted: record['isCompleted'] == true,
+          isUpcoming: false,
+        ));
+      }
+      historyWidgets.add(const SizedBox(height: 20));
+    }
+    
+    if (historyWidgets.isEmpty) {
+      historyWidgets.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Text(
+              'Chưa có dữ liệu uống thuốc',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
@@ -215,9 +310,9 @@ class _HistoryScreenState extends State<HistoryScreen>
               Expanded(
                 child: Column(
                   children: [
-                    _buildMetricCard('Đã uống', '18 lần', const Color(0xFF16A34A)),
+                    _buildMetricCard('Đã uống', '$totalTaken lần', const Color(0xFF16A34A)),
                     const SizedBox(height: 12),
-                    _buildMetricCard('Bỏ lỡ', '4 lần', dangerColor),
+                    _buildMetricCard('Bỏ lỡ', '$totalMissed lần', dangerColor),
                   ],
                 ),
               ),
@@ -225,10 +320,10 @@ class _HistoryScreenState extends State<HistoryScreen>
               Expanded(
                 child: Column(
                   children: [
-                    _buildMetricCard('Tỉ lệ', '82%', primaryColor),
+                    _buildMetricCard('Tỉ lệ', percentage, primaryColor),
                     const SizedBox(height: 12),
                     _buildMetricCard(
-                        'Trung bình', '3/ngày', const Color(0xFF6B7280)),
+                        'Trung bình', 'N/A', const Color(0xFF6B7280)),
                   ],
                 ),
               ),
@@ -237,47 +332,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           const SizedBox(height: 24),
           _sectionLabel('LỊCH SỬ DÙNG THUỐC'),
           const SizedBox(height: 12),
-          _sectionLabel('Hôm nay - 15/05/2026'),
-          const SizedBox(height: 12),
-          _buildHistoryItem(
-            time: '07:00',
-            name: 'Glucophage 500mg',
-            status: 'Đã uống',
-            isCompleted: true,
-          ),
-          _buildHistoryItem(
-            time: '07:00',
-            name: 'Vitamin D3',
-            status: 'Bỏ lỡ',
-            isCompleted: false,
-          ),
-          _buildHistoryItem(
-            time: '19:00',
-            name: 'Amlodipine 5mg',
-            status: 'Chưa uống',
-            isUpcoming: true,
-          ),
-          const SizedBox(height: 20),
-          _sectionLabel('Hôm qua - 14/05/2026'),
-          const SizedBox(height: 12),
-          _buildHistoryItem(
-            time: '07:00',
-            name: 'Glucophage 500mg',
-            status: 'Đã uống',
-            isCompleted: true,
-          ),
-          _buildHistoryItem(
-            time: '07:00',
-            name: 'Vitamin D3',
-            status: 'Đã uống',
-            isCompleted: true,
-          ),
-          _buildHistoryItem(
-            time: '19:00',
-            name: 'Amlodipine 5mg',
-            status: 'Đã uống',
-            isCompleted: true,
-          ),
+          ...historyWidgets,
           const SizedBox(height: 100),
         ],
       ),

@@ -86,7 +86,6 @@ class MedicationDialogHelper {
         );
         return;
       }
-
       final selectedItems = <Map<String, dynamic>>[];
       final selected = await showDialog<List<Map<String, dynamic>>>(
         context: context,
@@ -95,8 +94,8 @@ class MedicationDialogHelper {
             builder: (dialogContext, setDialogState) {
               return AlertDialog(
                 title: const Text(
-                  'Chọn thuốc từ ảnh',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  'Chọn thuốc từ ảnh (Vui lòng bỏ chọn dữ liệu quét sai)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 content: SizedBox(
                   width: double.maxFinite,
@@ -172,7 +171,7 @@ class MedicationDialogHelper {
                   ),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx, selectedItems),
-                    child: const Text('Chọn'),
+                    child: const Text('Chọn & Lưu Tự Động'),
                   ),
                 ],
               );
@@ -458,50 +457,53 @@ class MedicationDialogHelper {
                           onTap: () async {
                             await scanPrescriptionIntoFields(
                               context: ctx,
-                              onSelectionsSelected: (selected) => setDlg(() {
-                                scannedSelections = selected;
+                              onSelectionsSelected: (selected) async {
                                 if (selected.isNotEmpty) {
-                                  final first = selected.first;
-                                  final firstName =
-                                      first['name']?.toString().trim() ?? '';
-                                  if (firstName.isNotEmpty) {
-                                    nameCtrl.text = firstName;
+                                  setDlg(() => isSubmitting = true);
+                                  bool ok = false;
+                                  
+                                  final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+                                  final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+
+                                  for (final item in selected) {
+                                    final itemName = item['name']?.toString().trim() ?? '';
+                                    if (itemName.isEmpty) continue;
+                                    
+                                    final itemDosage = item['dosage']?.toString().trim() ?? '1 viên';
+                                    final itemInstruction = item['instruction']?.toString().trim() ?? 'Sau ăn';
+                                    final itemTime = item['time']?.toString().trim() ?? '08:00';
+                                    final itemFreq = item['frequency']?.toString().trim() ?? 'Hàng ngày';
+                                    
+                                    final success = await ApiService.addMedication(
+                                      elderlyId: elderlyId,
+                                      name: itemName,
+                                      dosage: itemDosage,
+                                      instruction: itemInstruction,
+                                      time: itemTime,
+                                      frequency: itemFreq,
+                                      description: 'Nhóm: Khác',
+                                      startDate: startStr,
+                                      endDate: endStr,
+                                    );
+                                    if (success) ok = true;
                                   }
-                                  final dosageValue =
-                                      first['dosage']?.toString() ?? '';
-                                  if (dosageValue.isNotEmpty) {
-                                    final doseMatch = RegExp(
-                                      r'(\d+(?:\.\d+)?)',
-                                    ).firstMatch(dosageValue);
-                                    if (doseMatch != null) {
-                                      doseAmountCtrl.text = doseMatch.group(1)!;
+                                  
+                                  setDlg(() => isSubmitting = false);
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx); // Đóng form chính
+                                    if (ok) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          backgroundColor: Color(0xFF10B981),
+                                          content: Text('✓ Đã tự động lưu các thuốc từ ảnh thành công!'),
+                                          behavior: SnackBarBehavior.floating,
+                                        )
+                                      );
+                                      onSuccess();
                                     }
-                                  }
-                                  final instructionValue =
-                                      first['instruction']?.toString() ?? '';
-                                  if (instructionValue.isNotEmpty) {
-                                    scannedInstructionCtrl.text =
-                                        instructionValue;
-                                    final lower = instructionValue
-                                        .toLowerCase();
-                                    if (lower.contains('trước')) {
-                                      selectedInstruction = 'Trước ăn';
-                                    } else if (lower.contains('sau')) {
-                                      selectedInstruction = 'Sau ăn';
-                                    } else if (lower.contains('ngủ')) {
-                                      selectedInstruction = 'Trước ngủ';
-                                    } else if (lower.contains('cần')) {
-                                      selectedInstruction = 'Khi cần';
-                                    }
-                                  }
-                                  final timeValue =
-                                      first['time']?.toString() ?? '';
-                                  if (timeValue.isNotEmpty) {
-                                    timeSlots = [timeValue];
-                                    selectedTime = timeValue;
                                   }
                                 }
-                              }),
+                              },
                             );
                             applySuggestions(nameCtrl.text);
                           },

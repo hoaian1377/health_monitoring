@@ -28,6 +28,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   List<Map<String, dynamic>> _elderlyList = [];
   int? _selectedElderlyId;
   List<dynamic> _medicationSchedules = [];
+  List<dynamic> _appointments = [];
   bool _isLoadingMedications = false;
   String _selectedMedFilter = 'Tất cả';
   late final ScrollController _medListScrollController;
@@ -80,10 +81,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       _selectedElderlyId!,
     );
     final data = await ApiService.getHealthMetrics(_selectedElderlyId!);
+    final appointments = await ApiService.getAppointments(_selectedElderlyId!);
 
     if (mounted) {
       setState(() {
         _medicationSchedules = schedules;
+        _appointments = appointments;
         _isLoadingMedications = false;
 
         // Reset metrics first
@@ -1225,6 +1228,41 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
   // ── Thẻ Lịch khám & giấy tờ ──────────────────────────────────────────────
   Widget _buildAppointmentCard() {
+    dynamic nextAppointment;
+    if (_appointments.isNotEmpty) {
+      final now = DateTime.now();
+      final sorted = List.from(_appointments);
+      sorted.sort((a, b) {
+        final dateA = DateTime.tryParse(a['appointment_date'] ?? '') ?? DateTime(2000);
+        final dateB = DateTime.tryParse(b['appointment_date'] ?? '') ?? DateTime(2000);
+        return dateA.compareTo(dateB);
+      });
+      nextAppointment = sorted.firstWhere((app) {
+        final date = DateTime.tryParse(app['appointment_date'] ?? '') ?? DateTime(2000);
+        return date.isAfter(now.subtract(const Duration(days: 1)));
+      }, orElse: () => sorted.last);
+    }
+
+    final String hospital = nextAppointment != null ? (nextAppointment['location'] ?? 'Chưa xác định') : 'Chưa có lịch khám';
+    String timeStr = 'N/A';
+    String daysLeft = '';
+    
+    if (nextAppointment != null) {
+      final date = DateTime.tryParse(nextAppointment['appointment_date'] ?? '');
+      final time = nextAppointment['appointment_time']?.toString().substring(0, 5) ?? '00:00';
+      if (date != null) {
+        timeStr = '$time ngày ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+        final diff = date.difference(DateTime.now()).inDays;
+        if (diff > 0) {
+          daysLeft = 'Còn $diff ngày';
+        } else if (diff == 0 && date.day == DateTime.now().day) {
+          daysLeft = 'Hôm nay';
+        } else {
+          daysLeft = 'Đã qua';
+        }
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1271,16 +1309,18 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Bệnh viện Chợ Rẫy',
-                      style: TextStyle(
+                    Text(
+                      hospital,
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
+                    if (nextAppointment != null) Row(
                       children: [
                         const Icon(
                           Icons.access_time_rounded,
@@ -1288,16 +1328,16 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           color: Color(0xFF64748B),
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          '08:30 ngày 12/06',
-                          style: TextStyle(
+                        Text(
+                          timeStr,
+                          style: const TextStyle(
                             fontSize: 13,
                             color: Color(0xFF475569),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
+                        if (daysLeft.isNotEmpty) const SizedBox(width: 8),
+                        if (daysLeft.isNotEmpty) Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 2,
@@ -1306,9 +1346,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                             color: const Color(0xFFFEF3C7),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
-                            'Còn 3 ngày',
-                            style: TextStyle(
+                          child: Text(
+                            daysLeft,
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFFB45309),
@@ -1342,21 +1382,21 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'BS. Nguyễn Thị Lan',
-                        style: TextStyle(
+                        nextAppointment != null ? 'BS. ${nextAppointment['doctor_name'] ?? 'Chưa xác định'}' : 'Chưa có thông tin BS',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           color: Color(0xFF1E293B),
                         ),
                       ),
                       Text(
-                        'Khoa Tim mạch',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        nextAppointment != null && nextAppointment['note'] != null && nextAppointment['note'].toString().isNotEmpty ? nextAppointment['note'] : 'Khám bệnh',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
                   ),

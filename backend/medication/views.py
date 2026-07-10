@@ -495,4 +495,4 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
         )
         
         serializer = MedicalDocumentSerializer(doc)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
