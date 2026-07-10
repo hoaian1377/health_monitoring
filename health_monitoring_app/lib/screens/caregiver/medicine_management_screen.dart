@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../utils/medication_dialog_helper.dart';
 import 'package:http/http.dart' as http;
@@ -716,8 +716,9 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
   Widget _buildTodayTimelineCard(TodayDoseSlot slot, bool isLast) {
     final now = TimeOfDay.now();
-    final slotHour = int.tryParse(slot.time.split(':')[0]) ?? 0;
-    final slotMin = int.tryParse(slot.time.split(':')[1]) ?? 0;
+    final parts = slot.time.split(':');
+    final slotHour = parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 0) : 0;
+    final slotMin = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
     final isPast = slotHour < now.hour || (slotHour == now.hour && slotMin <= now.minute);
     
     final isConfirmed = slot.confirmed;
@@ -1010,8 +1011,9 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   Widget _buildTimelineSlot(TodayDoseSlot slot, int idx, int total) {
     final isLast = idx == total - 1;
     final now = TimeOfDay.now();
-    final slotHour = int.tryParse(slot.time.split(':')[0]) ?? 0;
-    final slotMin = int.tryParse(slot.time.split(':')[1]) ?? 0;
+    final parts = slot.time.split(':');
+    final slotHour = parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 0) : 0;
+    final slotMin = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
     final isPast = slotHour < now.hour ||
         (slotHour == now.hour && slotMin <= now.minute);
     final medColor = _hexColor(slot.medicine.color);
@@ -1039,7 +1041,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                   child: Column(
                     children: [
                       Text(
-                        slot.time.split(':')[0],
+                        parts.isNotEmpty ? parts[0] : '00',
                         style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
@@ -1050,7 +1052,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                                     : const Color(0xFF0EA5E9)),
                       ),
                       Text(
-                        slot.time.split(':')[1],
+                        parts.length > 1 ? parts[1] : '00',
                         style: TextStyle(
                             fontSize: 10,
                             color: slot.confirmed

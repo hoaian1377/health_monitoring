@@ -180,23 +180,18 @@ class DeleteMedicationView(generics.DestroyAPIView):
 class ScanPrescriptionView(generics.CreateAPIView):
     """POST /api/medication/scan-prescription/"""
     def post(self, request):
-        import os, json, tempfile, re
-        import pytesseract
+        import os, json, tempfile
+        import google.generativeai as genai
         from PIL import Image
-
-        # Đường dẫn Tesseract trên Windows
-        tesseract_paths = [
-            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-        ]
-        for p in tesseract_paths:
-            if os.path.exists(p):
-                pytesseract.pytesseract.tesseract_cmd = p
-                break
 
         image_file = request.FILES.get('image')
         if not image_file:
             return Response({"error": "Vui lòng tải lên hình ảnh đơn thuốc (image field)"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Thay chuỗi rỗng bên dưới bằng API Key của bạn nếu không dùng biến môi trường
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            return Response({"error": "Chưa cấu hình GEMINI_API_KEY. Mở views.py và điền key vào hoặc set biến môi trường."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         suffix = '.' + (image_file.name.split('.')[-1] if '.' in image_file.name else 'jpg')
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -205,128 +200,59 @@ class ScanPrescriptionView(generics.CreateAPIView):
             tmp_path = tmp.name
 
         try:
+            genai.configure(api_key=api_key)
             img = Image.open(tmp_path)
-            # Xoay ảnh đúng chiều
-            img = ImageOps.exif_transpose(img)
-            # Chuyển sang ảnh xám
-            img = img.convert("L")
-            # Làm nét
-            img = img.filter(ImageFilter.SHARPEN)
-            # Tăng độ tương phản
-            img = img.point(lambda x: 255 if x > 150 else 0)
-            try:
-                text = pytesseract.image_to_string(
-                    img,
-                    lang="vie+eng",
-                    config="--oem 3 --psm 6"
-                )
-            except Exception:
-                text = pytesseract.image_to_string(
-                    img,
-                    lang="eng",
-                    config="--oem 3 --psm 6"
-                )
 
-            # Làm sạch dữ liệu OCR
-            text = text.replace("|", "I")
-            text = text.replace("—", "-")
-            text = text.replace("§", "5")
-
-            lines = [l.strip() for l in text.splitlines() if l.strip()]
-
-            # --- Phân tích thuốc ---
-            medications = []
-            med_keywords = ['mg', 'ml', 'gói', 'viên', 'tab', 'cap', 'syr', 'AUGMENTIN',
-                           'AMOX', 'PARA', 'DEXA', 'OMEP', 'CEFI', 'AZIT', 'CIPRO']
-            dose_map = {'sang': ('08:00', 'Sáng'), 'trua': ('12:00', 'Trưa'),
-                        'chieu': ('16:00', 'Chiều'), 'toi': ('20:00', 'Tối'),
-                        'sáng': ('08:00', 'Sáng'), 'trưa': ('12:00', 'Trưa'),
-                        'chiều': ('16:00', 'Chiều'), 'tối': ('20:00', 'Tối')}
-
-            current_time = '08:00'
-            current_freq = 'Sáng'
-            for line in lines:
-                low = line.lower()
-                # Detect time section headers
-                for kw, (t, f) in dose_map.items():
-                    if kw in low and len(line) < 30:
-                        current_time = t
-                        current_freq = f
-                        break
-                # Detect medication lines
-                is_med = any(kw.lower() in low for kw in med_keywords) or re.search(r'\d+\s*mg|\d+\s*ml', low)
-                if is_med and len(line) > 3:
-                    # Extract dosage
-                    dosage_match = re.search(r'(\d+[/\d]*\s*(?:viên|gói|ml|tab|cap))', line, re.IGNORECASE)
-                    dosage = dosage_match.group(1) if dosage_match else '1 viên'
-                    # Clean name
-                    name = re.sub(r'\s+', ' ', line).strip()
-                    # Avoid duplicate names
-                    if not any(m['name'] == name for m in medications):
-                        medications.append({
-                            "name": name,
-                            "dosage": dosage,
-                            "instruction": "Uống sau ăn",
-                            "time": current_time,
-                            "frequency": current_freq,
-                        })
-
-            # --- Phân tích thông tin tái khám ---
-            appointment = None
-            full_text = text.lower()
-            doctor = None
-            clinic = None
-            address = None
-            phone = None
-            appt_date = None
-            appt_time = None
-            note_lines = []
-
-            for line in lines:
-                low = line.lower()
-                if any(k in low for k in ['bs.', 'bác sĩ', 'dr.', 'ths.', 'pkđk', 'phòng khám', 'bệnh viện', 'clinic']):
-                    if not clinic:
-                        clinic = line
-                if any(k in low for k in ['bs.', 'bác sĩ', 'dr.', 'ths.', 'b.s']):
-                    if not doctor:
-                        doctor = line
-                if re.search(r'\b0\d{9}\b', line):
-                    phone = re.search(r'\b0\d{9}\b', line).group(0)
-                if re.search(r'\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2,4}', line):
-                    date_match = re.search(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})', line)
-                    if date_match:
-                        d, m, y = date_match.groups()
-                        y = y if len(y) == 4 else '20' + y
-                        appt_date = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
-                if re.search(r'\b\d{1,2}:\d{2}\b', line):
-                    appt_time = re.search(r'\b(\d{1,2}:\d{2})\b', line).group(1)
-                if any(k in low for k in ['tái khám', 'tai kham', 'lưu ý', 'ăn nóng', 'ghi chú', 'note']):
-                    note_lines.append(line)
-
-            if any([doctor, clinic, phone, appt_date]):
-                appointment = {
-                    "doctor_name": doctor,
-                    "clinic": clinic,
-                    "address": address,
-                    "phone": phone,
-                    "appointment_date": appt_date,
-                    "appointment_time": appt_time or '08:00',
-                    "note": ' '.join(note_lines) if note_lines else None
+            prompt = """Bạn là một dược sĩ/trợ lý y tế chuyên nghiệp. Hãy trích xuất danh sách thuốc và thông tin tái khám từ ảnh đơn thuốc này.
+            Trả về CHỈ một chuỗi JSON hợp lệ (KHÔNG chứa markdown ```json, không giải thích).
+            Định dạng JSON chuẩn:
+            {
+              "medications": [
+                {
+                  "name": "tên thuốc",
+                  "dosage": "liều lượng mỗi lần uống (VD: 1 viên, 5ml)",
+                  "instruction": "hướng dẫn (VD: Uống sau ăn, Trước ăn)",
+                  "time": "thời gian gợi ý (VD: 08:00, 20:00)",
+                  "frequency": "tần suất (VD: Sáng, Tối, Hàng ngày)"
                 }
+              ],
+              "appointment": {
+                "doctor_name": "tên bác sĩ hoặc null",
+                "clinic": "tên phòng khám/bệnh viện hoặc null",
+                "phone": "số điện thoại hoặc null",
+                "appointment_date": "YYYY-MM-DD hoặc null",
+                "appointment_time": "HH:MM hoặc null",
+                "note": "ghi chú tái khám hoặc null"
+              }
+            }"""
 
-            # Nếu không nhận diện được thuốc nào, báo lỗi
+            model = genai.GenerativeModel('gemini-flash-latest')
+            response = model.generate_content([prompt, img])
+            text = response.text.strip()
+            
+            # Xóa các markdown blocks nếu model lỡ sinh ra
+            if text.startswith("```json"):
+                text = text[7:]
+            if text.startswith("```"):
+                text = text[3:]
+            if text.endswith("```"):
+                text = text[:-3]
+            
+            data = json.loads(text.strip())
+
+            medications = data.get('medications', [])
             if not medications:
-                return Response({"error": "Không nhận ra thuốc trong ảnh. Vui lòng chụp rõ hơn hoặc nhập thủ công."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                return Response({"error": "Không nhận ra thuốc trong ảnh. Vui lòng chụp rõ hơn."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
             return Response({
                 "message": "Quét thành công",
                 "medications": medications,
-                "appointment": appointment,
-                "raw_text": text[:500]  # debug
+                "appointment": data.get('appointment'),
+                "raw_text": text[:500]
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": f"Lỗi phân tích ảnh: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Lỗi phân tích ảnh Gemini: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         finally:
             try:
                 os.unlink(tmp_path)

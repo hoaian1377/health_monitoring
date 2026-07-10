@@ -39,7 +39,9 @@ class MedicationDialogHelper {
     try {
       image = await picker.pickImage(
         source: imageSource,
-        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 70,
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -286,8 +288,8 @@ class MedicationDialogHelper {
             final t = await showTimePicker(
               context: ctx,
               initialTime: TimeOfDay(
-                hour: int.tryParse(selectedTime.split(':')[0]) ?? 8,
-                minute: int.tryParse(selectedTime.split(':')[1]) ?? 0,
+                hour: selectedTime.contains(':') ? (int.tryParse(selectedTime.split(':')[0]) ?? 8) : 8,
+                minute: selectedTime.contains(':') ? (int.tryParse(selectedTime.split(':')[1]) ?? 0) : 0,
               ),
               builder: (c, child) => Theme(
                 data: Theme.of(c).copyWith(

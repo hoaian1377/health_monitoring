@@ -229,7 +229,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       if (parts.length < 2) continue;
       
       final hour = int.tryParse(parts[0]) ?? 8;
-      final minute = int.tryParse(parts[1]) ?? 0;
+      final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
       final scheduleId = schedule['schedule_id'] as int;
 
       // Nếu đúng giờ phút hiện tại và chưa báo động lần nào
