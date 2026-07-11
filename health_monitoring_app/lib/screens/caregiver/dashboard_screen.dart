@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+import 'dart:convert';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../../utils/api_service.dart';
 
@@ -24,8 +25,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   int? _selectedElderlyId;
   String _selectedElderlyName = '';
 
-  // Chart tab
-  late TabController _chartTabController;
+  List<dynamic> _historicalMetrics = [];
+  List<dynamic> _medicationSchedules = [];
+
+
 
   // Bộ lọc thời gian (F09)
   String _selectedPeriod = 'Tuần';
@@ -34,7 +37,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    _chartTabController = TabController(length: 4, vsync: this);
     _loadElderlyThenMetrics();
   }
 
@@ -61,14 +63,18 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final data = await ApiService.getHealthMetrics(eldId);
     final appts = await ApiService.getAppointments(eldId);
+    final meds = await ApiService.getElderlyMedicationSchedule(eldId);
 
     if (mounted) {
       setState(() {
+        _historicalMetrics = data;
+        _medicationSchedules = meds;
         if (data.isNotEmpty) {
           bool foundHr = false;
           bool foundBp = false;
           bool foundSugar = false;
           bool foundTemp = false;
+          bool foundWeight = false;
 
           for (var item in data) {
             if (!foundHr && item['heart_rate'] != null) {
@@ -90,6 +96,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             if (!foundTemp && item['temperature'] != null) {
               _temperature = item['temperature'].toString();
               foundTemp = true;
+            }
+            if (!foundWeight && item['weight'] != null) {
+              _weight = item['weight'].toString();
+              foundWeight = true;
             }
           }
         }
@@ -122,7 +132,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void dispose() {
-    _chartTabController.dispose();
     super.dispose();
   }
 
@@ -335,6 +344,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         bloodPressure: '$_bpSys/$_bpDia',
                         bloodSugar: double.tryParse(_bloodSugar),
                         temperature: double.tryParse(_temperature),
+                        weight: double.tryParse(_weight),
                       );
                     }
 
@@ -648,10 +658,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _buildPeriodFilterRow(),
                   const SizedBox(height: 24),
 
-                  // Biểu đồ đa chỉ số
-                  _buildSectionLabel('BIỂU ĐỒ THEO DÕI (7 NGÀY)'),
+                  // Biểu đồ sử dụng thuốc
+                  _buildSectionLabel('BIỂU ĐỒ SỬ DỤNG THUỐC (${_selectedPeriod.toUpperCase()})'),
                   const SizedBox(height: 12),
-                  _buildMultiChart(),
+                  _buildMedicationChart(),
 
                   const SizedBox(height: 24),
 
@@ -1087,33 +1097,81 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ── Biểu đồ đa chỉ số ─────────────────────────────────────────────────────
-  Widget _buildMultiChart() {
-    int points = _selectedPeriod == 'Tuần'
-        ? 7
-        : (_selectedPeriod == 'Tháng' ? 30 : 12);
-    if (_selectedPeriod == 'Ngày') points = 6;
+  // ── Biểu đồ sử dụng thuốc ─────────────────────────────────────────────────────
+  Widget _buildMedicationChart() {
+    int points = _selectedPeriod == 'Tháng' ? 30 : 7;
+    final now = DateTime.now();
 
-    List<String> days = [];
-    if (_selectedPeriod == 'Tuần') {
-      days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    } else if (_selectedPeriod == 'Tháng') {
-      days = List.generate(points, (i) => '${i + 1}');
-    } else if (_selectedPeriod == 'Ngày') {
-      days = ['8h', '10h', '12h', '14h', '16h', '18h'];
-    } else {
-      days = List.generate(points, (i) => 'T${i + 1}');
+    // Group records by date string
+    final Map<String, List<bool>> recordsByDate = {};
+    for (var schedule in _medicationSchedules) {
+      final med = schedule['medication'] ?? {};
+      final description = med['description']?.toString() ?? '';
+      if (description.contains('· dose_history:')) {
+        final parts = description.split('· dose_history:');
+        try {
+          final list = jsonDecode(parts[1].trim()) as List;
+          for (final item in list) {
+            final dateStr = item['date'].toString();
+            final taken = item['taken'] == true;
+            if (!recordsByDate.containsKey(dateStr)) {
+              recordsByDate[dateStr] = [];
+            }
+            recordsByDate[dateStr]!.add(taken);
+          }
+        } catch (_) {}
+      }
     }
 
-    List<double> generateData(double base, double variance) {
-      final rand = Random(42); // Fixed seed for stable UI
-      return List.generate(
-        points - 1,
-        (i) => base + (rand.nextDouble() * 2 - 1) * variance,
-      )..add(base); // last point is current
+    // Build chart data
+    List<BarChartGroupData> barGroups = [];
+    List<String> bottomLabels = [];
+
+    for (int i = points - 1; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      
+      if (_selectedPeriod == 'Tháng') {
+        bottomLabels.add('${date.day}/${date.month}');
+      } else {
+        final weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        bottomLabels.add(weekDays[date.weekday % 7]);
+      }
+
+      int taken = 0;
+      int missed = 0;
+      if (recordsByDate.containsKey(dateStr)) {
+        for (bool t in recordsByDate[dateStr]!) {
+          if (t) taken++; else missed++;
+        }
+      }
+
+      barGroups.add(
+        BarChartGroupData(
+          x: points - 1 - i,
+          barRods: [
+            BarChartRodData(
+              toY: taken.toDouble() + missed.toDouble(),
+              rodStackItems: [
+                BarChartRodStackItem(0, taken.toDouble(), const Color(0xFF16A34A)),
+                BarChartRodStackItem(taken.toDouble(), taken.toDouble() + missed.toDouble(), const Color(0xFFDC2626)),
+              ],
+              width: _selectedPeriod == 'Tháng' ? 6 : 16,
+              borderRadius: BorderRadius.circular(4),
+              backDrawRodData: BackgroundBarChartRodData(
+                show: true,
+                toY: 5,
+                color: const Color(0xFFF1F5F9),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(
+      height: 260,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1126,195 +1184,140 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tab bar chọn chỉ số
-          Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: TabBar(
-              controller: _chartTabController,
-              isScrollable: true,
-              indicatorColor: const Color(0xFF0EA5E9),
-              indicatorWeight: 2.5,
-              labelColor: const Color(0xFF0EA5E9),
-              unselectedLabelColor: const Color(0xFF94A3B8),
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+          const SizedBox(height: 10),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: 5,
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        if (value.toInt() >= 0 && value.toInt() < bottomLabels.length) {
+                          if (_selectedPeriod == 'Tháng' && value.toInt() % 5 != 0) {
+                             return const Text('');
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              bottomLabels[value.toInt()],
+                              style: TextStyle(
+                                color: const Color(0xFF64748B),
+                                fontSize: _selectedPeriod == 'Tháng' ? 9 : 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        }
+                        return const Text('');
+                      },
+                      reservedSize: 28,
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 1,
+                  getDrawingHorizontalLine: (value) => const FlLine(
+                    color: Color(0xFFF1F5F9),
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: barGroups,
               ),
-              unselectedLabelStyle: const TextStyle(fontSize: 12),
-              tabs: const [
-                Tab(text: 'Huyết áp'),
-                Tab(text: 'Nhịp tim'),
-                Tab(text: 'Đường huyết'),
-                Tab(text: 'Cân nặng'),
-              ],
             ),
           ),
-          SizedBox(
-            height: 180,
-            child: TabBarView(
-              controller: _chartTabController,
-              children: [
-                _buildBarChart(
-                  data: generateData(double.tryParse(_bpSys) ?? 120.0, 15.0),
-                  days: days,
-                  color: const Color(0xFFDC2626),
-                  unit: 'mmHg',
-                  threshold: 140.0,
-                ),
-                _buildBarChart(
-                  data: generateData(double.tryParse(_heartRate) ?? 72.0, 10.0),
-                  days: days,
-                  color: const Color(0xFFE11D48),
-                  unit: 'l/p',
-                  threshold: 100.0,
-                ),
-                _buildBarChart(
-                  data: generateData(double.tryParse(_bloodSugar) ?? 5.5, 1.5),
-                  days: days,
-                  color: const Color(0xFF0284C7),
-                  unit: 'mmol',
-                  threshold: 7.8,
-                  isDecimal: true,
-                ),
-                _buildBarChart(
-                  data: generateData(double.tryParse(_weight) ?? 62.0, 1.0),
-                  days: days,
-                  color: const Color(0xFF7C3AED),
-                  unit: 'kg',
-                  threshold: 80.0,
-                  isDecimal: true,
-                ),
-              ],
-            ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _legendDot(const Color(0xFF16A34A), 'Đã uống'),
+              const SizedBox(width: 16),
+              _legendDot(const Color(0xFFDC2626), 'Bỏ lỡ'),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBarChart({
-    required List<double> data,
-    required List<String> days,
-    required Color color,
-    required String unit,
-    required double threshold,
-    bool isDecimal = false,
-  }) {
-    final maxVal = data.reduce((a, b) => a > b ? a : b);
-    final minVal = data.reduce((a, b) => a < b ? a : b);
-    final range = maxVal - minVal == 0 ? 1.0 : maxVal - minVal;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(data.length, (i) {
-                final isToday = i == data.length - 1;
-                final isHigh = data[i] > threshold;
-                final barH = 70.0 * (data[i] - minVal) / range + 20;
-
-                return Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (isHigh)
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 2),
-                          child: Icon(
-                            Icons.warning_rounded,
-                            size: 12,
-                            color: Color(0xFFDC2626),
-                          ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          isDecimal
-                              ? data[i].toStringAsFixed(1)
-                              : data[i].toInt().toString(),
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: isToday
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            color: isHigh
-                                ? const Color(0xFFDC2626)
-                                : const Color(0xFF64748B),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 28,
-                        height: barH,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        days[i],
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isToday
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: isToday ? color : const Color(0xFF94A3B8),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-        // Ghi chú (Legend)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 4),
-              const Text(
-                'Bình thường',
-                style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.warning_rounded,
-                size: 10,
-                color: Color(0xFFDC2626),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Vượt ngưỡng (>$threshold)',
-                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── Adherence Chart ─────────────────────────────────────────────────────────
   Widget _buildAdherenceChart() {
+    int totalTaken = 0;
+    int totalMissed = 0;
+    
+    // Group records by date (yyyy-MM-dd)
+    final Map<String, List<bool>> recordsByDate = {};
+    
+    for (var schedule in _medicationSchedules) {
+      final med = schedule['medication'] ?? {};
+      final description = med['description']?.toString() ?? '';
+      if (description.contains('· dose_history:')) {
+        final parts = description.split('· dose_history:');
+        try {
+          final list = jsonDecode(parts[1].trim()) as List;
+          for (final item in list) {
+            final dateStr = item['date'].toString();
+            final taken = item['taken'] == true;
+            if (taken) {
+              totalTaken++;
+            } else {
+              totalMissed++;
+            }
+            if (!recordsByDate.containsKey(dateStr)) {
+              recordsByDate[dateStr] = [];
+            }
+            recordsByDate[dateStr]!.add(taken);
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+    }
+    
+    int total = totalTaken + totalMissed;
+    double adherenceRatio = total > 0 ? (totalTaken / total) : 1.0; // default 1.0 if no data
+    String percentage = total > 0 ? '${(adherenceRatio * 100).round()}%' : '100%';
+    String adherenceStatus = adherenceRatio >= 0.8 ? 'Rất tốt' : (adherenceRatio >= 0.5 ? 'Khá' : 'Kém');
+    Color adherenceColor = adherenceRatio >= 0.8 ? const Color(0xFF16A34A) : (adherenceRatio >= 0.5 ? const Color(0xFFD97706) : const Color(0xFFDC2626));
+
+    // Calculate last 7 days status
+    final now = DateTime.now();
+    List<int> status = [];
+    List<String> days = [];
+    final weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    for (int i = 6; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      days.add(weekDays[date.weekday % 7]);
+      
+      if (recordsByDate.containsKey(dateStr)) {
+        final dayRecords = recordsByDate[dateStr]!;
+        bool allTaken = dayRecords.every((t) => t == true);
+        status.add(allTaken ? 1 : 0);
+      } else {
+        status.add(2); // no records yet
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1333,10 +1336,10 @@ class _DashboardScreenState extends State<DashboardScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Tỉ lệ tuân thủ uống thuốc',
                     style: TextStyle(
                       fontSize: 13,
@@ -1345,21 +1348,21 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   Text(
-                    'Rất tốt',
+                    adherenceStatus,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF16A34A),
+                      color: adherenceColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-              const Text(
-                '92%',
+              Text(
+                percentage,
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0EA5E9),
+                  color: adherenceColor,
                 ),
               ),
             ],
@@ -1369,20 +1372,16 @@ class _DashboardScreenState extends State<DashboardScreen>
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: 0.92,
+              value: adherenceRatio,
               minHeight: 6,
               backgroundColor: const Color(0xFFE0F2FE),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF0EA5E9),
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(adherenceColor),
             ),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
-              final days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-              final status = [1, 1, 0, 1, 1, 1, 2];
               return Column(
                 children: [
                   Container(
@@ -1463,39 +1462,84 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ── Recent Alerts ──────────────────────────────────────────────────────────
   Widget _buildRecentAlerts() {
-    return Column(
-      children: [
-        _buildAlertItem(
-          icon: Icons.monitor_heart_rounded,
-          color: const Color(0xFFDC2626),
-          bg: const Color(0xFFFFEBEB),
-          title: 'Huyết áp hơi cao',
-          time: 'Hôm nay, 08:30',
-          desc: 'Huyết áp 145/90 mmHg. Hãy theo dõi thêm và nghỉ ngơi.',
-          sentToFamily: true,
+    List<Widget> alerts = [];
+
+    // Check last metrics
+    if (_historicalMetrics.isNotEmpty) {
+      final latest = _historicalMetrics.last;
+      
+      // Blood pressure
+      if (latest['blood_pressure'] != null) {
+        final bpStr = latest['blood_pressure'].toString();
+        final bpParts = bpStr.split('/');
+        if (bpParts.isNotEmpty) {
+          final sys = double.tryParse(bpParts[0]) ?? 0;
+          if (sys >= 140) {
+            alerts.add(_buildAlertItem(
+              icon: Icons.monitor_heart_rounded,
+              color: const Color(0xFFDC2626),
+              bg: const Color(0xFFFFEBEB),
+              title: 'Huyết áp hơi cao',
+              time: 'Gần đây',
+              desc: 'Huyết áp $bpStr mmHg. Hãy theo dõi thêm và nghỉ ngơi.',
+              sentToFamily: true,
+            ));
+            alerts.add(const SizedBox(height: 12));
+          }
+        }
+      }
+
+      // Temperature
+      if (latest['temperature'] != null) {
+        final temp = double.tryParse(latest['temperature'].toString()) ?? 0;
+        if (temp > 37.5) {
+          alerts.add(_buildAlertItem(
+            icon: Icons.thermostat_rounded,
+            color: const Color(0xFFD97706),
+            bg: const Color(0xFFFEF3C7),
+            title: 'Nhiệt độ cơ thể tăng nhẹ',
+            time: 'Gần đây',
+            desc: 'Nhiệt độ $temp°C. Có thể là dấu hiệu sốt nhẹ.',
+            sentToFamily: true,
+          ));
+          alerts.add(const SizedBox(height: 12));
+        }
+      }
+      
+      // Blood sugar
+      if (latest['blood_sugar'] != null) {
+        final sugar = double.tryParse(latest['blood_sugar'].toString()) ?? 0;
+        if (sugar > 7.8) {
+          alerts.add(_buildAlertItem(
+            icon: Icons.water_drop_rounded,
+            color: const Color(0xFF0284C7),
+            bg: const Color(0xFFE0F2FE),
+            title: 'Đường huyết cao',
+            time: 'Gần đây',
+            desc: 'Đường huyết $sugar mmol/L. Hãy chú ý chế độ ăn uống.',
+            sentToFamily: true,
+          ));
+          alerts.add(const SizedBox(height: 12));
+        }
+      }
+    }
+
+    // Default message if no alerts
+    if (alerts.isEmpty) {
+      alerts.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Text(
+              'Không có cảnh báo bất thường nào gần đây.',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ),
         ),
-        const SizedBox(height: 12),
-        _buildAlertItem(
-          icon: Icons.thermostat_rounded,
-          color: const Color(0xFFD97706),
-          bg: const Color(0xFFFEF3C7),
-          title: 'Nhiệt độ cơ thể tăng nhẹ',
-          time: 'Hôm qua, 15:00',
-          desc: 'Nhiệt độ 37.8°C. Có thể là dấu hiệu sốt nhẹ.',
-          sentToFamily: true,
-        ),
-        const SizedBox(height: 12),
-        _buildAlertItem(
-          icon: Icons.cancel_rounded,
-          color: const Color(0xFF7C3AED),
-          bg: const Color(0xFFF3EEFF),
-          title: 'Bỏ lỡ uống thuốc',
-          time: 'Hôm qua, 13:00',
-          desc: 'Vitamin D3 buổi trưa chưa được xác nhận.',
-          sentToFamily: true,
-        ),
-      ],
-    );
+      );
+    }
+
+    return Column(children: alerts);
   }
 
   Widget _buildAlertItem({

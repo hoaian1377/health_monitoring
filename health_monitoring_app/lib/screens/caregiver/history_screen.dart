@@ -28,6 +28,7 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   List<dynamic> _treatmentHistory = [];
   List<dynamic> _medicationSchedules = [];
+  List<dynamic> _medicalDocuments = [];
   int? _currentElderlyId;
 
   final _hospitalController = TextEditingController();
@@ -39,7 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _fetchTreatmentHistory();
   }
 
@@ -55,10 +56,12 @@ class _HistoryScreenState extends State<HistoryScreen>
     if (_currentElderlyId != null) {
       final history = await ApiService.getTreatmentHistory(_currentElderlyId!);
       final meds = await ApiService.getElderlyMedicationSchedule(_currentElderlyId!);
+      final docs = await ApiService.getMedicalDocument();
       if (mounted) {
         setState(() {
           _treatmentHistory = history;
           _medicationSchedules = meds;
+          _medicalDocuments = docs;
         });
       }
     }
@@ -93,7 +96,6 @@ class _HistoryScreenState extends State<HistoryScreen>
             _buildMedicineTab(),
             _buildMetricsTab(),
             _buildAppointmentsTab(),
-            _buildNotificationsTab(),
           ],
         ),
       ),
@@ -165,7 +167,6 @@ class _HistoryScreenState extends State<HistoryScreen>
               Tab(text: 'Thuốc'),
               Tab(text: 'Chỉ Số'),
               Tab(text: 'Khám Bệnh'),
-              Tab(text: 'Thông Báo'),
             ],
           ),
           const SizedBox(height: 12),
@@ -487,11 +488,31 @@ class _HistoryScreenState extends State<HistoryScreen>
              )
           else
              ..._treatmentHistory.map((item) {
+                final startDateStr = item['start_date']?.toString();
+                String formattedDate = 'Không rõ';
+                List<dynamic> matchedDocs = [];
+                
+                if (startDateStr != null && startDateStr.length >= 10) {
+                  try {
+                    formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.parse(startDateStr));
+                    // Match documents by date
+                    final datePrefix = startDateStr.substring(0, 10);
+                    matchedDocs = _medicalDocuments.where((doc) {
+                      final uploadStr = doc['upload_at']?.toString();
+                      if (uploadStr != null && uploadStr.length >= 10) {
+                        return uploadStr.substring(0, 10) == datePrefix;
+                      }
+                      return false;
+                    }).toList();
+                  } catch (_) {}
+                }
+
                 return _buildAppointmentHistoryItem(
-                   date: item['start_date'] != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(item['start_date'])) : 'Không rõ',
+                   date: formattedDate,
                    hospital: item['hospital'] ?? 'Không rõ',
                    doctor: item['doctor_name'] ?? 'Không rõ',
                    result: item['result'] ?? item['diagnosis'] ?? 'Chưa có kết quả',
+                   documents: matchedDocs,
                 );
              }),
           const SizedBox(height: 100),
@@ -805,6 +826,7 @@ class _HistoryScreenState extends State<HistoryScreen>
     required String hospital,
     required String doctor,
     required String result,
+    List<dynamic> documents = const [],
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -858,97 +880,53 @@ class _HistoryScreenState extends State<HistoryScreen>
                 style: const TextStyle(
                     fontSize: 13, color: Color(0xFF475569), height: 1.4)),
           ),
+          if (documents.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text('Tài liệu đính kèm',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF94A3B8))),
+            const SizedBox(height: 8),
+            ...documents.map((doc) {
+              final String fileName = doc['file_url']?.split('/').last ?? 'Tài liệu không tên';
+              final String type = doc['document_type'] ?? 'Khác';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      type == 'Toa thuốc' ? Icons.receipt_long_rounded : Icons.science_rounded,
+                      color: const Color(0xFF0EA5E9),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        fileName,
+                        style: const TextStyle(
+                            fontSize: 13, color: Color(0xFF1E293B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(Icons.download_rounded, color: Color(0xFF94A3B8), size: 18),
+                  ],
+                ),
+              );
+            }),
+          ],
         ],
       ),
     );
   }
 
-  // ── Tab 4: Thông Báo ──
-  Widget _buildNotificationsTab() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      children: [
-        _buildNotificationItem(
-          title: 'Đã bỏ lỡ cữ thuốc',
-          message: 'Bác An đã bỏ lỡ thuốc Vitamin D3 lúc 13:00.',
-          time: 'Hôm nay, 13:15',
-          icon: Icons.medication_liquid_rounded,
-          iconColor: Colors.red,
-          bgColor: Colors.red.shade50,
-        ),
-        _buildNotificationItem(
-          title: 'Nhắc nhở khám bệnh',
-          message: 'Ngày mai (02/03) có lịch tái khám tại BV Chợ Rẫy.',
-          time: 'Hôm qua, 08:00',
-          icon: Icons.calendar_month_rounded,
-          iconColor: Colors.blue,
-          bgColor: Colors.blue.shade50,
-        ),
-        _buildNotificationItem(
-          title: 'Huyết áp đo bình thường',
-          message: 'Huyết áp lúc 07:30 là 128/82 mmHg (Bình thường).',
-          time: 'Hôm qua, 07:30',
-          icon: Icons.monitor_heart_rounded,
-          iconColor: Colors.green,
-          bgColor: Colors.green.shade50,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNotificationItem({
-    required String title,
-    required String message,
-    required String time,
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B))),
-                const SizedBox(height: 4),
-                Text(message,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF475569),
-                        height: 1.4)),
-                Text(time,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF94A3B8))),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildHealthChart() {
     List<FlSpot> spots;

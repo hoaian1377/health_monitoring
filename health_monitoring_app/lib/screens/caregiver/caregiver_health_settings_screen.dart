@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'appointment_screen.dart';
 import 'caregiver_medical_records_screen.dart';
 import '../../utils/api_service.dart';
 
@@ -12,17 +11,13 @@ class HealthDashboardScreen extends StatefulWidget {
   State<HealthDashboardScreen> createState() => _HealthDashboardScreenState();
 }
 
-class _HealthDashboardScreenState extends State<HealthDashboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
   List<Map<String, dynamic>> _elderlyList = [];
   int? _selectedElderlyId;
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     if (ApiService.currentRole == 'caregiver') {
       _loadElderlyList();
     } else {
@@ -31,7 +26,6 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
   }
 
   Future<void> _loadElderlyList() async {
-    setState(() => _isLoading = true);
     final result = await ApiService.getElderlyList();
     if (mounted && result['success'] == true) {
       final list = (result['elderly_list'] as List).cast<Map<String, dynamic>>();
@@ -45,16 +39,12 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
             ApiService.currentElderlyId = _selectedElderlyId;
           }
         }
-        _isLoading = false;
       });
-    } else {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -160,44 +150,15 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: Colors.white,
-                    indicatorWeight: 4,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-                    labelStyle: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13,
-                    ),
-                    tabs: const [
-                      Tab(text: 'Tổng quan'),
-                      Tab(text: 'Tài liệu y tế'),
-                      Tab(text: 'Lịch khám'),
-                    ],
-
-                  ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
           ),
           
-          // ── Tab Views ──────────────────────────────────────────────────────
+          // ── Main View ──────────────────────────────────────────────────────
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                // TODO: Add isEmbedded property to these screens to hide their headers
-                MedicalProfileScreen(isEmbedded: true),
-                MedicalDocumentsScreen(isEmbedded: true),
-                AppointmentScreen(isEmbedded: true),
-              ],
-            ),
+            child: MedicalProfileScreen(isEmbedded: true),
           ),
         ],
       ),

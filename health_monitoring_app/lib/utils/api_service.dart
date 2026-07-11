@@ -633,21 +633,32 @@ class ApiService {
 
   // ================= GENERATE MOCK NOTIFICATIONS =================
   static Future<bool> generateMockNotifications() async {
-    final queryParam = currentRole == 'elderly'
-        ? 'elderly_id=$currentAccountId'
-        : 'caregiver_id=$currentAccountId';
-    final url = Uri.parse(
-      "$baseUrl/api/notification/generate-mock/?$queryParam",
-    );
+    if (currentAccountId == null || currentRole == null) return false;
     try {
+      final queryParam = currentRole == 'caregiver' ? 'caregiver_id=$currentAccountId' : 'elderly_id=$currentAccountId';
+      final url = Uri.parse(
+          "$baseUrl/api/notification/generate-mock/?$queryParam");
+      final res = await http.post(url);
+      return res.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ================= NOTIFY MISSED MEDICATION =================
+  static Future<bool> notifyMissedMedication(int elderlyId, String medicationName) async {
+    try {
+      final url = Uri.parse("$baseUrl/api/notification/notify-missed/");
       final res = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({}),
+        body: jsonEncode({
+          "elderly_id": elderlyId,
+          "medication_name": medicationName,
+        }),
       );
-      return res.statusCode == 201;
+      return res.statusCode == 201 || res.statusCode == 200;
     } catch (e) {
-      print("ERROR: $e");
       return false;
     }
   }
@@ -675,6 +686,7 @@ class ApiService {
     String? bloodPressure,
     double? bloodSugar,
     double? temperature,
+    double? weight,
   }) async {
     final url = Uri.parse("$baseUrl/api/healthmetrics/create/");
     try {
@@ -687,6 +699,7 @@ class ApiService {
           "blood_pressure": bloodPressure,
           "blood_sugar": bloodSugar,
           "temperature": temperature,
+          "weight": weight,
         }),
       );
       return res.statusCode == 201;
@@ -726,7 +739,14 @@ class ApiService {
     final url = Uri.parse("$baseUrl/api/checklist/?elderly_id=$elderlyId");
     try {
       final res = await http.get(url);
-      if (res.statusCode == 200) return jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map && decoded['results'] != null) {
+          return decoded['results'];
+        }
+        return [];
+      }
       return [];
     } catch (e) {
       print("ERROR getChecklists: $e");
@@ -741,7 +761,14 @@ class ApiService {
     );
     try {
       final res = await http.get(url);
-      if (res.statusCode == 200) return jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map && decoded['results'] != null) {
+          return decoded['results'];
+        }
+        return [];
+      }
       return [];
     } catch (e) {
       print("ERROR getChecklistItems: $e");

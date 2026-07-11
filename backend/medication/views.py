@@ -486,8 +486,6 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
 class ElderlyChatbotView(generics.CreateAPIView):
     """POST /api/medication/chatbot/"""
     def post(self, request):
-        import os
-        import google.generativeai as genai
         from users.models import Elderly
         from healthmetric.models import HealthMetrics
         from .models import MedicationSchedule, Appointment
@@ -504,62 +502,53 @@ class ElderlyChatbotView(generics.CreateAPIView):
         except Elderly.DoesNotExist:
             return Response({"error": "Không tìm thấy elderly"}, status=status.HTTP_404_NOT_FOUND)
             
-        # Get context data
         now = timezone.now()
+        msg_lower = message.lower()
         
-        # 1. Health metrics (latest 1)
-        latest_metric = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
-        health_context = "Chưa có dữ liệu."
-        if latest_metric:
-            health_context = f"Huyết áp: {latest_metric.blood_pressure or 'Trống'}, Đường huyết: {latest_metric.blood_sugar or 'Trống'}, Nhịp tim: {latest_metric.heart_rate or 'Trống'}."
-            
-        # 2. Medications
-        schedules = MedicationSchedule.objects.filter(elderlyid=elderly)
-        med_context_list = []
-        for s in schedules:
-            if s.medicationid:
-                med_context_list.append(f"{s.medicationid.name} (Liều: {s.medicationid.dosage}): uống lúc {s.time}, hướng dẫn: {s.medicationid.instruction}")
-        med_context = "; ".join(med_context_list) if med_context_list else "Chưa có thuốc nào."
+        response_text = ""
+        pronoun = "ông" if elderly.gender == 'Nam' else "bà"
         
-        # 3. Appointments
-        appointments = Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date')
-        app_context_list = []
-        for a in appointments:
-            app_context_list.append(f"Khám ngày {a.appointment_date} lúc {a.appointment_time} tại {a.location} với BS {a.doctor_name}")
-        app_context = "; ".join(app_context_list) if app_context_list else "Không có lịch khám sắp tới."
-        
-        system_prompt = f"""Bạn là một trợ lý ảo y tế thông minh, xưng "cháu" và gọi người dùng là "ông/bà" hoặc "cô/chú". Bạn đang hỗ trợ một người cao tuổi tên là {elderly.fullname}.
-Dưới đây là DỮ LIỆU SỨC KHỎE CỦA NGƯỜI DÙNG:
-- Chỉ số sức khỏe gần nhất: {health_context}
-- Lịch uống thuốc: {med_context}
-- Lịch hẹn khám sắp tới: {app_context}
-
-Nhiệm vụ của bạn là:
-1. Trả lời các câu hỏi của người dùng dựa trên DỮ LIỆU SỨC KHỎE ở trên. Nếu họ hỏi về lịch uống thuốc, huyết áp, lịch khám, hãy TÌM VÀ LẤY thông tin từ phần trên để trả lời.
-2. Nếu người dùng hỏi giao tiếp thông thường (như chào hỏi, hỏi thăm), hãy phản hồi một cách tự nhiên và thân thiện.
-3. Nếu người dùng hỏi kiến thức y tế chung (ví dụ: "đau đầu uống gì?", "huyết áp cao nên ăn gì?"), bạn ĐƯỢC PHÉP dùng kiến thức chung của bạn để đưa ra lời khuyên cơ bản, nhưng luôn nhắc nhở họ hỏi ý kiến bác sĩ.
-4. Trả lời NGẮN GỌN, dễ hiểu, ưu tiên câu ngắn (vì sẽ được phát qua loa cho người cao tuổi nghe).
-
-Câu hỏi của người dùng: "{message}"
-"""
-
-        from django.conf import settings
-        api_key = settings.GEMINI_API_KEY
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        import time
-        max_retries = 3
-        response = None
-        
-        for attempt in range(max_retries):
-            try:
-                response = model.generate_content(system_prompt)
-                break
-            except Exception as e:
-                if "429" in str(e) and attempt < max_retries - 1:
-                    time.sleep(5)
+        # 1. Rule for Medication
+        if any(word in msg_lower for word in ['thuốc', 'uống', 'đơn']):
+            schedules = MedicationSchedule.objects.filter(elderlyid=elderly)
+            if not schedules.exists():
+                response_text = f"Dạ, hiện tại {pronoun} không có lịch uống thuốc nào ạ."
+            else:
+                med_list = []
+                for s in schedules:
+                    if s.medicationid:
+                        med_list.append(f"{s.medicationid.name} uống lúc {s.time}")
+                if med_list:
+                    response_text = f"Dạ, lịch uống thuốc của {pronoun} gồm có: " + ", ".join(med_list) + f". {pronoun.capitalize()} nhớ uống đúng giờ nhé!"
                 else:
-                    return Response({"error": f"Lỗi gọi AI: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        return Response({"response": response.text}, status=status.HTTP_200_OK)
+                    response_text = f"Dạ, hiện tại {pronoun} không có lịch uống thuốc nào ạ."
+                    
+        # 2. Rule for Appointment
+        elif any(word in msg_lower for word in ['khám', 'bác sĩ', 'hẹn', 'bệnh viện']):
+            appointments = Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date')
+            if not appointments.exists():
+                response_text = f"Dạ, hiện tại {pronoun} không có lịch hẹn khám nào sắp tới ạ."
+            else:
+                app_list = []
+                for a in appointments:
+                    time_str = str(a.appointment_time)[:5] if a.appointment_time else ""
+                    app_list.append(f"khám ngày {a.appointment_date} lúc {time_str} tại {a.location}")
+                response_text = f"Dạ, {pronoun} có lịch " + ", ".join(app_list) + "."
+                
+        # 3. Rule for Health
+        elif any(word in msg_lower for word in ['huyết áp', 'đường huyết', 'nhịp tim', 'sức khỏe']):
+            latest_metric = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
+            if latest_metric:
+                response_text = f"Dạ, chỉ số đo gần nhất của {pronoun} là: Huyết áp {latest_metric.blood_pressure or 'Trống'}, Đường huyết {latest_metric.blood_sugar or 'Trống'}, Nhịp tim {latest_metric.heart_rate or 'Trống'}."
+            else:
+                response_text = f"Dạ, cháu chưa tìm thấy dữ liệu sức khỏe nào của {pronoun} ạ."
+                
+        # 4. Greeting
+        elif any(word in msg_lower for word in ['chào', 'khỏe không', 'tên gì', 'ai đó']):
+            response_text = f"Dạ cháu chào {pronoun}, cháu là trợ lý ảo. Cháu có thể giúp {pronoun} xem lịch khám, đơn thuốc và sức khỏe ạ!"
+            
+        # 5. Fallback
+        else:
+            response_text = f"Dạ cháu chưa hiểu ý lắm. {pronoun.capitalize()} có thể hỏi cháu về 'lịch khám', 'uống thuốc', hoặc 'huyết áp' nhé!"
+            
+        return Response({"response": response_text}, status=status.HTTP_200_OK)

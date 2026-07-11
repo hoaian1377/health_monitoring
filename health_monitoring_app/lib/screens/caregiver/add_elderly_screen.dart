@@ -607,17 +607,21 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
                 // QR Image
                 RepaintBoundary(
                   key: _qrKey,
-                  child: QrImageView(
-                    data: _createdQrToken!,
-                    version: QrVersions.auto,
-                    size: 220,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.square,
-                      color: Color(0xFF7C3AED),
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.square,
-                      color: Color(0xFF1E293B),
+                  child: Container(
+                    color: Colors.white,
+                    child: QrImageView(
+                      data: _createdQrToken!,
+                      version: QrVersions.auto,
+                      size: 220,
+                      backgroundColor: Colors.white,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Color(0xFF7C3AED),
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Color(0xFF1E293B),
+                      ),
                     ),
                   ),
                 ),

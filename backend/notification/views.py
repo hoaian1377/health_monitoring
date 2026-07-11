@@ -66,3 +66,41 @@ class GenerateMockNotificationsView(generics.CreateAPIView):
         
         return Response({"message": "Đã tạo thông báo giả lập thành công!"}, status=status.HTTP_201_CREATED)
 
+class NotifyMissedMedicationView(generics.CreateAPIView):
+    """POST /api/notification/notify-missed/
+    Body: {"elderly_id": int, "medication_name": str}
+    """
+    def post(self, request):
+        elderly_id = request.data.get('elderly_id')
+        medication_name = request.data.get('medication_name')
+
+        if not elderly_id or not medication_name:
+            return Response({"error": "Thiếu elderly_id hoặc medication_name"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from users.models import CaregiverElderly
+        caregiver_id = CaregiverElderly.objects.filter(elderlyid=elderly_id).values_list('caregiverid', flat=True).first()
+
+        if not caregiver_id:
+            return Response({"error": "Không tìm thấy caregiver cho elderly này"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Tránh tạo trùng lặp thông báo nếu đã gửi trong vòng 1 tiếng
+        recent_notifs = Notification.objects.filter(
+            caregiverid_id=caregiver_id,
+            title="Quên uống thuốc",
+            message__contains=medication_name,
+            created_at__gte=datetime.datetime.now() - datetime.timedelta(hours=1)
+        )
+        
+        if recent_notifs.exists():
+            return Response({"message": "Đã gửi thông báo gần đây, bỏ qua."}, status=status.HTTP_200_OK)
+
+        notif = Notification.objects.create(
+            caregiverid_id=caregiver_id,
+            title="Quên uống thuốc",
+            message=f"Bác chưa xác nhận đã uống thuốc '{medication_name}' theo lịch. Hãy nhắc nhở bác!",
+            created_at=datetime.datetime.now()
+        )
+        NotificationDetail.objects.create(notificationid=notif, is_read=False)
+
+        return Response({"message": "Đã gửi thông báo quên uống thuốc cho Caregiver!"}, status=status.HTTP_201_CREATED)
+

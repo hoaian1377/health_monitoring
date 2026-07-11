@@ -214,6 +214,9 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
 
   // Set lưu ID các lịch đã báo để không báo lại nhiều lần trong cùng 1 phút
   final Set<int> _notifiedScheduleIds = {};
+  
+  // Set lưu ID các lịch đã gửi cảnh báo quên thuốc cho caregiver
+  final Set<int> _missedNotifiedScheduleIds = {};
 
   // Hàm kiểm tra tới giờ uống thuốc
   void _checkAndShowReminders() {
@@ -236,9 +239,22 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       // Nếu đúng giờ phút hiện tại và chưa báo động lần nào
       if (now.hour == hour && now.minute == minute && !_notifiedScheduleIds.contains(scheduleId)) {
         // Chỉ nhắc nếu chưa đánh dấu đã uống
-        if (!_takenScheduleIds.contains(scheduleId)) {
+        if (!_isMedicationTaken(scheduleId, now)) {
           _notifiedScheduleIds.add(scheduleId);
           _showMedicineReminderDialog(schedule);
+        }
+      }
+
+      // Logic cảnh báo "Quên uống thuốc" cho Caregiver sau 5 phút
+      final missedTime = DateTime(now.year, now.month, now.day, hour, minute).add(const Duration(minutes: 5));
+      if (now.isAfter(missedTime) && now.day == missedTime.day && !_missedNotifiedScheduleIds.contains(scheduleId)) {
+        if (!_isMedicationTaken(scheduleId, now)) {
+          _missedNotifiedScheduleIds.add(scheduleId);
+          final accountId = ApiService.currentAccountId;
+          if (accountId != null) {
+            final medName = schedule['medication']?['name']?.toString() ?? 'Thuốc';
+            ApiService.notifyMissedMedication(accountId, medName);
+          }
         }
       }
     }
@@ -929,19 +945,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                   }
                 },
               ),
-              // Nút Lịch khám bệnh
-              IconButton(
-                icon: const Icon(Icons.calendar_month_outlined, size: 26),
-                color: Colors.white,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ElderlyAppointmentScreen(),
-                    ),
-                  );
-                },
-              ),
+
               // Nút Hộp thư (Inbox) đi kèm chấm thông báo đỏ
               IconButton(
                 onPressed: () {
@@ -1414,11 +1418,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                                             spacing: 6,
                                             runSpacing: 6,
                                             children: [
-                                              _buildMiniBadge(Icons.vaccines_rounded, dosage, medColor, isTaken),
-                                              _buildMiniBadge(Icons.repeat_rounded, frequency, medColor, isTaken),
-                                              _buildMiniBadge(Icons.restaurant_rounded, instruction, medColor, isTaken),
+                                              _buildMiniBadge(context, Icons.vaccines_rounded, dosage, medColor, isTaken),
+                                              _buildMiniBadge(context, Icons.repeat_rounded, frequency, medColor, isTaken),
+                                              _buildMiniBadge(context, Icons.restaurant_rounded, instruction, medColor, isTaken),
                                               if (startDate.isNotEmpty)
                                                 _buildMiniBadge(
+                                                  context,
                                                   Icons.date_range_rounded, 
                                                   '${startDate.substring(0, 5)} - ${endDate.substring(0, 5)}', 
                                                   medColor, 
@@ -1493,34 +1498,41 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   }
 
   // Widget xây dựng Badge nhỏ gọn cho thông tin thuốc trên thẻ
-  Widget _buildMiniBadge(IconData icon, String text, Color color, bool isTaken) {
+  Widget _buildMiniBadge(BuildContext context, IconData icon, String text, Color color, bool isTaken) {
     final Color badgeBg = isTaken ? const Color(0xFFF1F5F9) : color.withOpacity(0.08);
     final Color badgeText = isTaken ? Colors.grey.shade400 : color;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: badgeBg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isTaken ? Colors.grey.shade200 : color.withOpacity(0.15),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: badgeText),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: badgeText,
-            ),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 110),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: badgeBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isTaken ? Colors.grey.shade200 : color.withOpacity(0.15),
+            width: 1,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: badgeText),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: badgeText,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

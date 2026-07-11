@@ -88,7 +88,7 @@ class _ChecklistScreenState extends State<ChecklistScreen>
           (c) => c['title'] == 'Nhiệm vụ hàng ngày',
           orElse: () => checklistsRes.first);
       _dailyChecklistId =
-          defaultChecklist['checklistID'] ?? defaultChecklist['id'];
+          defaultChecklist['checklistID'] ?? defaultChecklist['id'] ?? defaultChecklist['checklistid'];
       if (_dailyChecklistId != null) {
         checklistItems = await ApiService.getChecklistItems(_dailyChecklistId!);
       }
@@ -408,7 +408,7 @@ class _ChecklistScreenState extends State<ChecklistScreen>
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) =>
-                      _buildTaskCard(filteredTasks[index]),
+                      _buildTaskCard(filteredTasks[index], isLast: index == filteredTasks.length - 1),
                   childCount: filteredTasks.length,
                 ),
               ),
@@ -583,233 +583,232 @@ class _ChecklistScreenState extends State<ChecklistScreen>
   }
 
   // ─── Task Card ─────────────────────────────────────────────────────────────
-  Widget _buildTaskCard(TaskItem task) {
+  Widget _buildTaskCard(TaskItem task, {bool isLast = false}) {
     final color = _typeColor(task.type);
     final icon = _typeIcon(task.type);
     final label = _typeLabel(task.type);
 
-    return Dismissible(
-      key: Key(task.id),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => _deleteTask(task),
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEF4444),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.delete_rounded, color: Colors.white, size: 22),
-            SizedBox(height: 2),
-            Text('Xóa', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-      child: GestureDetector(
-        onTap: () => _toggleTask(task),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.only(bottom: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: task.isCompleted
-                  ? const Color(0xFFF1F5F9)
-                  : color.withValues(alpha: 0.18),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: task.isCompleted
-                    ? Colors.black.withValues(alpha: 0.02)
-                    : color.withValues(alpha: 0.08),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Timeline Line & Dot ──
+          SizedBox(
+            width: 40,
+            child: Stack(
+              alignment: Alignment.topCenter,
               children: [
-                // ── Checkbox ──
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutBack,
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: task.isCompleted ? color : Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: task.isCompleted
-                          ? Colors.transparent
-                          : const Color(0xFFCBD5E1),
+                // Vertical line
+                if (!isLast)
+                  Positioned(
+                    top: 28,
+                    bottom: 0,
+                    child: Container(
                       width: 2,
+                      color: const Color(0xFFE2E8F0),
                     ),
-                    boxShadow: task.isCompleted
-                        ? [
-                            BoxShadow(
-                                color: color.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3))
-                          ]
-                        : null,
                   ),
-                  child: task.isCompleted
-                      ? const Icon(Icons.done_rounded,
-                          color: Colors.white, size: 18)
-                      : null,
-                ),
-                const SizedBox(width: 14),
-
-                // ── Content ──
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Type badge + time
-                      Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: task.isCompleted
-                                ? const Color(0xFFF1F5F9)
-                                : color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(icon,
-                                  size: 11,
-                                  color: task.isCompleted
-                                      ? Colors.grey
-                                      : color),
-                              const SizedBox(width: 4),
-                              Text(label,
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: task.isCompleted
-                                          ? Colors.grey
-                                          : color)),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (task.time.isNotEmpty && task.time != 'Tùy lúc')
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.access_time_rounded,
-                                    size: 11,
-                                    color: Color(0xFF64748B)),
-                                const SizedBox(width: 4),
-                                Text(task.time,
-                                    style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF475569))),
-                              ],
-                            ),
-                          ),
-                      ]),
-                      const SizedBox(height: 8),
-
-                      // Title
-                      Text(
-                        task.title,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                          color: task.isCompleted
-                              ? Colors.grey.shade400
-                              : const Color(0xFF1E293B),
-                          decoration: task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
+                // Dot
+                Positioned(
+                  top: 20,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: task.isCompleted ? const Color(0xFF10B981) : Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: task.isCompleted
+                            ? Colors.transparent
+                            : color,
+                        width: 2,
                       ),
-
-                      // Details
-                      if (task.details.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          task.details,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: task.isCompleted
-                                ? Colors.grey.shade300
-                                : const Color(0xFF94A3B8),
-                          ),
-                        ),
-                      ],
-
-                      // Appointment info
-                      if (task.type == 'appointment' &&
-                          (task.hospital?.isNotEmpty == true ||
-                              task.doctor?.isNotEmpty == true)) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE11D48)
-                                .withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 13,
-                                color: Color(0xFFE11D48)),
-                            const SizedBox(width: 5),
-                            Flexible(
-                                child: Text(
-                              [task.hospital, task.doctor]
-                                  .where((e) => e?.isNotEmpty == true)
-                                  .join(' · '),
-                              style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: Color(0xFFE11D48),
-                                  fontWeight: FontWeight.w600),
-                            )),
-                          ]),
-                        ),
-                      ],
-                    ],
+                      boxShadow: task.isCompleted
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: task.isCompleted
+                        ? const Icon(Icons.check_rounded,
+                            color: Colors.white, size: 12)
+                        : Icon(icon, color: color, size: 10),
                   ),
-                ),
-
-                // ── Delete ──
-                IconButton(
-                  onPressed: () => _deleteTask(task),
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      size: 18, color: Color(0xFFCBD5E1)),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  splashRadius: 20,
                 ),
               ],
             ),
           ),
-        ),
+          
+          // ── Task Content ──
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Dismissible(
+                key: Key(task.id),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) => _deleteTask(task),
+                background: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+                      SizedBox(height: 2),
+                      Text('Xóa', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                child: GestureDetector(
+                  onTap: () => _toggleTask(task),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: task.isCompleted ? const Color(0xFFF8FAFC) : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: task.isCompleted
+                            ? const Color(0xFFF1F5F9)
+                            : color.withValues(alpha: 0.15),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: task.isCompleted
+                              ? Colors.black.withValues(alpha: 0.01)
+                              : color.withValues(alpha: 0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header: Type badge & Status
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  if (task.time.isNotEmpty && task.time != 'Tùy lúc')
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      margin: const EdgeInsets.only(right: 8),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(task.time,
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: color)),
+                                    ),
+                                  Text(label,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: task.isCompleted ? Colors.grey : const Color(0xFF64748B))),
+                                ],
+                              ),
+                              // Status badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: task.isCompleted
+                                      ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                                      : const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  task.isCompleted ? 'Đã xong' : 'Chờ thực hiện',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: task.isCompleted
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFFD97706),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // Title
+                          Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: task.isCompleted
+                                  ? Colors.grey.shade400
+                                  : const Color(0xFF1E293B),
+                              decoration: task.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                          
+                          // Details
+                          if (task.details.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              task.details,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: task.isCompleted
+                                    ? Colors.grey.shade300
+                                    : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                          
+                          // Appointment info
+                          if (task.type == 'appointment' &&
+                              (task.hospital?.isNotEmpty == true || task.doctor?.isNotEmpty == true)) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE11D48).withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(children: [
+                                const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFFE11D48)),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    [task.hospital, task.doctor].where((e) => e?.isNotEmpty == true).join(' · '),
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFFBE123C),
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ]),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

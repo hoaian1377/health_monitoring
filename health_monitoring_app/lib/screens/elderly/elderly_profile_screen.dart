@@ -1,8 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'elderly_emergency_contacts_screen.dart';
 import '../login_screen.dart';
 import 'elderly_change_password_screen.dart';
-import 'elderly_manage_profiles_screen.dart';
 import '../../utils/api_service.dart';
 
 class ElderlyProfileScreen extends StatefulWidget {
@@ -281,18 +280,7 @@ class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const ElderlyManageProfilesScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.swap_horiz_rounded,
-                      color: Colors.white, size: 28),
-                  tooltip: 'Chuyển đổi hồ sơ',
-                ),
+
               ],
             ),
           ),
