@@ -48,14 +48,17 @@ class ChecklistItemCreateView(generics.CreateAPIView):
 
 
 class ChecklistItemListView(generics.ListAPIView):
-    """GET /api/checklist/item/?checklist_id=<id>"""
+    """GET /api/checklist/item/?checklist_id=<id> hoac ?elderly_id=<id>"""
     serializer_class = ChecklistItemSerializer
 
     def get_queryset(self):
         qs = ChecklistItem.objects.all()
         checklist_id = self.request.query_params.get('checklist_id')
+        elderly_id = self.request.query_params.get('elderly_id')
         if checklist_id:
             qs = qs.filter(checklistid_id=checklist_id)
+        elif elderly_id:
+            qs = qs.filter(checklistid__elderlyid=elderly_id)
         return qs.order_by('checklist_itemid')
 
 

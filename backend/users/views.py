@@ -244,8 +244,8 @@ class ChangePasswordView(generics.UpdateAPIView):
         if not check_password(old_password, account.password) and account.password != old_password:
             return Response({"error": "Mật khẩu hiện tại không đúng"}, status=status.HTTP_400_BAD_REQUEST)
 
-        account.password = make_password(new_password)
-        account.save()
+        # Sử dụng update trực tiếp để đảm bảo lưu thay đổi vào DB thật
+        Account.objects.filter(accountid=account.accountid).update(password=make_password(new_password))
         return Response({"message": "Đổi mật khẩu thành công"}, status=status.HTTP_200_OK)
 
 # ── Quên mật khẩu ──────────────────────────────────────────────────────────
@@ -264,8 +264,9 @@ class ForgotPasswordView(generics.UpdateAPIView):
             if not account:
                 return Response({"error": "Tài khoản không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
             
-            account.password = make_password(new_password)
-            account.save()
+            # Sử dụng update trực tiếp để đảm bảo lưu thay đổi vào DB thật
+            Account.objects.filter(accountid=account.accountid).update(password=make_password(new_password))
+            
             return Response({"message": "Đặt lại mật khẩu thành công"}, status=status.HTTP_200_OK)
         except Caregiver.DoesNotExist:
             return Response({"error": "Số điện thoại chưa được đăng ký"}, status=status.HTTP_404_NOT_FOUND)

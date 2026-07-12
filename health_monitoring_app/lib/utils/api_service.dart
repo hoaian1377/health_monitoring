@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
-
 class ApiService {
   static String get baseUrl {
     if (kIsWeb) {
@@ -288,9 +287,12 @@ class ApiService {
   }
 
   // ================= MEDICAL DOCUMENTS =================
-  static Future<List<dynamic>> getMedicalDocument() async {
-    if (currentElderlyId == null) return [];
-    final url = Uri.parse("$baseUrl/api/medication/elderly-document/list/?elderly_id=$currentElderlyId");
+  static Future<List<dynamic>> getMedicalDocument({int? elderlyId}) async {
+    final targetId = elderlyId ?? currentElderlyId;
+    if (targetId == null) return [];
+    final url = Uri.parse(
+      "$baseUrl/api/medication/elderly-document/list/?elderly_id=$targetId",
+    );
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {
@@ -308,16 +310,17 @@ class ApiService {
     int? elderlyId,
   }) async {
     final eId = elderlyId ?? currentElderlyId;
-    if (eId == null) return {"success": false, "error": "Chưa chọn người cao tuổi"};
-    
+    if (eId == null)
+      return {"success": false, "error": "Chưa chọn người cao tuổi"};
+
     final url = Uri.parse("$baseUrl/api/medication/elderly-document/upload/");
     try {
       var request = http.MultipartRequest('POST', url);
       request.fields['elderly_id'] = eId.toString();
       request.fields['document_type'] = documentType;
-      
+
       request.files.add(await http.MultipartFile.fromPath('file', filePath));
-      
+
       var response = await request.send();
       if (response.statusCode == 201) {
         return {"success": true, "message": "Upload thành công"};
@@ -330,7 +333,6 @@ class ApiService {
     }
   }
 
-
   // ================= FORGOT PASSWORD =================
   static Future<Map<String, dynamic>> forgotPassword({
     required String phone,
@@ -341,16 +343,16 @@ class ApiService {
       final res = await http.put(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "phone": phone,
-          "new_password": newPassword,
-        }),
+        body: jsonEncode({"phone": phone, "new_password": newPassword}),
       );
       if (res.statusCode == 200) {
         return {"success": true, "message": "Đặt lại mật khẩu thành công."};
       }
       final err = jsonDecode(res.body);
-      return {"success": false, "error": err["error"] ?? "Đặt lại mật khẩu thất bại."};
+      return {
+        "success": false,
+        "error": err["error"] ?? "Đặt lại mật khẩu thất bại.",
+      };
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
@@ -560,7 +562,10 @@ class ApiService {
     }
   }
 
-  static Future<bool> updateAppointment(int id, Map<String, dynamic> data) async {
+  static Future<bool> updateAppointment(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     final url = Uri.parse("$baseUrl/api/medication/appointment/$id/update/");
     try {
       final res = await http.put(
@@ -600,7 +605,6 @@ class ApiService {
       return [];
     }
   }
-
 
   // ================= UC-6: SAO LƯU CSDL =================
   static Future<Map<String, dynamic>> backupDatabase() async {
@@ -666,9 +670,12 @@ class ApiService {
   static Future<bool> generateMockNotifications() async {
     if (currentAccountId == null || currentRole == null) return false;
     try {
-      final queryParam = currentRole == 'caregiver' ? 'caregiver_id=$currentAccountId' : 'elderly_id=$currentAccountId';
+      final queryParam = currentRole == 'caregiver'
+          ? 'caregiver_id=$currentAccountId'
+          : 'elderly_id=$currentAccountId';
       final url = Uri.parse(
-          "$baseUrl/api/notification/generate-mock/?$queryParam");
+        "$baseUrl/api/notification/generate-mock/?$queryParam",
+      );
       final res = await http.post(url);
       return res.statusCode == 201;
     } catch (e) {
@@ -677,7 +684,10 @@ class ApiService {
   }
 
   // ================= NOTIFY MISSED MEDICATION =================
-  static Future<bool> notifyMissedMedication(int elderlyId, String medicationName) async {
+  static Future<bool> notifyMissedMedication(
+    int elderlyId,
+    String medicationName,
+  ) async {
     try {
       final url = Uri.parse("$baseUrl/api/notification/notify-missed/");
       final res = await http.post(
@@ -798,11 +808,29 @@ class ApiService {
         if (decoded is Map && decoded['results'] != null) {
           return decoded['results'];
         }
-        return [];
       }
       return [];
     } catch (e) {
       print("ERROR getChecklistItems: $e");
+      return [];
+    }
+  }
+
+  /// Lấy tất cả checklist items của một elderly
+  static Future<List<dynamic>> getChecklistItemsByElderly(int elderlyId) async {
+    final url = Uri.parse("$baseUrl/api/checklist/item/?elderly_id=$elderlyId");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is List) return decoded;
+        if (decoded is Map && decoded['results'] != null) {
+          return decoded['results'];
+        }
+      }
+      return [];
+    } catch (e) {
+      print("ERROR getChecklistItemsByElderly: $e");
       return [];
     }
   }
@@ -982,21 +1010,94 @@ class ApiService {
       request.fields['doctor_name'] = doctorName;
       request.fields['diagnosis'] = diagnosis;
       request.fields['result'] = result;
-      
+
       if (filePath != null && filePath.isNotEmpty) {
         request.files.add(await http.MultipartFile.fromPath('file', filePath));
       }
 
       final streamedResponse = await request.send();
       final res = await http.Response.fromStream(streamedResponse);
-      
+
       if (res.statusCode == 200 || res.statusCode == 201) {
-        return {"success": true, "data": jsonDecode(utf8.decode(res.bodyBytes))};
+        return {
+          "success": true,
+          "data": jsonDecode(utf8.decode(res.bodyBytes)),
+        };
       }
-      return {"success": false, "error": "Lỗi thêm kết quả. Mã lỗi: ${res.statusCode}"};
+      return {
+        "success": false,
+        "error": "Lỗi thêm kết quả. Mã lỗi: ${res.statusCode}",
+      };
     } catch (e) {
       print("ERROR createMedicalDocument: $e");
       return {"success": false, "error": "Không thể kết nối máy chủ."};
+    }
+  }
+
+  /// Tạo Bệnh án (Lần khám) và upload nhiều file đính kèm
+  static Future<Map<String, dynamic>> createMedicalVisit({
+    required int elderlyId,
+    required String date,
+    required String time,
+    required String hospital,
+    required String doctorName,
+    required String diagnosis,
+    required String result,
+    required List<Map<String, String>>
+    files, // [{'path': '...', 'type': 'Toa thuốc'}]
+  }) async {
+    // 1. Tạo Appointment
+    final appointmentUrl = Uri.parse(
+      "$baseUrl/api/medication/appointment/create/",
+    );
+    try {
+      final apptRes = await http.post(
+        appointmentUrl,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "elderly_id": elderlyId,
+          "appointment_date": date,
+          "appointment_time": time,
+          "location": hospital,
+          "doctor_name": doctorName,
+          "note": diagnosis,
+          "is_past": true,
+        }),
+      );
+
+      if (apptRes.statusCode != 200 && apptRes.statusCode != 201) {
+        return {"success": false, "error": "Không thể tạo lịch khám"};
+      }
+
+      final apptData = jsonDecode(utf8.decode(apptRes.bodyBytes));
+      final appointmentId = apptData['appointment_id'];
+
+      // 2. Upload các file đính kèm
+      for (var file in files) {
+        if (file['path'] != null && file['path']!.isNotEmpty) {
+          final uploadUrl = Uri.parse(
+            "$baseUrl/api/medication/elderly-document/upload/",
+          );
+          var request = http.MultipartRequest('POST', uploadUrl);
+          request.fields['elderly_id'] = elderlyId.toString();
+          request.fields['appointment_id'] = appointmentId.toString();
+          request.fields['document_type'] = file['type'] ?? 'Kết quả khám bệnh';
+          request.fields['hospital'] = hospital;
+          request.fields['doctor_name'] = doctorName;
+          request.fields['diagnosis'] = diagnosis;
+          request.fields['result'] = result;
+          request.files.add(
+            await http.MultipartFile.fromPath('file', file['path']!),
+          );
+
+          await request.send();
+        }
+      }
+
+      return {"success": true, "message": "Tạo bệnh án thành công"};
+    } catch (e) {
+      print("ERROR createMedicalVisit: $e");
+      return {"success": false, "error": "Lỗi kết nối máy chủ"};
     }
   }
 
@@ -1054,10 +1155,7 @@ class ApiService {
       final res = await http.post(
         url,
         headers: {'Content-Type': 'application/json; charset=UTF-8'},
-        body: jsonEncode({
-          'elderly_id': elderlyId,
-          'message': message,
-        }),
+        body: jsonEncode({'elderly_id': elderlyId, 'message': message}),
       );
       if (res.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(res.bodyBytes));

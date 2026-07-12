@@ -17,6 +17,12 @@ class MedicalDocumentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    documents = serializers.SerializerMethodField()
+
     class Meta:
         model = Appointment
         fields = '__all__'
+
+    def get_documents(self, obj):
+        docs = MedicalDocument.objects.filter(appointmentid=obj)
+        return MedicalDocumentSerializer(docs, many=True).data

@@ -354,33 +354,56 @@ class CreateAppointmentView(generics.CreateAPIView):
             note=request.data.get('note', ''),
         )
         
-        # Create notification for caregivers
-        from notification.models import Notification, NotificationDetail
-        from users.models import CaregiverElderly
-        from django.utils import timezone
+        is_past = str(request.data.get('is_past', 'false')).lower() == 'true'
         
-        caregivers = CaregiverElderly.objects.filter(elderlyid=elderly)
-        for ce in caregivers:
-            if ce.caregiverid:
-                time_formatted = appointment_time.strftime("%H:%M") if appointment_time else "08:00"
-                date_formatted = appointment_date.strftime("%d/%m/%Y") if appointment_date else "Chưa rõ"
-                location_str = request.data.get('location', '')
-                location_str = location_str if location_str else "bệnh viện/phòng khám"
-                doctor_str = request.data.get('doctor_name', '')
-                doctor_str = doctor_str if doctor_str else "Bác sĩ"
-                
-                notif = Notification.objects.create(
-                    caregiverid=ce.caregiverid,
-                    title=f"Lịch khám bệnh: {elderly.fullname}",
-                    message=f"Thời gian: {time_formatted} ngày {date_formatted}\nTại: {location_str}\nPhụ trách: {doctor_str}",
-                    created_at=timezone.now()
-                )
-                NotificationDetail.objects.create(
-                    notificationid=notif,
-                    is_read=False
-                )
+        if not is_past:
+            from notification.models import Notification, NotificationDetail
+            from users.models import CaregiverElderly
+            from checklist.models import Checklist, ChecklistItem
+            from django.utils import timezone
+            
+            time_formatted = appointment_time.strftime("%H:%M") if appointment_time else "08:00"
+            date_formatted = appointment_date.strftime("%d/%m/%Y") if appointment_date else "Chưa rõ"
+            location_str = request.data.get('location', '')
+            location_str = location_str if location_str else "bệnh viện/phòng khám"
+            doctor_str = request.data.get('doctor_name', '')
+            doctor_str = doctor_str if doctor_str else "Bác sĩ"
 
-        
+            # Create Checklist for Elderly
+            new_checklist = Checklist.objects.create(
+                elderlyid=elderly,
+                appointmentid=appointment,
+                title=f"Lịch tái khám: {location_str}",
+                created_at=timezone.now()
+            )
+            
+            ChecklistItem.objects.create(
+                checklistid=new_checklist,
+                title="Đi tái khám",
+                item_type="appointment",
+                time_string=time_formatted,
+                details=f"Bác sĩ: {doctor_str}\nTại: {location_str}\nGhi chú: {appointment.note}",
+                is_complete=False,
+                hospital=location_str,
+                doctor=doctor_str,
+                appointment_date=timezone.make_aware(datetime.combine(appointment_date, appointment_time)) if appointment_date and appointment_time else None
+            )
+
+            # Create notification for caregivers
+            caregivers = CaregiverElderly.objects.filter(elderlyid=elderly)
+            for ce in caregivers:
+                if ce.caregiverid:
+                    notif = Notification.objects.create(
+                        caregiverid=ce.caregiverid,
+                        title=f"Lịch khám bệnh: {elderly.fullname}",
+                        message=f"Thời gian: {time_formatted} ngày {date_formatted}\nTại: {location_str}\nPhụ trách: {doctor_str}",
+                        created_at=timezone.now()
+                    )
+                    NotificationDetail.objects.create(
+                        notificationid=notif,
+                        is_read=False
+                    )
+
         return Response({
             "message": "Tạo lịch khám thành công",
             "appointment_id": appointment.appointmentid
@@ -393,8 +416,22 @@ class AppointmentListView(generics.ListAPIView):
     def get_queryset(self):
         elderly_id = self.request.query_params.get('elderly_id')
         if elderly_id:
-            return Appointment.objects.filter(elderlyid=elderly_id).order_by('appointment_date')
-        return Appointment.objects.all().order_by('appointment_date')
+            qs = Appointment.objects.filter(elderlyid=elderly_id).order_by('appointment_date')
+        else:
+            qs = Appointment.objects.all().order_by('appointment_date')
+            
+        from checklist.models import Checklist, ChecklistItem
+        valid_ids = []
+        for appt in qs:
+            chk = Checklist.objects.filter(appointmentid=appt).first()
+            if chk:
+                chk_item = ChecklistItem.objects.filter(checklistid=chk).first()
+                if chk_item and chk_item.is_complete:
+                    valid_ids.append(appt.appointmentid)
+            else:
+                valid_ids.append(appt.appointmentid)
+                
+        return qs.filter(appointmentid__in=valid_ids)
 
 class UpdateAppointmentView(generics.UpdateAPIView):
     """PUT /api/medication/appointment/<id>/update/"""
@@ -463,6 +500,14 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
         diagnosis = request.data.get('diagnosis', '')
         result = request.data.get('result', '')
 
+        appointment_id = request.data.get('appointment_id')
+        appointment = None
+        if appointment_id:
+            try:
+                appointment = Appointment.objects.get(appointmentid=appointment_id)
+            except Appointment.DoesNotExist:
+                pass
+
         if not elderly_id:
             return Response({"error": "Thiếu elderly_id"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -481,6 +526,7 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
         
         doc = MedicalDocument.objects.create(
             elderlyid=elderly,
+            appointmentid=appointment,
             document_type=document_type,
             file_url=file_url,
             upload_at=timezone.now(),
@@ -494,9 +540,11 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
 class ElderlyChatbotView(generics.CreateAPIView):
     """POST /api/medication/chatbot/"""
     def post(self, request):
+        import unicodedata
+        import re
         from users.models import Elderly
         from healthmetric.models import HealthMetrics
-        from .models import MedicationSchedule, Appointment
+        from .models import MedicationSchedule, Appointment, MedicalDocument
         from django.utils import timezone
         
         elderly_id = request.data.get('elderly_id')
@@ -508,55 +556,106 @@ class ElderlyChatbotView(generics.CreateAPIView):
         try:
             elderly = Elderly.objects.get(elderlyid=elderly_id)
         except Elderly.DoesNotExist:
-            return Response({"error": "Không tìm thấy elderly"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"response": "Dạ, cháu không nhận diện được tài khoản của ông/bà, vui lòng đăng nhập lại ạ."}, status=status.HTTP_200_OK)
             
         now = timezone.now()
-        msg_lower = message.lower()
+        
+        def remove_accents(input_str):
+            s = re.sub(r'[àáạảãâầấậẩẫăằắặẳẵ]', 'a', input_str)
+            s = re.sub(r'[èéẹẻẽêềếệểễ]', 'e', s)
+            s = re.sub(r'[ìíịỉĩ]', 'i', s)
+            s = re.sub(r'[òóọỏõôồốộổỗơờớợởỡ]', 'o', s)
+            s = re.sub(r'[ùúụủũưừứựửữ]', 'u', s)
+            s = re.sub(r'[ỳýỵỷỹ]', 'y', s)
+            s = re.sub(r'[đ]', 'd', s)
+            s = re.sub(r'[ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴ]', 'A', s)
+            s = re.sub(r'[ÈÉẸẺẼÊỀẾỆỂỄ]', 'E', s)
+            s = re.sub(r'[ÌÍỊỈĨ]', 'I', s)
+            s = re.sub(r'[ÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ]', 'O', s)
+            s = re.sub(r'[ÙÚỤỦŨƯỪỨỰỬỮ]', 'U', s)
+            s = re.sub(r'[ỲÝỴỶỸ]', 'Y', s)
+            s = re.sub(r'[Đ]', 'D', s)
+            return s.lower()
+            
+        msg_norm = remove_accents(message)
         
         response_text = ""
         pronoun = "ông" if elderly.gender == 'Nam' else "bà"
         
-        # 1. Rule for Medication
-        if any(word in msg_lower for word in ['thuốc', 'uống', 'đơn']):
+        def has_kw(kws):
+            return any(kw in msg_norm for kw in kws)
+
+        # 1. Intent: Medical Documents / Prescriptions
+        if has_kw(['giay to', 'toa thuoc', 'don thuoc', 'ho so', 'ket qua', 'xet nghiem']):
+            doc = MedicalDocument.objects.filter(elderlyid=elderly).order_by('-upload_at').first()
+            if doc:
+                date_str = doc.upload_at.strftime("%d/%m/%Y") if doc.upload_at else "gần đây"
+                response_text = f"Dạ, tài liệu gần nhất của {pronoun} là '{doc.document_type}' tại {doc.hospital}, bác sĩ {doc.doctor_name} cung cấp vào ngày {date_str}. {pronoun.capitalize()} có thể xem chi tiết ở mục Hồ sơ ạ."
+            else:
+                response_text = f"Dạ, hiện tại cháu chưa tìm thấy giấy tờ khám bệnh hay toa thuốc nào của {pronoun} ạ."
+                
+        # 2. Intent: Appointment / Visit
+        elif has_kw(['lich kham', 'tai kham', 'benh vien', 'di kham']):
+            appointments = Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date')
+            if not appointments.exists():
+                response_text = f"Dạ, hiện tại {pronoun} không có lịch hẹn khám hay tái khám nào sắp tới ạ."
+            else:
+                app_list = []
+                for a in appointments:
+                    time_str = str(a.appointment_time)[:5] if a.appointment_time else "tùy lúc"
+                    app_list.append(f"ngày {a.appointment_date.strftime('%d/%m/%Y')} lúc {time_str} tại {a.location}")
+                response_text = f"Dạ, {pronoun} có lịch khám vào " + ", ".join(app_list) + f". Bác sĩ sẽ theo dõi cho {pronoun} ạ."
+                
+        # 3. Intent: Health Metrics
+        elif has_kw(['huyet ap', 'duong huyet', 'can nang', 'nhip tim', 'chi so', 'suc khoe', 'do']):
+            latest_metric = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
+            if latest_metric:
+                date_str = latest_metric.recorded_at.strftime("%d/%m/%Y") if latest_metric.recorded_at else "gần đây"
+                parts = []
+                if latest_metric.blood_pressure: parts.append(f"huyết áp {latest_metric.blood_pressure}")
+                if latest_metric.blood_sugar: parts.append(f"đường huyết {latest_metric.blood_sugar} mmol/L")
+                if latest_metric.heart_rate: parts.append(f"nhịp tim {latest_metric.heart_rate} bpm")
+                if latest_metric.weight: parts.append(f"cân nặng {latest_metric.weight} kg")
+                
+                if parts:
+                    response_text = f"Dạ, theo lần đo gần nhất vào ngày {date_str}, " + ", ".join(parts) + f". {pronoun.capitalize()} nhớ giữ gìn sức khỏe nhé!"
+                else:
+                    response_text = f"Dạ, bản ghi sức khỏe gần nhất của {pronoun} chưa có số liệu chi tiết ạ."
+            else:
+                response_text = f"Dạ, cháu chưa tìm thấy dữ liệu đo sức khỏe nào của {pronoun} ạ."
+                
+        # 4. Intent: Medication
+        elif has_kw(['thuoc', 'uong gi', 'lieu luong', 'uong thuoc']):
             schedules = MedicationSchedule.objects.filter(elderlyid=elderly)
             if not schedules.exists():
-                response_text = f"Dạ, hiện tại {pronoun} không có lịch uống thuốc nào ạ."
+                response_text = f"Dạ, hiện tại {pronoun} không có lịch uống thuốc nào được ghi nhận ạ."
             else:
                 med_list = []
                 for s in schedules:
                     if s.medicationid:
-                        med_list.append(f"{s.medicationid.name} uống lúc {s.time}")
+                        med_list.append(f"{s.medicationid.name} uống lúc {s.time} ({s.frequency})")
                 if med_list:
                     response_text = f"Dạ, lịch uống thuốc của {pronoun} gồm có: " + ", ".join(med_list) + f". {pronoun.capitalize()} nhớ uống đúng giờ nhé!"
                 else:
-                    response_text = f"Dạ, hiện tại {pronoun} không có lịch uống thuốc nào ạ."
+                    response_text = f"Dạ, hiện tại {pronoun} không có chi tiết lịch uống thuốc nào ạ."
+
+        # 5. Intent: Doctor
+        elif has_kw(['bac si']):
+            app = Appointment.objects.filter(elderlyid=elderly).order_by('-appointment_date').first()
+            if app and app.doctor_name:
+                response_text = f"Dạ, bác sĩ theo dõi gần nhất của {pronoun} là Bác sĩ {app.doctor_name} tại {app.location} ạ."
+            else:
+                doc = MedicalDocument.objects.filter(elderlyid=elderly).order_by('-upload_at').first()
+                if doc and doc.doctor_name:
+                    response_text = f"Dạ, bác sĩ ghi trong hồ sơ gần nhất của {pronoun} là Bác sĩ {doc.doctor_name} tại {doc.hospital} ạ."
+                else:
+                    response_text = f"Dạ, cháu chưa tìm thấy thông tin bác sĩ điều trị của {pronoun} ạ."
                     
-        # 2. Rule for Appointment
-        elif any(word in msg_lower for word in ['khám', 'bác sĩ', 'hẹn', 'bệnh viện']):
-            appointments = Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date')
-            if not appointments.exists():
-                response_text = f"Dạ, hiện tại {pronoun} không có lịch hẹn khám nào sắp tới ạ."
-            else:
-                app_list = []
-                for a in appointments:
-                    time_str = str(a.appointment_time)[:5] if a.appointment_time else ""
-                    app_list.append(f"khám ngày {a.appointment_date} lúc {time_str} tại {a.location}")
-                response_text = f"Dạ, {pronoun} có lịch " + ", ".join(app_list) + "."
-                
-        # 3. Rule for Health
-        elif any(word in msg_lower for word in ['huyết áp', 'đường huyết', 'nhịp tim', 'sức khỏe']):
-            latest_metric = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
-            if latest_metric:
-                response_text = f"Dạ, chỉ số đo gần nhất của {pronoun} là: Huyết áp {latest_metric.blood_pressure or 'Trống'}, Đường huyết {latest_metric.blood_sugar or 'Trống'}, Nhịp tim {latest_metric.heart_rate or 'Trống'}."
-            else:
-                response_text = f"Dạ, cháu chưa tìm thấy dữ liệu sức khỏe nào của {pronoun} ạ."
-                
-        # 4. Greeting
-        elif any(word in msg_lower for word in ['chào', 'khỏe không', 'tên gì', 'ai đó']):
-            response_text = f"Dạ cháu chào {pronoun}, cháu là trợ lý ảo. Cháu có thể giúp {pronoun} xem lịch khám, đơn thuốc và sức khỏe ạ!"
-            
-        # 5. Fallback
+        # 6. Fallback / Greeting
         else:
-            response_text = f"Dạ cháu chưa hiểu ý lắm. {pronoun.capitalize()} có thể hỏi cháu về 'lịch khám', 'uống thuốc', hoặc 'huyết áp' nhé!"
+            if has_kw(['chao', 'khoe khong', 'ten gi', 'ai do']):
+                response_text = f"Dạ cháu chào {pronoun}, cháu là trợ lý ảo chăm sóc sức khỏe. Cháu có thể giúp {pronoun} xem lịch khám, đơn thuốc, sức khỏe và lịch uống thuốc ạ!"
+            else:
+                response_text = f"Dạ cháu chưa hiểu ý lắm. {pronoun.capitalize()} có thể hỏi cháu các câu như: 'Lịch khám của tôi', 'Xem đơn thuốc', hoặc 'Chỉ số huyết áp' nhé!"
             
         return Response({"response": response_text}, status=status.HTTP_200_OK)

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../utils/api_service.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -23,15 +24,21 @@ class _HistoryScreenState extends State<HistoryScreen>
   String selectedFilter = 'Tuần này';
   DateTime? selectedDateFilter;
   String _selectedChartMetric = 'Huyết áp';
-  final List<String> _chartMetrics = ['Huyết áp', 'Nhịp tim', 'Đường huyết', 'Cân nặng', 'Nhiệt độ'];
-  
-
+  final List<String> _chartMetrics = [
+    'Huyết áp',
+    'Nhịp tim',
+    'Đường huyết',
+    'Cân nặng',
+    'Nhiệt độ',
+  ];
 
   List<dynamic> _treatmentHistory = [];
   List<dynamic> _medicationSchedules = [];
   List<dynamic> _medicalDocuments = [];
+  List<dynamic> _appointments = [];
   List<dynamic> _healthMetrics = [];
   int? _currentElderlyId;
+  DateTime? _filterDate;
 
   final _hospitalController = TextEditingController();
   final _doctorController = TextEditingController();
@@ -54,17 +61,23 @@ class _HistoryScreenState extends State<HistoryScreen>
         _currentElderlyId = list.first['id'] as int;
       }
     }
-    
+
     if (_currentElderlyId != null) {
       final history = await ApiService.getTreatmentHistory(_currentElderlyId!);
-      final meds = await ApiService.getElderlyMedicationSchedule(_currentElderlyId!);
-      final docs = await ApiService.getMedicalDocument();
+      final meds = await ApiService.getElderlyMedicationSchedule(
+        _currentElderlyId!,
+      );
+      final docs = await ApiService.getMedicalDocument(
+        elderlyId: _currentElderlyId!,
+      );
+      final appts = await ApiService.getAppointments(_currentElderlyId!);
       final metrics = await ApiService.getHealthMetrics(_currentElderlyId!);
       if (mounted) {
         setState(() {
           _treatmentHistory = history;
           _medicationSchedules = meds;
           _medicalDocuments = docs;
+          _appointments = appts;
           _healthMetrics = metrics;
         });
       }
@@ -88,11 +101,7 @@ class _HistoryScreenState extends State<HistoryScreen>
       backgroundColor: const Color(0xFFF0F9FF),
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-          return [
-            SliverToBoxAdapter(
-              child: _buildHeader(),
-            ),
-          ];
+          return [SliverToBoxAdapter(child: _buildHeader())];
         },
         body: TabBarView(
           controller: _tabController,
@@ -148,10 +157,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                   SizedBox(height: 4),
                   Text(
                     'Xem lại toàn bộ hoạt động',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
               ),
@@ -164,8 +170,10 @@ class _HistoryScreenState extends State<HistoryScreen>
             indicatorWeight: 3,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
-            labelStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
             indicatorSize: TabBarIndicatorSize.label,
             tabs: const [
               Tab(text: 'Thuốc'),
@@ -182,10 +190,10 @@ class _HistoryScreenState extends State<HistoryScreen>
   Widget _buildMedicineTab() {
     int totalTaken = 0;
     int totalMissed = 0;
-    
+
     // Group records by date (yyyy-MM-dd)
     final Map<String, List<Map<String, dynamic>>> recordsByDate = {};
-    
+
     final now = DateTime.now();
     DateTime? filterStartDate;
     if (selectedFilter == 'Tuần này') {
@@ -193,7 +201,7 @@ class _HistoryScreenState extends State<HistoryScreen>
     } else if (selectedFilter == 'Tháng này') {
       filterStartDate = now.subtract(const Duration(days: 30));
     }
-    
+
     for (var schedule in _medicationSchedules) {
       final med = schedule['medication'] ?? {};
       final name = med['name']?.toString() ?? 'Không rõ';
@@ -205,7 +213,7 @@ class _HistoryScreenState extends State<HistoryScreen>
           for (final item in list) {
             final dateStr = item['date'].toString();
             final dateObj = DateTime.tryParse(dateStr);
-            
+
             if (dateObj != null) {
               if (selectedDateFilter != null) {
                 if (dateObj.year != selectedDateFilter!.year ||
@@ -214,7 +222,11 @@ class _HistoryScreenState extends State<HistoryScreen>
                   continue;
                 }
               } else if (filterStartDate != null) {
-                final filterDateOnly = DateTime(filterStartDate.year, filterStartDate.month, filterStartDate.day);
+                final filterDateOnly = DateTime(
+                  filterStartDate.year,
+                  filterStartDate.month,
+                  filterStartDate.day,
+                );
                 if (dateObj.isBefore(filterDateOnly)) {
                   continue;
                 }
@@ -242,13 +254,16 @@ class _HistoryScreenState extends State<HistoryScreen>
         }
       }
     }
-    
+
     int total = totalTaken + totalMissed;
-    String percentage = total > 0 ? '${(totalTaken / total * 100).round()}%' : '0%';
-    
+    String percentage = total > 0
+        ? '${(totalTaken / total * 100).round()}%'
+        : '0%';
+
     // Sort dates descending
-    final sortedDates = recordsByDate.keys.toList()..sort((a, b) => b.compareTo(a));
-    
+    final sortedDates = recordsByDate.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
     int uniqueDays = sortedDates.length;
     String averagePerDay = '0 lần/ngày';
     if (uniqueDays > 0) {
@@ -258,40 +273,46 @@ class _HistoryScreenState extends State<HistoryScreen>
         averagePerDay = '${avg.toInt()} lần/ngày';
       }
     }
-    
+
     final List<Widget> historyWidgets = [];
     final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final yesterdayStr = DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1)));
-    
+    final yesterdayStr = DateFormat(
+      'yyyy-MM-dd',
+    ).format(DateTime.now().subtract(const Duration(days: 1)));
+
     for (String dateStr in sortedDates) {
       final dateRecords = recordsByDate[dateStr]!;
       // Sort records by time ascending
       dateRecords.sort((a, b) => a['time'].compareTo(b['time']));
-      
+
       String label = dateStr;
       if (dateStr == todayStr) {
-        label = 'Hôm nay - ${DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr))}';
+        label =
+            'Hôm nay - ${DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr))}';
       } else if (dateStr == yesterdayStr) {
-        label = 'Hôm qua - ${DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr))}';
+        label =
+            'Hôm qua - ${DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr))}';
       } else {
         label = DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr));
       }
-      
+
       historyWidgets.add(_sectionLabel(label));
       historyWidgets.add(const SizedBox(height: 12));
-      
+
       for (var record in dateRecords) {
-        historyWidgets.add(_buildHistoryItem(
-          time: record['time'],
-          name: record['name'],
-          status: record['status'],
-          isCompleted: record['isCompleted'] == true,
-          isUpcoming: false,
-        ));
+        historyWidgets.add(
+          _buildHistoryItem(
+            time: record['time'],
+            name: record['name'],
+            status: record['status'],
+            isCompleted: record['isCompleted'] == true,
+            isUpcoming: false,
+          ),
+        );
       }
       historyWidgets.add(const SizedBox(height: 20));
     }
-    
+
     if (historyWidgets.isEmpty) {
       historyWidgets.add(
         const Padding(
@@ -321,13 +342,21 @@ class _HistoryScreenState extends State<HistoryScreen>
               const SizedBox(width: 8),
               Container(
                 decoration: BoxDecoration(
-                  color: selectedDateFilter != null ? const Color(0xFF0EA5E9) : Colors.white,
+                  color: selectedDateFilter != null
+                      ? const Color(0xFF0EA5E9)
+                      : Colors.white,
                   border: Border.all(
-                      color: selectedDateFilter != null ? Colors.transparent : const Color(0xFFBAE6FD)),
+                    color: selectedDateFilter != null
+                        ? Colors.transparent
+                        : const Color(0xFFBAE6FD),
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: IconButton(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   constraints: const BoxConstraints(),
                   onPressed: () async {
                     if (selectedDateFilter != null) {
@@ -346,16 +375,22 @@ class _HistoryScreenState extends State<HistoryScreen>
                     if (date != null) {
                       setState(() {
                         selectedDateFilter = date;
-                        selectedFilter = ''; 
+                        selectedFilter = '';
                       });
                     }
                   },
                   icon: Icon(
-                    selectedDateFilter != null ? Icons.clear_rounded : Icons.calendar_month_rounded,
-                    color: selectedDateFilter != null ? Colors.white : const Color(0xFF0EA5E9),
+                    selectedDateFilter != null
+                        ? Icons.clear_rounded
+                        : Icons.calendar_month_rounded,
+                    color: selectedDateFilter != null
+                        ? Colors.white
+                        : const Color(0xFF0EA5E9),
                     size: 20,
                   ),
-                  tooltip: selectedDateFilter != null ? 'Bỏ lọc ngày' : 'Lọc theo ngày',
+                  tooltip: selectedDateFilter != null
+                      ? 'Bỏ lọc ngày'
+                      : 'Lọc theo ngày',
                 ),
               ),
             ],
@@ -366,7 +401,11 @@ class _HistoryScreenState extends State<HistoryScreen>
               Expanded(
                 child: Column(
                   children: [
-                    _buildMetricCard('Đã uống', '$totalTaken lần', const Color(0xFF16A34A)),
+                    _buildMetricCard(
+                      'Đã uống',
+                      '$totalTaken lần',
+                      const Color(0xFF16A34A),
+                    ),
                     const SizedBox(height: 12),
                     _buildMetricCard('Bỏ lỡ', '$totalMissed lần', dangerColor),
                   ],
@@ -379,7 +418,10 @@ class _HistoryScreenState extends State<HistoryScreen>
                     _buildMetricCard('Tỉ lệ', percentage, primaryColor),
                     const SizedBox(height: 12),
                     _buildMetricCard(
-                        'Trung bình', averagePerDay, const Color(0xFF6B7280)),
+                      'Trung bình',
+                      averagePerDay,
+                      const Color(0xFF6B7280),
+                    ),
                   ],
                 ),
               ),
@@ -413,17 +455,31 @@ class _HistoryScreenState extends State<HistoryScreen>
                   onTap: () => setState(() => _selectedChartMetric = metric),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
-                      border: Border.all(color: isSelected ? const Color(0xFF0EA5E9) : const Color(0xFFBAE6FD)),
+                      color: isSelected
+                          ? const Color(0xFF0EA5E9)
+                          : Colors.white,
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFF0EA5E9)
+                            : const Color(0xFFBAE6FD),
+                      ),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(metric,
-                        style: TextStyle(
-                            color: isSelected ? Colors.white : const Color(0xFF0EA5E9),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12)),
+                    child: Text(
+                      metric,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF0EA5E9),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
@@ -435,52 +491,62 @@ class _HistoryScreenState extends State<HistoryScreen>
           _sectionLabel('LỊCH SỬ GẦN ĐÂY'),
           const SizedBox(height: 12),
           if (_healthMetrics.isEmpty)
-             const Center(child: Text('Chưa có lịch sử', style: TextStyle(color: Colors.grey)))
+            const Center(
+              child: Text(
+                'Chưa có lịch sử',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
           else
-             ..._healthMetrics.take(5).map((item) {
-                String valStr = '';
-                IconData ic = Icons.monitor_heart_rounded;
-                Color icC = const Color(0xFF16A34A);
-                Color bgC = const Color(0xFFDCFCE7);
-                
-                if (_selectedChartMetric == 'Nhịp tim') {
-                   valStr = '${item['heart_rate'] ?? '--'} bpm';
-                   ic = Icons.monitor_heart_rounded;
-                   icC = const Color(0xFFE11D48); bgC = const Color(0xFFFFEBEB);
-                } else if (_selectedChartMetric == 'Huyết áp') {
-                   valStr = '${item['blood_pressure'] ?? '--'} mmHg';
-                   ic = Icons.favorite_border_rounded;
-                   icC = const Color(0xFFDC2626); bgC = const Color(0xFFFFEBEB);
-                } else if (_selectedChartMetric == 'Đường huyết') {
-                   valStr = '${item['blood_sugar'] ?? '--'} mmol/L';
-                   ic = Icons.water_drop_rounded;
-                   icC = const Color(0xFF0284C7); bgC = const Color(0xFFE0F2FE);
-                } else if (_selectedChartMetric == 'Nhiệt độ') {
-                   valStr = '${item['temperature'] ?? '--'} °C';
-                   ic = Icons.thermostat_rounded;
-                   icC = const Color(0xFFEA580C); bgC = const Color(0xFFFFEDD5);
-                } else if (_selectedChartMetric == 'Cân nặng') {
-                   valStr = '${item['weight'] ?? '--'} kg';
-                   ic = Icons.monitor_weight_rounded;
-                   icC = const Color(0xFF7C3AED); bgC = const Color(0xFFEDE9FE);
-                }
-                
-                String dateStr = item['recorded_at']?.toString() ?? '';
-                if (dateStr.isNotEmpty) {
-                  try {
-                    final d = DateTime.parse(dateStr).toLocal();
-                    dateStr = DateFormat('dd/MM/yyyy, HH:mm').format(d);
-                  } catch(_) {}
-                }
+            ..._healthMetrics.take(5).map((item) {
+              String valStr = '';
+              IconData ic = Icons.monitor_heart_rounded;
+              Color icC = const Color(0xFF16A34A);
+              Color bgC = const Color(0xFFDCFCE7);
 
-                return _buildMetricHistoryItem(
-                   date: dateStr,
-                   value: valStr,
-                   icon: ic,
-                   iconColor: icC,
-                   bgColor: bgC,
-                );
-             }),
+              if (_selectedChartMetric == 'Nhịp tim') {
+                valStr = '${item['heart_rate'] ?? '--'} bpm';
+                ic = Icons.monitor_heart_rounded;
+                icC = const Color(0xFFE11D48);
+                bgC = const Color(0xFFFFEBEB);
+              } else if (_selectedChartMetric == 'Huyết áp') {
+                valStr = '${item['blood_pressure'] ?? '--'} mmHg';
+                ic = Icons.favorite_border_rounded;
+                icC = const Color(0xFFDC2626);
+                bgC = const Color(0xFFFFEBEB);
+              } else if (_selectedChartMetric == 'Đường huyết') {
+                valStr = '${item['blood_sugar'] ?? '--'} mmol/L';
+                ic = Icons.water_drop_rounded;
+                icC = const Color(0xFF0284C7);
+                bgC = const Color(0xFFE0F2FE);
+              } else if (_selectedChartMetric == 'Nhiệt độ') {
+                valStr = '${item['temperature'] ?? '--'} °C';
+                ic = Icons.thermostat_rounded;
+                icC = const Color(0xFFEA580C);
+                bgC = const Color(0xFFFFEDD5);
+              } else if (_selectedChartMetric == 'Cân nặng') {
+                valStr = '${item['weight'] ?? '--'} kg';
+                ic = Icons.monitor_weight_rounded;
+                icC = const Color(0xFF7C3AED);
+                bgC = const Color(0xFFEDE9FE);
+              }
+
+              String dateStr = item['recorded_at']?.toString() ?? '';
+              if (dateStr.isNotEmpty) {
+                try {
+                  final d = DateTime.parse(dateStr).toLocal();
+                  dateStr = DateFormat('dd/MM/yyyy, HH:mm').format(d);
+                } catch (_) {}
+              }
+
+              return _buildMetricHistoryItem(
+                date: dateStr,
+                value: valStr,
+                icon: ic,
+                iconColor: icC,
+                bgColor: bgC,
+              );
+            }),
           const SizedBox(height: 100),
         ],
       ),
@@ -510,7 +576,10 @@ class _HistoryScreenState extends State<HistoryScreen>
                     decoration: InputDecoration(
                       hintText: 'Tìm kiếm bệnh viện, bác sĩ...',
                       border: InputBorder.none,
-                      hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+                      hintStyle: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -520,11 +589,29 @@ class _HistoryScreenState extends State<HistoryScreen>
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildMetricCard('Tổng tài liệu', '${_medicalDocuments.length} hồ sơ', const Color(0xFF16A34A))),
+              Expanded(
+                child: _buildMetricCard(
+                  'Tổng tài liệu',
+                  '${_medicalDocuments.length} hồ sơ',
+                  const Color(0xFF16A34A),
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _buildMetricCard('Toa thuốc', '${_medicalDocuments.where((d) => d['document_type'] == 'Toa thuốc').length} toa', const Color(0xFF0EA5E9))),
+              Expanded(
+                child: _buildMetricCard(
+                  'Toa thuốc',
+                  '${_medicalDocuments.where((d) => d['document_type'] == 'Toa thuốc').length} toa',
+                  const Color(0xFF0EA5E9),
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _buildMetricCard('Kết quả/Khác', '${_medicalDocuments.where((d) => d['document_type'] != 'Toa thuốc').length} hồ sơ', const Color(0xFF64748B))),
+              Expanded(
+                child: _buildMetricCard(
+                  'Kết quả/Khác',
+                  '${_medicalDocuments.where((d) => d['document_type'] != 'Toa thuốc').length} hồ sơ',
+                  const Color(0xFF64748B),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -536,59 +623,241 @@ class _HistoryScreenState extends State<HistoryScreen>
               decoration: BoxDecoration(
                 color: const Color(0xFF0EA5E9).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF0EA5E9).withOpacity(0.4)),
+                border: Border.all(
+                  color: const Color(0xFF0EA5E9).withOpacity(0.4),
+                ),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_circle_outline_rounded, color: Color(0xFF0EA5E9)),
+                  Icon(
+                    Icons.add_circle_outline_rounded,
+                    color: Color(0xFF0EA5E9),
+                  ),
                   SizedBox(width: 8),
-                  Text('Thêm kết quả điều trị',
-                      style: TextStyle(color: Color(0xFF0EA5E9), fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(
+                    'Thêm kết quả điều trị',
+                    style: TextStyle(
+                      color: Color(0xFF0EA5E9),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 24),
-          _sectionLabel('CÁC LẦN KHÁM GẦN NHẤT'),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _sectionLabel('CÁC LẦN KHÁM GẦN NHẤT'),
+              InkWell(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _filterDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date != null) {
+                    setState(() {
+                      _filterDate = date;
+                    });
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _filterDate == null
+                        ? Colors.grey.shade100
+                        : const Color(0xFF0EA5E9).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 14,
+                        color: _filterDate == null
+                            ? Colors.grey.shade600
+                            : const Color(0xFF0EA5E9),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _filterDate == null
+                            ? 'Lọc theo ngày'
+                            : DateFormat('dd/MM/yyyy').format(_filterDate!),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: _filterDate == null
+                              ? Colors.grey.shade600
+                              : const Color(0xFF0EA5E9),
+                        ),
+                      ),
+                      if (_filterDate != null) ...[
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _filterDate = null);
+                          },
+                          child: const Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Color(0xFF0EA5E9),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          if (_medicalDocuments.isEmpty)
-             const Padding(
-               padding: EdgeInsets.all(24.0),
-               child: Center(child: Text('Chưa có kết quả điều trị nào.', style: TextStyle(color: Colors.black54))),
-             )
-          else
-             ..._medicalDocuments.map((doc) {
-                final uploadStr = doc['upload_at']?.toString();
-                String formattedDate = 'Không rõ';
-                
-                if (uploadStr != null && uploadStr.length >= 10) {
-                  try {
-                    formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.parse(uploadStr));
-                  } catch (_) {}
-                }
+          Builder(
+            builder: (context) {
+              var filteredAppts = _appointments;
+              var filteredDocs = _medicalDocuments
+                  .where((doc) => doc['appointmentid'] == null)
+                  .toList();
 
-                final type = doc['document_type'] ?? 'Kết quả khám bệnh';
-                final fileName = doc['file_url']?.split('/').last ?? 'Tài liệu';
+              if (_filterDate != null) {
+                String filterStr = DateFormat(
+                  'yyyy-MM-dd',
+                ).format(_filterDate!);
+                filteredAppts = _appointments.where((appt) {
+                  return appt['appointment_date']?.toString().startsWith(
+                        filterStr,
+                      ) ==
+                      true;
+                }).toList();
 
-                final hospital = doc['hospital']?.toString().isNotEmpty == true ? doc['hospital'] : type;
-                final doctor = doc['doctor_name']?.toString().isNotEmpty == true ? doc['doctor_name'] : 'Không rõ';
-                
-                String resultText = 'Tài liệu đính kèm: $fileName';
-                if (doc['result']?.toString().isNotEmpty == true) {
-                   resultText = doc['result'].toString();
-                } else if (doc['diagnosis']?.toString().isNotEmpty == true) {
-                   resultText = doc['diagnosis'].toString();
-                }
+                filteredDocs = filteredDocs.where((doc) {
+                  final uploadStr = doc['upload_at']?.toString();
+                  if (uploadStr != null && uploadStr.length >= 10) {
+                    return uploadStr.startsWith(filterStr);
+                  }
+                  return false;
+                }).toList();
+              }
 
-                return _buildAppointmentHistoryItem(
-                   date: formattedDate,
-                   hospital: hospital,
-                   doctor: doctor,
-                   result: resultText,
-                   documents: [doc],
+              if (filteredAppts.isEmpty && filteredDocs.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Center(
+                    child: Text(
+                      'Không có lịch sử khám bệnh nào.',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
                 );
-             }),
+              }
+
+              return Column(
+                children: [
+                  ...filteredAppts.map((appt) {
+                    final dateStr = appt['appointment_date']?.toString();
+                    final timeStr = appt['appointment_time']
+                        ?.toString()
+                        ?.substring(0, 5);
+                    String formattedDate = 'Không rõ';
+
+                    if (dateStr != null && dateStr.length >= 10) {
+                      try {
+                        formattedDate = DateFormat(
+                          'dd/MM/yyyy',
+                        ).format(DateTime.parse(dateStr));
+                      } catch (_) {}
+                    }
+
+                    if (timeStr != null &&
+                        timeStr.isNotEmpty &&
+                        timeStr != "null") {
+                      formattedDate = '$timeStr $formattedDate';
+                    }
+
+                    final hospital =
+                        appt['location']?.toString().isNotEmpty == true
+                        ? appt['location']
+                        : 'Phòng khám / Bệnh viện';
+                    final doctor =
+                        appt['doctor_name']?.toString().isNotEmpty == true
+                        ? appt['doctor_name']
+                        : 'Bác sĩ';
+
+                    String resultText =
+                        appt['note']?.toString() ?? 'Không có ghi chú';
+
+                    List<dynamic> docs = appt['documents'] ?? [];
+
+                    String diagnosis = appt['diagnosis']?.toString() ?? '';
+                    int? appointmentId =
+                        appt['appointment_id'] ?? appt['appointmentid'];
+
+                    return _buildAppointmentHistoryItem(
+                      date: formattedDate,
+                      hospital: hospital,
+                      doctor: doctor,
+                      diagnosis: diagnosis,
+                      result: resultText,
+                      documents: docs,
+                      appointmentId: appointmentId,
+                    );
+                  }),
+                  ...filteredDocs.map((doc) {
+                    final uploadStr = doc['upload_at']?.toString();
+                    String formattedDate = 'Không rõ';
+
+                    if (uploadStr != null && uploadStr.length >= 10) {
+                      try {
+                        formattedDate = DateFormat(
+                          'dd/MM/yyyy',
+                        ).format(DateTime.parse(uploadStr));
+                      } catch (_) {}
+                    }
+
+                    final type = doc['document_type'] ?? 'Kết quả khám bệnh';
+                    final fileName =
+                        doc['file_url']?.split('/').last ?? 'Tài liệu';
+
+                    final hospital =
+                        doc['hospital']?.toString().isNotEmpty == true
+                        ? doc['hospital']
+                        : type;
+                    final doctor =
+                        doc['doctor_name']?.toString().isNotEmpty == true
+                        ? doc['doctor_name']
+                        : 'Không rõ';
+
+                    String resultText = 'Tài liệu đính kèm: $fileName';
+                    String diagnosis = '';
+                    if (doc['result']?.toString().isNotEmpty == true) {
+                      resultText = doc['result'].toString();
+                    }
+                    if (doc['diagnosis']?.toString().isNotEmpty == true) {
+                      diagnosis = doc['diagnosis'].toString();
+                    }
+
+                    return _buildAppointmentHistoryItem(
+                      date: formattedDate,
+                      hospital: hospital,
+                      doctor: doctor,
+                      diagnosis: diagnosis,
+                      result: resultText,
+                      documents: [doc],
+                      appointmentId: null,
+                    );
+                  }),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 100),
         ],
       ),
@@ -600,9 +869,9 @@ class _HistoryScreenState extends State<HistoryScreen>
     _doctorController.clear();
     _diagnosisController.clear();
     _resultController.clear();
-    String selectedDocType = 'Kết quả khám bệnh';
-    String? selectedFilePath;
-    String? selectedFileName;
+    List<Map<String, String>> selectedFiles = [];
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
     showModalBottomSheet(
       context: context,
@@ -614,11 +883,19 @@ class _HistoryScreenState extends State<HistoryScreen>
             return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(28), topRight: Radius.circular(28)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
               ),
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24 + MediaQuery.of(context).padding.bottom,
-                top: 24, left: 24, right: 24,
+                bottom:
+                    MediaQuery.of(context).viewInsets.bottom +
+                    24 +
+                    MediaQuery.of(context).padding.bottom,
+                top: 24,
+                left: 24,
+                right: 24,
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -627,88 +904,258 @@ class _HistoryScreenState extends State<HistoryScreen>
                   children: [
                     Center(
                       child: Container(
-                        width: 46, height: 4,
-                        decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text('Thêm kết quả điều trị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF1E293B))),
-                    const SizedBox(height: 20),
-                    const Text('Loại tài liệu', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedDocType,
-                          isExpanded: true,
-                          items: ['Kết quả khám bệnh', 'Toa thuốc', 'Xét nghiệm máu', 'Siêu âm', 'Khác'].map((String value) {
-                            return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
-                            );
-                          }).toList(),
-                          onChanged: (newValue) {
-                            if (newValue != null) {
-                              setModalState(() {
-                                selectedDocType = newValue;
-                              });
-                            }
-                          },
+                        width: 46,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Thêm hồ sơ khám bệnh',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now(),
+                              );
+                              if (date != null) {
+                                setModalState(() {
+                                  selectedDate = date;
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 18,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    DateFormat(
+                                      'dd/MM/yyyy',
+                                    ).format(selectedDate),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: selectedTime,
+                              );
+                              if (time != null) {
+                                setModalState(() {
+                                  selectedTime = time;
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.access_time,
+                                    size: 18,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(selectedTime.format(context)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
-                    _buildTextField('Bệnh viện / Cơ sở y tế', _hospitalController),
+                    _buildTextField(
+                      'Bệnh viện / Cơ sở y tế',
+                      _hospitalController,
+                    ),
                     const SizedBox(height: 16),
                     _buildTextField('Bác sĩ điều trị', _doctorController),
                     const SizedBox(height: 16),
                     _buildTextField('Chẩn đoán bệnh', _diagnosisController),
                     const SizedBox(height: 16),
-                    _buildTextField('Kết quả / Ghi chú thêm', _resultController, maxLines: 3),
-                    const SizedBox(height: 16),
-                    const Text('Đính kèm tệp', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () async {
-                        FilePickerResult? result = await FilePicker.platform.pickFiles(
-                          type: FileType.custom,
-                          allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-                        );
-                        if (result != null) {
-                          setModalState(() {
-                            selectedFilePath = result.files.single.path;
-                            selectedFileName = result.files.single.name;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.attach_file, color: Color(0xFF94A3B8)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                selectedFileName ?? 'Chọn tệp đính kèm (PDF, JPG, PNG)',
-                                style: TextStyle(color: selectedFileName != null ? Colors.black : const Color(0xFF94A3B8), fontSize: 14),
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    _buildTextField(
+                      'Kết quả / Ghi chú thêm',
+                      _resultController,
+                      maxLines: 3,
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Tài liệu đính kèm',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () async {
+                            FilePickerResult? result = await FilePicker.platform
+                                .pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: [
+                                    'pdf',
+                                    'jpg',
+                                    'jpeg',
+                                    'png',
+                                  ],
+                                  allowMultiple: true,
+                                );
+                            if (result != null) {
+                              setModalState(() {
+                                for (var file in result.files) {
+                                  if (file.path != null) {
+                                    selectedFiles.add({
+                                      'path': file.path!,
+                                      'name': file.name,
+                                      'type': 'Kết quả khám bệnh',
+                                    });
+                                  }
+                                }
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Thêm file'),
+                        ),
+                      ],
+                    ),
+                    if (selectedFiles.isNotEmpty)
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: selectedFiles.length,
+                        itemBuilder: (context, index) {
+                          final file = selectedFiles[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.insert_drive_file,
+                                  color: Color(0xFF94A3B8),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        file['name'] ?? '',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                      DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: file['type'],
+                                          isDense: true,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF0EA5E9),
+                                          ),
+                                          items:
+                                              [
+                                                    'Kết quả khám bệnh',
+                                                    'Toa thuốc',
+                                                    'Xét nghiệm máu',
+                                                    'Siêu âm',
+                                                    'Khác',
+                                                  ]
+                                                  .map(
+                                                    (t) => DropdownMenuItem(
+                                                      value: t,
+                                                      child: Text(t),
+                                                    ),
+                                                  )
+                                                  .toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setModalState(() {
+                                                selectedFiles[index]['type'] =
+                                                    val;
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      selectedFiles.removeAt(index);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     const SizedBox(height: 28),
                     SizedBox(
                       width: double.infinity,
@@ -717,46 +1164,71 @@ class _HistoryScreenState extends State<HistoryScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0EA5E9),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           elevation: 0,
                         ),
                         onPressed: () async {
                           if (_currentElderlyId == null) return;
-                          
+
                           // Hiển thị dialog đang tải
                           showDialog(
                             context: context,
                             barrierDismissible: false,
-                            builder: (context) => const Center(child: CircularProgressIndicator()),
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
                           );
 
-                          final res = await ApiService.createMedicalDocument(
+                          String formattedDate = DateFormat(
+                            'yyyy-MM-dd',
+                          ).format(selectedDate);
+                          String formattedTime =
+                              '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+
+                          final res = await ApiService.createMedicalVisit(
                             elderlyId: _currentElderlyId!,
-                            documentType: selectedDocType,
+                            date: formattedDate,
+                            time: formattedTime,
                             hospital: _hospitalController.text,
                             doctorName: _doctorController.text,
                             diagnosis: _diagnosisController.text,
                             result: _resultController.text,
-                            filePath: selectedFilePath,
+                            files: selectedFiles,
                           );
-                          
+
                           // Đóng dialog loading
                           Navigator.pop(context);
                           // Đóng bottom sheet
                           Navigator.pop(context);
-                          
+
                           if (res['success'] == true) {
                             _fetchTreatmentHistory();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(backgroundColor: Color(0xFF0EA5E9), content: Text('Đã lưu kết quả điều trị thành công!')),
+                              const SnackBar(
+                                backgroundColor: Color(0xFF0EA5E9),
+                                content: Text(
+                                  'Đã lưu kết quả điều trị thành công!',
+                                ),
+                              ),
                             );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(backgroundColor: Colors.red, content: Text(res['error'] ?? 'Thêm thất bại')),
+                              SnackBar(
+                                backgroundColor: Colors.red,
+                                content: Text(res['error'] ?? 'Thêm thất bại'),
+                              ),
                             );
                           }
                         },
-                        child: const Text('Lưu thông tin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        child: const Text(
+                          'Lưu thông tin',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -769,11 +1241,22 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF64748B),
+          ),
+        ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -781,9 +1264,21 @@ class _HistoryScreenState extends State<HistoryScreen>
           decoration: InputDecoration(
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 1.5)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(
+                color: Color(0xFF0EA5E9),
+                width: 1.5,
+              ),
+            ),
           ),
         ),
       ],
@@ -804,7 +1299,8 @@ class _HistoryScreenState extends State<HistoryScreen>
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF0EA5E9) : Colors.white,
           border: Border.all(
-              color: isSelected ? Colors.transparent : const Color(0xFFBAE6FD)),
+            color: isSelected ? Colors.transparent : const Color(0xFFBAE6FD),
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         alignment: Alignment.center,
@@ -832,15 +1328,23 @@ class _HistoryScreenState extends State<HistoryScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B))),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: valueColor)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
         ],
       ),
     );
@@ -850,10 +1354,11 @@ class _HistoryScreenState extends State<HistoryScreen>
     return Text(
       title,
       style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF475569),
-          letterSpacing: 0.5),
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF475569),
+        letterSpacing: 0.5,
+      ),
     );
   }
 
@@ -905,30 +1410,43 @@ class _HistoryScreenState extends State<HistoryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B))),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.access_time_rounded,
-                        size: 14, color: Color(0xFF64748B)),
+                    const Icon(
+                      Icons.access_time_rounded,
+                      size: 14,
+                      color: Color(0xFF64748B),
+                    ),
                     const SizedBox(width: 4),
-                    Text(time,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF64748B))),
+                    Text(
+                      time,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
-          Text(status,
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: statusColor)),
+          Text(
+            status,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: statusColor,
+            ),
+          ),
         ],
       ),
     );
@@ -964,15 +1482,22 @@ class _HistoryScreenState extends State<HistoryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B))),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(date,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B))),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
               ],
             ),
           ),
@@ -986,107 +1511,533 @@ class _HistoryScreenState extends State<HistoryScreen>
     required String hospital,
     required String doctor,
     required String result,
+    required String diagnosis,
+    required int? appointmentId,
     List<dynamic> documents = const [],
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE0F2FE)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0EA5E9).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showAppointmentDetailsSheet(
+            date,
+            hospital,
+            doctor,
+            diagnosis,
+            result,
+            documents,
+            appointmentId,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0284C7).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.medical_services_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                 ),
-                child: const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF16A34A), size: 18),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hospital,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person_rounded,
+                            size: 14,
+                            color: Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              doctor,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF64748B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            date,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          if (documents.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0F9FF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${documents.length} File',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF0284C7),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Color(0xFFCBD5E1),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAppointmentDetailsSheet(
+    String date,
+    String hospital,
+    String doctor,
+    String diagnosis,
+    String result,
+    List<dynamic> documents,
+    int? appointmentId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+          ),
+          padding: const EdgeInsets.only(
+            top: 16,
+            left: 24,
+            right: 24,
+            bottom: 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 46,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Chi tiết hồ sơ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 20,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(hospital,
-                        style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B))),
-                    Text('$doctor · $date',
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF64748B))),
-                  ],
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow(
+                        'Ngày khám',
+                        date,
+                        icon: Icons.calendar_today_rounded,
+                      ),
+                      _buildDetailRow(
+                        'Bệnh viện / Cơ sở',
+                        hospital,
+                        icon: Icons.local_hospital_rounded,
+                      ),
+                      _buildDetailRow(
+                        'Bác sĩ điều trị',
+                        doctor,
+                        icon: Icons.person_rounded,
+                      ),
+                      if (diagnosis.isNotEmpty)
+                        _buildDetailRow(
+                          'Chẩn đoán bệnh',
+                          diagnosis,
+                          icon: Icons.healing_rounded,
+                        ),
+                      if (result.isNotEmpty)
+                        _buildDetailRow(
+                          'Kết quả / Ghi chú',
+                          result,
+                          icon: Icons.description_rounded,
+                        ),
+
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Tài liệu đính kèm',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                          if (appointmentId != null)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  _addDocumentToAppointment(appointmentId),
+                              style: TextButton.styleFrom(
+                                backgroundColor: const Color(0xFFF0F9FF),
+                                foregroundColor: const Color(0xFF0284C7),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Thêm tài liệu',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (documents.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFE2E8F0),
+                              style: BorderStyle.solid,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'Chưa có tài liệu đính kèm.',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ...documents.map((doc) {
+                          final String fileName =
+                              doc['file_url']?.split('/').last ??
+                              'Tài liệu không tên';
+                          final String type = doc['document_type'] ?? 'Khác';
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF0F9FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    type == 'Toa thuốc'
+                                        ? Icons.receipt_long_rounded
+                                        : Icons.science_rounded,
+                                    color: const Color(0xFF0EA5E9),
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        fileName,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        type,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.file_download_outlined,
+                                    color: Color(0xFF64748B),
+                                    size: 20,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {IconData? icon}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (icon != null) ...[
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: const Color(0xFF0EA5E9), size: 18),
             ),
-            child: Text(result,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF475569), height: 1.4)),
-          ),
-          if (documents.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text('Tài liệu đính kèm',
-                style: TextStyle(
+            const SizedBox(width: 14),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF94A3B8))),
-            const SizedBox(height: 8),
-            ...documents.map((doc) {
-              final String fileName = doc['file_url']?.split('/').last ?? 'Tài liệu không tên';
-              final String type = doc['document_type'] ?? 'Khác';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  borderRadius: BorderRadius.circular(8),
+                    color: Color(0xFF64748B),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      type == 'Toa thuốc' ? Icons.receipt_long_rounded : Icons.science_rounded,
-                      color: const Color(0xFF0EA5E9),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        fileName,
-                        style: const TextStyle(
-                            fontSize: 13, color: Color(0xFF1E293B)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const Icon(Icons.download_rounded, color: Color(0xFF94A3B8), size: 18),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
                 ),
-              );
-            }),
-          ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
+  Future<void> _addDocumentToAppointment(int appointmentId) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (result != null && result.files.single.path != null) {
+      String filePath = result.files.single.path!;
+
+      // show dialog
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final uploadUrl = Uri.parse(
+        "${ApiService.baseUrl}/api/medication/elderly-document/upload/",
+      );
+      var request = http.MultipartRequest('POST', uploadUrl);
+      request.fields['elderly_id'] = _currentElderlyId.toString();
+      request.fields['appointment_id'] = appointmentId.toString();
+      request.fields['document_type'] = 'Kết quả khám bệnh'; // Default
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+      try {
+        final res = await request.send();
+        Navigator.pop(context); // close dialog
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          Navigator.pop(context); // close details sheet
+          _fetchTreatmentHistory(); // refresh data
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: Colors.green,
+              content: Text('Thêm tài liệu thành công!'),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red,
+              content: Text('Lỗi: ${res.statusCode}'),
+            ),
+          );
+        }
+      } catch (e) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Lỗi kết nối!'),
+          ),
+        );
+      }
+    }
+  }
 
   Widget _buildHealthChart() {
     List<FlSpot> spots = [];
@@ -1104,47 +2055,62 @@ class _HistoryScreenState extends State<HistoryScreen>
       return Container(
         height: 200,
         alignment: Alignment.center,
-        child: const Text('Chưa có dữ liệu', style: TextStyle(color: Colors.grey)),
+        child: const Text(
+          'Chưa có dữ liệu',
+          style: TextStyle(color: Colors.grey),
+        ),
       );
     }
 
     switch (_selectedChartMetric) {
       case 'Nhịp tim':
         chartColor = const Color(0xFFE11D48);
-        minY = 50; maxY = 150;
+        minY = 50;
+        maxY = 150;
         for (int i = 0; i < dataToUse.length; i++) {
-          final val = double.tryParse(dataToUse[i]['heart_rate']?.toString() ?? '0') ?? 0;
+          final val =
+              double.tryParse(dataToUse[i]['heart_rate']?.toString() ?? '0') ??
+              0;
           spots.add(FlSpot(i.toDouble(), val));
         }
         break;
       case 'Đường huyết':
         chartColor = const Color(0xFF0284C7);
-        minY = 3.0; maxY = 15.0;
+        minY = 3.0;
+        maxY = 15.0;
         for (int i = 0; i < dataToUse.length; i++) {
-          final val = double.tryParse(dataToUse[i]['blood_sugar']?.toString() ?? '0') ?? 0;
+          final val =
+              double.tryParse(dataToUse[i]['blood_sugar']?.toString() ?? '0') ??
+              0;
           spots.add(FlSpot(i.toDouble(), val));
         }
         break;
       case 'Cân nặng':
         chartColor = const Color(0xFF7C3AED);
-        minY = 40.0; maxY = 100.0;
+        minY = 40.0;
+        maxY = 100.0;
         for (int i = 0; i < dataToUse.length; i++) {
-          final val = double.tryParse(dataToUse[i]['weight']?.toString() ?? '0') ?? 0;
+          final val =
+              double.tryParse(dataToUse[i]['weight']?.toString() ?? '0') ?? 0;
           spots.add(FlSpot(i.toDouble(), val));
         }
         break;
       case 'Nhiệt độ':
         chartColor = const Color(0xFFEA580C);
-        minY = 35.0; maxY = 42.0;
+        minY = 35.0;
+        maxY = 42.0;
         for (int i = 0; i < dataToUse.length; i++) {
-          final val = double.tryParse(dataToUse[i]['temperature']?.toString() ?? '0') ?? 0;
+          final val =
+              double.tryParse(dataToUse[i]['temperature']?.toString() ?? '0') ??
+              0;
           spots.add(FlSpot(i.toDouble(), val));
         }
         break;
       case 'Huyết áp':
       default:
         chartColor = const Color(0xFFDC2626);
-        minY = 80; maxY = 200;
+        minY = 80;
+        maxY = 200;
         for (int i = 0; i < dataToUse.length; i++) {
           final bpStr = dataToUse[i]['blood_pressure']?.toString() ?? '120/80';
           final sys = double.tryParse(bpStr.split('/')[0]) ?? 120;
@@ -1152,7 +2118,7 @@ class _HistoryScreenState extends State<HistoryScreen>
         }
         break;
     }
-    
+
     double maxX = (dataToUse.length - 1).toDouble();
     if (maxX < 0) maxX = 0;
 
@@ -1168,24 +2134,47 @@ class _HistoryScreenState extends State<HistoryScreen>
         LineChartData(
           gridData: const FlGridData(show: true, drawVerticalLine: false),
           titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    value.toInt().toString(),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  );
+                },
+              ),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
+                interval: 1,
+                reservedSize: 30,
                 getTitlesWidget: (value, meta) {
                   int idx = value.toInt();
                   if (idx >= 0 && idx < dataToUse.length) {
                     final dateStr = dataToUse[idx]['recorded_at']?.toString();
                     if (dateStr != null && dateStr.length >= 10) {
-                       try {
-                         final date = DateTime.parse(dateStr).toLocal();
-                         return Padding(
-                           padding: const EdgeInsets.only(top: 8.0),
-                           child: Text('${date.day}/${date.month}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                         );
-                       } catch(_) {}
+                      try {
+                        final date = DateTime.parse(dateStr).toLocal();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            '${date.day}/${date.month}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      } catch (_) {}
                     }
                   }
                   return const Text('');
