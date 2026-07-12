@@ -200,12 +200,20 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
           }
         }
 
-        final stock = schedule['stock_remaining'] is int
+        int stock = schedule['stock_remaining'] is int
             ? schedule['stock_remaining'] as int
             : 30;
-        final totalStock = schedule['stock_total'] is int
+        int totalStock = schedule['stock_total'] is int
             ? schedule['stock_total'] as int
-            : stock;
+            : 30;
+            
+        if (description.contains('Tổng số viên thuốc:')) {
+          final match = RegExp(r'Tổng số viên thuốc:\s*(\d+)').firstMatch(description);
+          if (match != null) {
+            stock = int.parse(match.group(1)!);
+          }
+        }
+
         final startDate = DateTime.tryParse(schedule['start_date']?.toString() ?? '') ?? DateTime.now();
         final endDate = DateTime.tryParse(schedule['end_date']?.toString() ?? '') ?? DateTime.now().add(const Duration(days: 30));
         

@@ -456,32 +456,40 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
     """POST /api/medication/elderly-document/upload/"""
     def post(self, request):
         elderly_id = request.data.get('elderly_id')
-        document_type = request.data.get('document_type', 'Khác')
+        document_type = request.data.get('document_type', 'Kết quả khám bệnh')
         file_obj = request.FILES.get('file')
+        hospital = request.data.get('hospital', '')
+        doctor_name = request.data.get('doctor_name', '')
+        diagnosis = request.data.get('diagnosis', '')
+        result = request.data.get('result', '')
 
-        if not elderly_id or not file_obj:
-            return Response({"error": "Thiếu elderly_id hoặc file"}, status=status.HTTP_400_BAD_REQUEST)
+        if not elderly_id:
+            return Response({"error": "Thiếu elderly_id"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             elderly = Elderly.objects.get(elderlyid=elderly_id)
         except Elderly.DoesNotExist:
             return Response({"error": "Không tìm thấy elderly"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Save file
-        file_extension = file_obj.name.split('.')[-1]
-        file_name = f"documents/{elderly_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
-        file_path = default_storage.save(file_name, file_obj)
-        file_url = f"/media/{file_path}"
-
+        # Save file if provided
+        file_url = ""
+        if file_obj:
+            file_extension = file_obj.name.split('.')[-1]
+            file_name = f"documents/{elderly_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+            file_path = default_storage.save(file_name, file_obj)
+            file_url = f"/media/{file_path}"
+        
         doc = MedicalDocument.objects.create(
             elderlyid=elderly,
             document_type=document_type,
             file_url=file_url,
-            upload_at=timezone.now()
+            upload_at=timezone.now(),
+            hospital=hospital,
+            doctor_name=doctor_name,
+            diagnosis=diagnosis,
+            result=result
         )
-        
-        serializer = MedicalDocumentSerializer(doc)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({"success": True, "message": "Đã lưu kết quả thành công", "id": doc.medical_documentid})
 
 class ElderlyChatbotView(generics.CreateAPIView):
     """POST /api/medication/chatbot/"""

@@ -18,6 +18,8 @@ class Caregiver(models.Model):
     fullname = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS')
     email = models.CharField(unique=True, max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS')
     phone = models.CharField(unique=True, max_length=15, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    gender = models.BooleanField(blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = False

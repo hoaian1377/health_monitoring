@@ -40,11 +40,26 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   String _bloodSugar = '--';
   String _temperature = '--';
 
+  List<dynamic> _notifications = [];
+  bool _isLoadingNotifications = false;
+
   @override
   void initState() {
     super.initState();
     _medListScrollController = ScrollController();
     _loadElderlyList();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() => _isLoadingNotifications = true);
+    final notifs = await ApiService.getNotifications();
+    if (mounted) {
+      setState(() {
+        _notifications = notifs;
+        _isLoadingNotifications = false;
+      });
+    }
   }
 
   @override
@@ -245,25 +260,26 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     ),
                     onPressed: _showNotificationsDialog,
                   ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text(
-                        '2',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                  if (_notifications.where((n) => n['is_read'] != true).isNotEmpty)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${_notifications.where((n) => n['is_read'] != true).length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ],
@@ -2764,42 +2780,27 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
               const SizedBox(height: 12),
               const Divider(height: 1),
               Expanded(
-                child: ListView(
-                  controller: scrollCtrl,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  children: [
-                    _buildNotifItem(
-                      icon: Icons.calendar_today_rounded,
-                      iconBg: const Color(0xFFFEF3C7),
-                      iconColor: const Color(0xFFD97706),
-                      title: 'Lịch tái khám sắp tới',
-                      body:
-                          'Ngày 12/06 lúc 08:30 — BV Chợ Rẫy, BS. Nguyễn Thị Lan (Tim mạch). Còn 3 ngày nữa.',
-                      time: '2 giờ trước',
-                    ),
-                    _buildNotifItem(
-                      icon: Icons.medication_rounded,
-                      iconBg: const Color(0xFFDCFCE7),
-                      iconColor: const Color(0xFF16A34A),
-                      title: 'Đã uống thuốc buổi sáng',
-                      body:
-                          'Bác đã xác nhận uống Amlodipine 5mg và Atorvastatin 20mg lúc 07:15.',
-                      time: '5 giờ trước',
-                    ),
-                    _buildNotifItem(
-                      icon: Icons.warning_amber_rounded,
-                      iconBg: const Color(0xFFFFE4E6),
-                      iconColor: const Color(0xFFDC2626),
-                      title: 'Bỏ lỡ thuốc buổi trưa',
-                      body:
-                          'Bác chưa xác nhận uống Metformin 500mg lúc 12:00. Hệ thống đã gửi nhắc nhở.',
-                      time: 'Hôm qua',
-                    ),
-                  ],
-                ),
+                child: _isLoadingNotifications
+                    ? const Center(child: CircularProgressIndicator())
+                    : _notifications.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Không có thông báo nào.',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: scrollCtrl,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            itemCount: _notifications.length,
+                            itemBuilder: (context, index) {
+                              final notif = _notifications[index];
+                              return _buildNotifItemDynamic(notif);
+                            },
+                          ),
               ),
             ],
           ),
@@ -2808,67 +2809,106 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     );
   }
 
-  Widget _buildNotifItem({
-    required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
-    required String title,
-    required String body,
-    required String time,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(10),
+  Widget _buildNotifItemDynamic(dynamic notif) {
+    IconData icon = Icons.notifications_rounded;
+    Color iconBg = const Color(0xFFE0F2FE);
+    Color iconColor = const Color(0xFF0284C7);
+    
+    final title = notif['title']?.toString() ?? 'Thông báo';
+    final body = notif['message']?.toString() ?? '';
+    final timeStr = notif['created_at']?.toString() ?? '';
+    final isRead = notif['is_read'] == true;
+    final detailId = notif['id'];
+
+    if (title.toLowerCase().contains('khám')) {
+      icon = Icons.calendar_today_rounded;
+      iconBg = const Color(0xFFFEF3C7);
+      iconColor = const Color(0xFFD97706);
+    } else if (title.toLowerCase().contains('cảnh báo') || title.toLowerCase().contains('miss')) {
+      icon = Icons.warning_amber_rounded;
+      iconBg = const Color(0xFFFFE4E6);
+      iconColor = const Color(0xFFDC2626);
+    } else if (title.toLowerCase().contains('thuốc') || title.toLowerCase().contains('uống')) {
+      icon = Icons.medication_rounded;
+      iconBg = const Color(0xFFDCFCE7);
+      iconColor = const Color(0xFF16A34A);
+    }
+
+    String displayTime = '';
+    if (timeStr.isNotEmpty) {
+      try {
+        final parsed = DateTime.parse(timeStr).toLocal();
+        displayTime = '${parsed.day}/${parsed.month}/${parsed.year} ${parsed.hour.toString().padLeft(2, '0')}:${parsed.minute.toString().padLeft(2, '0')}';
+      } catch (_) {
+        displayTime = timeStr;
+      }
+    }
+
+    return GestureDetector(
+      onTap: () async {
+        if (!isRead && detailId != null) {
+          final success = await ApiService.markNotificationRead(detailId);
+          if (success) {
+            setState(() {
+              notif['is_read'] = true;
+            });
+          }
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isRead ? const Color(0xFFF8FAFC) : const Color(0xFFF0F9FF),
+          borderRadius: BorderRadius.circular(16),
+          border: isRead ? Border.all(color: const Color(0xFFE2E8F0)) : Border.all(color: const Color(0xFFBAE6FD)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
             ),
-            child: Icon(icon, color: iconColor, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isRead ? FontWeight.bold : FontWeight.w900,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    height: 1.4,
+                  const SizedBox(height: 4),
+                  Text(
+                    body,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isRead ? Colors.grey : Colors.black87,
+                      height: 1.4,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF94A3B8),
+                  const SizedBox(height: 6),
+                  Text(
+                    displayTime,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF94A3B8),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

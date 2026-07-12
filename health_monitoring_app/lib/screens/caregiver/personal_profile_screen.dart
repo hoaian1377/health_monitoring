@@ -87,37 +87,76 @@ class _PersonalProfileScreenState extends State<PersonalProfileScreen> {
     setState(() => _isEditing = false);
   }
 
-  void _saveChanges() {
-    // Save to ApiService static fields
-    ApiService.currentFullname = _fullnameCtrl.text.trim();
-    ApiService.currentPhone = _phoneCtrl.text.trim();
-    ApiService.currentEmail = _emailCtrl.text.trim();
-    if (_selectedGender != null) {
-      ApiService.currentGender = _selectedGender!;
-    }
+  Future<void> _saveChanges() async {
+    final newFullname = _fullnameCtrl.text.trim();
+    final newPhone = _phoneCtrl.text.trim();
+    final newEmail = _emailCtrl.text.trim();
+    String? newDob;
     if (_selectedDob != null) {
-      ApiService.currentDob =
+      newDob =
           '${_selectedDob!.year}-${_selectedDob!.month.toString().padLeft(2, '0')}-${_selectedDob!.day.toString().padLeft(2, '0')}';
     }
-    setState(() => _isEditing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: const Color(0xFF16A34A),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 10),
-            Text('Đã lưu thành công ✓',
-                style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
+
+    final res = await ApiService.updateCaregiverProfile(
+      fullname: newFullname,
+      phone: newPhone,
+      email: newEmail,
+      gender: _selectedGender,
+      dob: newDob,
     );
+
+    if (res['success']) {
+      // Save to ApiService static fields
+      ApiService.currentFullname = newFullname;
+      ApiService.currentPhone = newPhone;
+      ApiService.currentEmail = newEmail;
+      if (_selectedGender != null) {
+        ApiService.currentGender = _selectedGender!;
+      }
+      if (newDob != null) {
+        ApiService.currentDob = newDob;
+      }
+      setState(() => _isEditing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Text('Đã lưu thành công ✓',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFC81E1E),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(res['error'] ?? 'Lỗi cập nhật',
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _pickDob() async {

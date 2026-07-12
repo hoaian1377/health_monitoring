@@ -85,8 +85,8 @@ class ApiService {
           currentFullname = data["user"]["fullname"] ?? '';
           currentEmail = data["user"]["email"] ?? '';
           currentPhone = data["user"]["phone"] ?? '';
-          currentDob = ''; // caregiver might not have this
-          currentGender = '';
+          currentDob = data["user"]["dob"] ?? '';
+          currentGender = data["user"]["gender"] ?? '';
         }
         return {"success": true, "data": data};
       } else {
@@ -191,6 +191,37 @@ class ApiService {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         return {"success": true, "elderly": data["elderly"]};
+      }
+      return {"success": false, "error": "Cập nhật thất bại."};
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= UPDATE CAREGIVER =================
+  static Future<Map<String, dynamic>> updateCaregiverProfile({
+    required String fullname,
+    required String phone,
+    required String email,
+    String? gender,
+    String? dob,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/users/caregiver/update/");
+    try {
+      final res = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "account_id": currentAccountId,
+          "fullname": fullname,
+          "phone": phone,
+          "email": email,
+          "gender": gender,
+          "dob": dob,
+        }),
+      );
+      if (res.statusCode == 200) {
+        return {"success": true};
       }
       return {"success": false, "error": "Cập nhật thất bại."};
     } catch (e) {
@@ -932,46 +963,40 @@ class ApiService {
     }
   }
 
-  /// Tạo mới lịch sử điều trị
-  static Future<Map<String, dynamic>> createTreatmentHistory({
+  /// Tạo mới kết quả khám bệnh (Lưu vào MedicalDocument)
+  static Future<Map<String, dynamic>> createMedicalDocument({
     required int elderlyId,
+    required String hospital,
+    required String doctorName,
     required String diagnosis,
-    required String treatment,
-    String treatmentType = 'Ngoại trú',
-    String doctorName = '',
-    String hospital = '',
-    String? startDate,
-    String? endDate,
-    String result = '',
-    String notes = '',
-    String status = 'ongoing',
+    required String result,
+    required String documentType,
+    String? filePath,
   }) async {
-    final url = Uri.parse("$baseUrl/api/treatmenthistory/create/");
+    final url = Uri.parse("$baseUrl/api/medication/elderly-document/upload/");
     try {
-      final res = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'elderly_id': elderlyId,
-          'diagnosis': diagnosis,
-          'treatment': treatment,
-          'treatment_type': treatmentType,
-          'doctor_name': doctorName,
-          'hospital': hospital,
-          'start_date': startDate,
-          'end_date': endDate,
-          'result': result,
-          'notes': notes,
-          'status': status,
-        }),
-      );
-      if (res.statusCode == 201) {
-        return {'success': true, 'data': jsonDecode(res.body)};
+      var request = http.MultipartRequest('POST', url);
+      request.fields['elderly_id'] = elderlyId.toString();
+      request.fields['document_type'] = documentType;
+      request.fields['hospital'] = hospital;
+      request.fields['doctor_name'] = doctorName;
+      request.fields['diagnosis'] = diagnosis;
+      request.fields['result'] = result;
+      
+      if (filePath != null && filePath.isNotEmpty) {
+        request.files.add(await http.MultipartFile.fromPath('file', filePath));
       }
-      final err = res.body.isNotEmpty ? jsonDecode(res.body) : {};
-      return {'success': false, 'error': err['error'] ?? 'Thêm thất bại'};
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
+      
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        return {"success": true, "data": jsonDecode(utf8.decode(res.bodyBytes))};
+      }
+      return {"success": false, "error": "Lỗi thêm kết quả. Mã lỗi: ${res.statusCode}"};
     } catch (e) {
-      return {'success': false, 'error': e.toString()};
+      print("ERROR createMedicalDocument: $e");
+      return {"success": false, "error": "Không thể kết nối máy chủ."};
     }
   }
 

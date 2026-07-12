@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
+from django.contrib.auth.hashers import check_password, make_password
 from .serializers import RegisterSerialzier, LoginSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .models import Account
@@ -35,10 +36,17 @@ class LoginView(generics.CreateAPIView):
                 try:
                     from .models import Caregiver
                     caregiver = Caregiver.objects.get(accountid=user.accountid)
+                    
+                    gender_str = ''
+                    if caregiver.gender is not None:
+                        gender_str = 'Nam' if caregiver.gender else 'Nữ'
+
                     caregiver_info = {
                         'fullname': caregiver.fullname,
                         'email': caregiver.email,
                         'phone': caregiver.phone,
+                        'gender': gender_str,
+                        'dob': str(caregiver.date_of_birth) if caregiver.date_of_birth else '',
                     }
                 except Caregiver.DoesNotExist:
                     pass
@@ -233,10 +241,10 @@ class ChangePasswordView(generics.UpdateAPIView):
         except Account.DoesNotExist:
             return Response({"error": "Tài khoản không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
 
-        if account.password != old_password:
+        if not check_password(old_password, account.password) and account.password != old_password:
             return Response({"error": "Mật khẩu hiện tại không đúng"}, status=status.HTTP_400_BAD_REQUEST)
 
-        account.password = new_password
+        account.password = make_password(new_password)
         account.save()
         return Response({"message": "Đổi mật khẩu thành công"}, status=status.HTTP_200_OK)
 
@@ -256,8 +264,44 @@ class ForgotPasswordView(generics.UpdateAPIView):
             if not account:
                 return Response({"error": "Tài khoản không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
             
-            account.password = new_password
+            account.password = make_password(new_password)
             account.save()
             return Response({"message": "Đặt lại mật khẩu thành công"}, status=status.HTTP_200_OK)
         except Caregiver.DoesNotExist:
-            return Response({"error": "Số điện thoại chưa được đăng ký"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Số điện thoại chưa được đăng ký"}, status=status.HTTP_404_NOT_FOUND)
+
+# ── Cập nhật hồ sơ Caregiver ───────────────────────────────────────────────
+class UpdateCaregiverProfileView(generics.UpdateAPIView):
+    """PUT /api/users/caregiver/update/"""
+    def put(self, request):
+        account_id = request.data.get('account_id')
+        fullname = request.data.get('fullname')
+        phone = request.data.get('phone')
+        email = request.data.get('email')
+        gender_str = request.data.get('gender')
+        dob_str = request.data.get('dob')
+        
+        try:
+            from .models import Caregiver
+            caregiver = Caregiver.objects.get(accountid_id=account_id)
+        except Caregiver.DoesNotExist:
+            return Response({"error": "Không tìm thấy người chăm sóc"}, status=status.HTTP_404_NOT_FOUND)
+            
+        if fullname:
+            caregiver.fullname = fullname
+        if phone:
+            caregiver.phone = phone
+        if email:
+            caregiver.email = email
+            
+        if gender_str is not None:
+            caregiver.gender = (gender_str == 'Nam')
+            
+        if dob_str:
+            try:
+                caregiver.date_of_birth = datetime.strptime(dob_str, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+                
+        caregiver.save()
+        return Response({"message": "Cập nhật thành công"}, status=status.HTTP_200_OK)
