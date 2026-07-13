@@ -1150,7 +1150,8 @@ class ApiService {
           "appointment_time": time,
           "location": hospital,
           "doctor_name": doctorName,
-          "note": diagnosis,
+          "note": result,
+          "diagnosis": diagnosis,
           "is_past": true,
         }),
       );

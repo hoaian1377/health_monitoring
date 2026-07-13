@@ -239,6 +239,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                     if (value == null || value.isEmpty) {
                                       return 'Vui lòng nhập tên đăng nhập';
                                     }
+                                    if (value.contains(' ')) {
+                                      return 'Tên đăng nhập không được chứa khoảng trắng';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -281,6 +284,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                     if (!emailRegex.hasMatch(value.trim())) {
                                       return 'Email không đúng định dạng (VD: ten@gmail.com)';
                                     }
+                                    if (value.toLowerCase().contains('@gmail.') && !value.toLowerCase().endsWith('@gmail.com')) {
+                                      return 'Email Gmail phải có đuôi là @gmail.com';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -290,7 +296,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 TextFormField(
                                   controller: _phoneController,
                                   keyboardType: TextInputType.phone,
-                                  maxLength: 11,
+                                  maxLength: 10,
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
                                   ],
@@ -307,8 +313,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                     if (digitsOnly.length != value.trim().length) {
                                       return 'Số điện thoại chỉ được chứa chữ số';
                                     }
-                                    if (digitsOnly.length < 10 || digitsOnly.length > 11) {
-                                      return 'Số điện thoại phải có 10-11 chữ số';
+                                    if (digitsOnly.length != 10) {
+                                      return 'Số điện thoại phải có đúng 10 chữ số';
                                     }
                                     if (!digitsOnly.startsWith('0')) {
                                       return 'Số điện thoại phải bắt đầu bằng số 0';

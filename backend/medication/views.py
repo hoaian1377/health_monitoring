@@ -354,6 +354,7 @@ class CreateAppointmentView(generics.CreateAPIView):
             doctor_name=request.data.get('doctor_name', ''),
             location=request.data.get('location', ''),
             note=request.data.get('note', ''),
+            diagnosis=request.data.get('diagnosis', ''),
         )
         
         is_past = str(request.data.get('is_past', 'false')).lower() == 'true'
@@ -464,6 +465,8 @@ class UpdateAppointmentView(generics.UpdateAPIView):
             instance.location = request.data.get('location')
         if 'note' in request.data:
             instance.note = request.data.get('note')
+        if 'diagnosis' in request.data:
+            instance.diagnosis = request.data.get('diagnosis')
             
         instance.save()
         return Response({"message": "Cập nhật thành công"}, status=status.HTTP_200_OK)

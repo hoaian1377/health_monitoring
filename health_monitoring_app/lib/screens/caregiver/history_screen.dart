@@ -593,25 +593,17 @@ class _HistoryScreenState extends State<HistoryScreen>
             children: [
               Expanded(
                 child: _buildMetricCard(
-                  'Tổng tài liệu',
-                  '${_medicalDocuments.length} hồ sơ',
+                  'Tổng số lần khám',
+                  '${_appointments.length} lần',
                   const Color(0xFF16A34A),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: _buildMetricCard(
-                  'Toa thuốc',
-                  '${_medicalDocuments.where((d) => d['document_type'] == 'Toa thuốc').length} toa',
+                  'Bác sĩ theo dõi',
+                  '${_appointments.map((a) => a['doctor_name']).where((n) => n != null && n.toString().isNotEmpty).toSet().length} bác sĩ',
                   const Color(0xFF0EA5E9),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildMetricCard(
-                  'Kết quả/Khác',
-                  '${_medicalDocuments.where((d) => d['document_type'] != 'Toa thuốc').length} hồ sơ',
-                  const Color(0xFF64748B),
                 ),
               ),
             ],
@@ -725,9 +717,6 @@ class _HistoryScreenState extends State<HistoryScreen>
           Builder(
             builder: (context) {
               var filteredAppts = _appointments;
-              var filteredDocs = _medicalDocuments
-                  .where((doc) => doc['appointmentid'] == null)
-                  .toList();
 
               if (_filterDate != null) {
                 String filterStr = DateFormat(
@@ -739,17 +728,9 @@ class _HistoryScreenState extends State<HistoryScreen>
                       ) ==
                       true;
                 }).toList();
-
-                filteredDocs = filteredDocs.where((doc) {
-                  final uploadStr = doc['upload_at']?.toString();
-                  if (uploadStr != null && uploadStr.length >= 10) {
-                    return uploadStr.startsWith(filterStr);
-                  }
-                  return false;
-                }).toList();
               }
 
-              if (filteredAppts.isEmpty && filteredDocs.isEmpty) {
+              if (filteredAppts.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(24.0),
                   child: Center(
@@ -762,101 +743,55 @@ class _HistoryScreenState extends State<HistoryScreen>
               }
 
               return Column(
-                children: [
-                  ...filteredAppts.map((appt) {
-                    final dateStr = appt['appointment_date']?.toString();
-                    final timeStr = appt['appointment_time']
-                        ?.toString()
-                        ?.substring(0, 5);
-                    String formattedDate = 'Không rõ';
+                children: filteredAppts.map((appt) {
+                  final dateStr = appt['appointment_date']?.toString();
+                  final timeStr = appt['appointment_time']
+                      ?.toString()
+                      ?.substring(0, 5);
+                  String formattedDate = 'Không rõ';
 
-                    if (dateStr != null && dateStr.length >= 10) {
-                      try {
-                        formattedDate = DateFormat(
-                          'dd/MM/yyyy',
-                        ).format(DateTime.parse(dateStr));
-                      } catch (_) {}
-                    }
+                  if (dateStr != null && dateStr.length >= 10) {
+                    try {
+                      formattedDate = DateFormat(
+                        'dd/MM/yyyy',
+                      ).format(DateTime.parse(dateStr));
+                    } catch (_) {}
+                  }
 
-                    if (timeStr != null &&
-                        timeStr.isNotEmpty &&
-                        timeStr != "null") {
-                      formattedDate = '$timeStr $formattedDate';
-                    }
+                  if (timeStr != null &&
+                      timeStr.isNotEmpty &&
+                      timeStr != "null") {
+                    formattedDate = '$timeStr $formattedDate';
+                  }
 
-                    final hospital =
-                        appt['location']?.toString().isNotEmpty == true
-                        ? appt['location']
-                        : 'Phòng khám / Bệnh viện';
-                    final doctor =
-                        appt['doctor_name']?.toString().isNotEmpty == true
-                        ? appt['doctor_name']
-                        : 'Bác sĩ';
+                  final hospital =
+                      appt['location']?.toString().isNotEmpty == true
+                      ? appt['location']
+                      : 'Phòng khám / Bệnh viện';
+                  final doctor =
+                      appt['doctor_name']?.toString().isNotEmpty == true
+                      ? appt['doctor_name']
+                      : 'Bác sĩ';
 
-                    String resultText =
-                        appt['note']?.toString() ?? 'Không có ghi chú';
+                  String resultText =
+                      appt['note']?.toString() ?? 'Không có ghi chú';
 
-                    List<dynamic> docs = appt['documents'] ?? [];
+                  List<dynamic> docs = appt['documents'] ?? [];
 
-                    String diagnosis = appt['diagnosis']?.toString() ?? '';
-                    int? appointmentId =
-                        appt['appointment_id'] ?? appt['appointmentid'];
+                  String diagnosis = appt['diagnosis']?.toString() ?? '';
+                  int? appointmentId =
+                      appt['appointment_id'] ?? appt['appointmentid'];
 
-                    return _buildAppointmentHistoryItem(
-                      date: formattedDate,
-                      hospital: hospital,
-                      doctor: doctor,
-                      diagnosis: diagnosis,
-                      result: resultText,
-                      documents: docs,
-                      appointmentId: appointmentId,
-                    );
-                  }),
-                  ...filteredDocs.map((doc) {
-                    final uploadStr = doc['upload_at']?.toString();
-                    String formattedDate = 'Không rõ';
-
-                    if (uploadStr != null && uploadStr.length >= 10) {
-                      try {
-                        formattedDate = DateFormat(
-                          'dd/MM/yyyy',
-                        ).format(DateTime.parse(uploadStr));
-                      } catch (_) {}
-                    }
-
-                    final type = doc['document_type'] ?? 'Kết quả khám bệnh';
-                    final fileName =
-                        doc['file_url']?.split('/').last ?? 'Tài liệu';
-
-                    final hospital =
-                        doc['hospital']?.toString().isNotEmpty == true
-                        ? doc['hospital']
-                        : type;
-                    final doctor =
-                        doc['doctor_name']?.toString().isNotEmpty == true
-                        ? doc['doctor_name']
-                        : 'Không rõ';
-
-                    String resultText = 'Tài liệu đính kèm: $fileName';
-                    String diagnosis = '';
-                    if (doc['result']?.toString().isNotEmpty == true) {
-                      resultText = doc['result'].toString();
-                    }
-                    if (doc['diagnosis']?.toString().isNotEmpty == true) {
-                      diagnosis = doc['diagnosis'].toString();
-                    }
-
-                    return _buildAppointmentHistoryItem(
-                      date: formattedDate,
-                      hospital: hospital,
-                      doctor: doctor,
-                      diagnosis: diagnosis,
-                      result: resultText,
-                      documents: [doc],
-                      appointmentId: null,
-                    );
-                  }),
-                ],
+                  return _buildAppointmentHistoryItem(
+                    date: formattedDate,
+                    hospital: hospital,
+                    doctor: doctor,
+                    diagnosis: diagnosis,
+                    result: resultText,
+                    documents: docs,
+                    appointmentId: appointmentId,
+                  );
+                }).toList(),
               );
             },
           ),
@@ -1985,60 +1920,330 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Future<void> _addDocumentToAppointment(int appointmentId) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-    );
-    if (result != null && result.files.single.path != null) {
-      String filePath = result.files.single.path!;
+    final List<String> docTypes = [
+      'Kết quả khám bệnh',
+      'Toa thuốc',
+      'Xét nghiệm máu',
+      'Siêu âm',
+      'Khác',
+    ];
 
-      // show dialog
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        String selectedType = docTypes.first;
+        List<Map<String, String>> pickedFiles = [];
+        bool isUploading = false;
 
-      final uploadUrl = Uri.parse(
-        "${ApiService.baseUrl}/api/medication/elderly-document/upload/",
-      );
-      var request = http.MultipartRequest('POST', uploadUrl);
-      request.fields['elderly_id'] = _currentElderlyId.toString();
-      request.fields['appointment_id'] = appointmentId.toString();
-      request.fields['document_type'] = 'Kết quả khám bệnh'; // Default
-      request.files.add(await http.MultipartFile.fromPath('file', filePath));
-
-      try {
-        final res = await request.send();
-        Navigator.pop(context); // close dialog
-        if (res.statusCode == 200 || res.statusCode == 201) {
-          Navigator.pop(context); // close details sheet
-          _fetchTreatmentHistory(); // refresh data
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Colors.green,
-              content: Text('Thêm tài liệu thành công!'),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.red,
-              content: Text('Lỗi: ${res.statusCode}'),
-            ),
-          );
-        }
-      } catch (e) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            content: Text('Lỗi kết nối!'),
-          ),
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Row(
+                    children: [
+                      Icon(Icons.upload_file_rounded,
+                          color: Color(0xFF0EA5E9), size: 24),
+                      SizedBox(width: 10),
+                      Text(
+                        'Thêm tài liệu',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedType,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFF64748B)),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Color(0xFF334155),
+                        ),
+                        items: docTypes
+                            .map((t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        t == 'Kết quả khám bệnh'
+                                            ? Icons.description_rounded
+                                            : t == 'Toa thuốc'
+                                                ? Icons.medication_rounded
+                                                : t == 'Xét nghiệm máu'
+                                                    ? Icons.science_rounded
+                                                    : t == 'Siêu âm'
+                                                        ? Icons.monitor_heart_rounded
+                                                        : Icons.folder_rounded,
+                                        size: 18,
+                                        color: const Color(0xFF0EA5E9),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(t),
+                                    ],
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setSheetState(() => selectedType = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(
+                            color: Color(0xFF0EA5E9), width: 1.5),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const Icon(Icons.attach_file_rounded,
+                          color: Color(0xFF0EA5E9)),
+                      label: Text(
+                        pickedFiles.isEmpty
+                            ? 'Chọn file (PDF, JPG, PNG)'
+                            : 'Thêm file khác',
+                        style: const TextStyle(
+                          color: Color(0xFF0EA5E9),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      onPressed: () async {
+                        FilePickerResult? result =
+                            await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+                          allowMultiple: true,
+                        );
+                        if (result != null) {
+                          setSheetState(() {
+                            for (var f in result.files) {
+                              if (f.path != null) {
+                                pickedFiles.add({
+                                  'path': f.path!,
+                                  'name': f.name,
+                                  'type': selectedType,
+                                });
+                              }
+                            }
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (pickedFiles.isNotEmpty)
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: pickedFiles.length,
+                        itemBuilder: (_, idx) {
+                          final file = pickedFiles[idx];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  file['name']!
+                                          .toLowerCase()
+                                          .endsWith('.pdf')
+                                      ? Icons.picture_as_pdf_rounded
+                                      : Icons.image_rounded,
+                                  color: file['name']!
+                                          .toLowerCase()
+                                          .endsWith('.pdf')
+                                      ? Colors.red.shade400
+                                      : const Color(0xFF0EA5E9),
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        file['name'] ?? '',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: file['type'],
+                                          isDense: true,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF0EA5E9),
+                                          ),
+                                          items: docTypes
+                                              .map((t) => DropdownMenuItem(
+                                                  value: t,
+                                                  child: Text(t)))
+                                              .toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setSheetState(() =>
+                                                  pickedFiles[idx]['type'] =
+                                                      val);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded,
+                                      size: 18, color: Colors.red.shade400),
+                                  onPressed: () => setSheetState(
+                                      () => pickedFiles.removeAt(idx)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: pickedFiles.isEmpty || isUploading
+                            ? Colors.grey.shade300
+                            : const Color(0xFF0EA5E9),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      icon: isUploading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.cloud_upload_rounded),
+                      label: Text(
+                        isUploading
+                            ? 'Đang tải lên...'
+                            : 'Tải lên ${pickedFiles.length} file',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      onPressed: pickedFiles.isEmpty || isUploading
+                          ? null
+                          : () async {
+                              setSheetState(() => isUploading = true);
+                              int successCount = 0;
+                              for (var file in pickedFiles) {
+                                try {
+                                  final uploadUrl = Uri.parse(
+                                      "${ApiService.baseUrl}/api/medication/elderly-document/upload/");
+                                  var request = http.MultipartRequest(
+                                      'POST', uploadUrl);
+                                  request.fields['elderly_id'] =
+                                      _currentElderlyId.toString();
+                                  request.fields['appointment_id'] =
+                                      appointmentId.toString();
+                                  request.fields['document_type'] =
+                                      file['type'] ?? 'Kết quả khám bệnh';
+                                  request.files.add(
+                                      await http.MultipartFile.fromPath(
+                                          'file', file['path']!));
+                                  final res = await request.send();
+                                  if (res.statusCode == 200 ||
+                                      res.statusCode == 201) {
+                                    successCount++;
+                                  }
+                                } catch (_) {}
+                              }
+                              setSheetState(() => isUploading = false);
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                Navigator.pop(context);
+                                _fetchTreatmentHistory();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor:
+                                        const Color(0xFF10B981),
+                                    content: Text(
+                                        'Đã tải lên $successCount/${pickedFiles.length} tài liệu!'),
+                                  ),
+                                );
+                              }
+                            },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
-      }
-    }
+      },
+    );
   }
 
   Widget _buildHealthChart() {

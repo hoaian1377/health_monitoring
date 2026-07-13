@@ -12,7 +12,7 @@ class ElderlyChatScreen extends StatefulWidget {
 }
 
 class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
-  final List<Map<String, String>> _messages = []; // {'role': 'user' | 'bot', 'text': '...'}
+  final List<Map<String, dynamic>> _messages = []; // {'role': 'user' | 'bot', 'text': '...', 'images': [...]}
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   
@@ -110,15 +110,22 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
       return;
     }
 
-    final response = await ApiService.chatWithAssistant(elderlyId, text);
+    final result = await ApiService.chatWithAssistant(elderlyId, text);
     if (!mounted) return;
     
+    final String responseText = result['response'] as String;
+    final List<String> images = (result['images'] as List<dynamic>?)?.cast<String>() ?? [];
+    
     setState(() {
-      _messages.add({'role': 'bot', 'text': response});
+      _messages.add({
+        'role': 'bot',
+        'text': responseText,
+        'images': images,
+      });
       _isLoading = false;
     });
     
-    _speak(response);
+    _speak(responseText);
     _scrollToBottom();
   }
 
@@ -188,6 +195,58 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
     }
   }
 
+  void _showFullImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      padding: const EdgeInsets.all(32),
+                      color: Colors.white,
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.broken_image_rounded, size: 48, color: Color(0xFF94A3B8)),
+                          SizedBox(height: 12),
+                          Text('Không tải được ảnh', style: TextStyle(color: Color(0xFF94A3B8))),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -216,6 +275,7 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
                 itemBuilder: (context, index) {
                   final msg = _messages[index];
                   final isUser = msg['role'] == 'user';
+                  final List<String> images = (msg['images'] as List<dynamic>?)?.cast<String>() ?? [];
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -238,12 +298,53 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
                           ),
                         ],
                       ),
-                      child: Text(
-                        msg['text'] ?? '',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isUser ? Colors.white : const Color(0xFF1E293B),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (msg['text'] ?? '').toString(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: isUser ? Colors.white : const Color(0xFF1E293B),
+                            ),
+                          ),
+                          if (images.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            ...images.map((imgUrl) {
+                              final fullUrl = imgUrl.startsWith('http')
+                                  ? imgUrl
+                                  : '${ApiService.baseUrl}$imgUrl';
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: GestureDetector(
+                                  onTap: () => _showFullImage(context, fullUrl),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      fullUrl,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            Icon(Icons.broken_image_rounded, color: Color(0xFF94A3B8)),
+                                            SizedBox(width: 8),
+                                            Text('Không tải được ảnh', style: TextStyle(color: Color(0xFF94A3B8))),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        ],
                       ),
                     ),
                   );

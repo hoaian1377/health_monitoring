@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'healthmetric',
     'checklist',
     'treatmenthistory',
+    'chatbot',
+    'admin.apps.AdminConfig',
 ]
 
 REST_FRAMEWORK = {

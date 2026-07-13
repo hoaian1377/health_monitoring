@@ -450,13 +450,32 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     );
   }
 
-  // ── Thẻ Hồ sơ cá nhân ────────────────────────────────────────────────────
   Widget _buildProfileCard() {
     final name = ApiService.currentFullname.isNotEmpty
         ? ApiService.currentFullname
         : ApiService.currentUsername;
     final nameSplit = name.split(' ');
     final shortName = nameSplit.isNotEmpty ? nameSplit.last : name;
+
+    // Get selected elderly details if available
+    String bloodType = 'Chưa cập nhật';
+    String underlyingConditions = 'Chưa cập nhật';
+    
+    if (_elderlyList.isNotEmpty && _selectedElderlyId != null) {
+      try {
+        final currentElderly = _elderlyList.firstWhere(
+            (e) => e['id'] == _selectedElderlyId,
+            orElse: () => <String, dynamic>{});
+        
+        if (currentElderly.isNotEmpty) {
+          final bt = currentElderly['blood_type']?.toString().trim();
+          if (bt != null && bt.isNotEmpty) bloodType = bt;
+          
+          final uc = currentElderly['underlying_conditions']?.toString().trim();
+          if (uc != null && uc.isNotEmpty) underlyingConditions = uc;
+        }
+      } catch (_) {}
+    }
 
     return Container(
       height: 190,
@@ -515,43 +534,50 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.bloodtype_outlined, color: Colors.red, size: 14),
-                    SizedBox(width: 4),
-                    Text(
+                    const Icon(Icons.bloodtype_outlined, color: Colors.red, size: 14),
+                    const SizedBox(width: 4),
+                    const Text(
                       'Nhóm máu: ',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                     ),
-                    Text(
-                      'O+',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    Expanded(
+                      child: Text(
+                        bloodType,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 3),
-                const Row(
+                Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.favorite_border_rounded,
                       color: Colors.orange,
                       size: 14,
                     ),
-                    SizedBox(width: 4),
-                    Text(
+                    const SizedBox(width: 4),
+                    const Text(
                       'Bệnh nền: ',
                       style: TextStyle(fontSize: 11, color: Colors.grey),
                     ),
-                    Text(
-                      'Huyết áp',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    Expanded(
+                      child: Text(
+                        underlyingConditions,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

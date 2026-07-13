@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'screens/caregiver/medicine_management_screen.dart';
-import 'screens/caregiver/history_screen.dart';
+import 'screens/caregiver/caregiver_health_settings_screen.dart';
 import 'screens/caregiver/dashboard_screen.dart';
 import 'screens/caregiver/profile_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/admin/screens/admin_login_screen.dart';
 import 'utils/alarm_service.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
@@ -90,7 +91,11 @@ class _HealthAppState extends State<HealthApp> {
         fontFamily: 'Roboto',
         scaffoldBackgroundColor: const Color(0xFFF0F4FB),
       ),
-      home: const LoginScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LoginScreen(),
+        '/admin': (context) => const AdminLoginScreen(),
+      },
     );
   }
 }
@@ -134,7 +139,7 @@ class _MainNavigatorState extends State<MainNavigator> {
         children: const [
           HomeScreen(),
           MedicineManagementScreen(),
-          HistoryScreen(),
+          HealthDashboardScreen(),
           DashboardScreen(),
           ProfileScreen(),
         ],
@@ -179,9 +184,9 @@ class _MainNavigatorState extends State<MainNavigator> {
           label: 'Quản lý thuốc',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.history_rounded),
-          activeIcon: Icon(Icons.history_rounded),
-          label: 'Lịch sử',
+          icon: Icon(Icons.folder_shared_outlined),
+          activeIcon: Icon(Icons.folder_shared_rounded),
+          label: 'Hồ sơ',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.dashboard_outlined),

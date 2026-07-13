@@ -27,4 +27,5 @@ urlpatterns = [
     path('api/checklist/', include('checklist.urls')),
     path('api/treatmenthistory/', include('treatmenthistory.urls')),
     path('api/chatbot/', include('chatbot.urls')),
+    path('api/admin/', include('admin.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

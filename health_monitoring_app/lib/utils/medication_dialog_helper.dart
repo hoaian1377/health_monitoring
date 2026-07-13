@@ -233,16 +233,16 @@ class MedicationDialogHelper {
           : '',
     );
     final remainingCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
     if (initialDescription != null) {
-      final regExp = RegExp(r'(?:Còn lại|Tổng số viên thuốc):\s*(\d+)');
-      final match = regExp.firstMatch(initialDescription);
-      if (match != null) {
-        remainingCtrl.text = match.group(1) ?? '';
-      }
+      final rmMatch = RegExp(r'(?:Còn lại|Tổng số viên thuốc):\s*(\d+)').firstMatch(initialDescription);
+      if (rmMatch != null) remainingCtrl.text = rmMatch.group(1) ?? '';
+      
+      final descMatch = RegExp(r'Mô tả:\s*([^·]+)').firstMatch(initialDescription);
+      if (descMatch != null) descCtrl.text = descMatch.group(1)?.trim() ?? '';
     }
     final scannedInstructionCtrl = TextEditingController();
 
-    String selectedGroup = 'Khác';
     String selectedInstruction = 'Sau ăn';
     String selectedDoseUnit = 'viên';
     String selectedTime = initialTime ?? '08:00';
@@ -250,6 +250,8 @@ class MedicationDialogHelper {
     DateTime endDate = DateTime.now().add(const Duration(days: 30));
     List<String> timeSlots = [initialTime ?? '08:00'];
     bool isSubmitting = false;
+    String? nameError;
+    String? doseError;
 
     if (initialDosage != null) {
       for (final unit in ['viên', 'gói', 'ml', 'mg', 'lần']) {
@@ -342,25 +344,6 @@ class MedicationDialogHelper {
             if (normalized.isEmpty) return;
 
             setDlg(() {
-              if (selectedGroup == 'Khác') {
-                if (normalized.contains('huyết áp') ||
-                    normalized.contains('amlodipine') ||
-                    normalized.contains('lisinopril')) {
-                  selectedGroup = 'Huyết áp';
-                } else if (normalized.contains('đường') ||
-                    normalized.contains('metformin') ||
-                    normalized.contains('glipizide')) {
-                  selectedGroup = 'Tiểu đường';
-                } else if (normalized.contains('tim') ||
-                    normalized.contains('mạch') ||
-                    normalized.contains('atorvastatin')) {
-                  selectedGroup = 'Tim mạch';
-                } else if (normalized.contains('vitamin') ||
-                    normalized.contains('d3')) {
-                  selectedGroup = 'Vitamin';
-                }
-              }
-
               if (doseAmountCtrl.text.trim().isEmpty) {
                 final dosageMatch = RegExp(
                   r'(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|iu)',
@@ -606,8 +589,12 @@ class MedicationDialogHelper {
                             TextField(
                               controller: nameCtrl,
                               textCapitalization: TextCapitalization.words,
-                              onChanged: applySuggestions,
+                              onChanged: (val) {
+                                if (nameError != null) setDlg(() => nameError = null);
+                                applySuggestions(val);
+                              },
                               decoration: InputDecoration(
+                                errorText: nameError,
                                 hintText: 'VD: Amlodipine 5mg',
                                 hintStyle: const TextStyle(
                                   color: Color(0xFFCBD5E1),
@@ -650,7 +637,11 @@ class MedicationDialogHelper {
                                   child: TextField(
                                     controller: doseAmountCtrl,
                                     keyboardType: TextInputType.number,
+                                    onChanged: (val) {
+                                      if (doseError != null) setDlg(() => doseError = null);
+                                    },
                                     decoration: InputDecoration(
+                                      errorText: doseError,
                                       hintText: 'VD: 1',
                                       hintStyle: const TextStyle(
                                         color: Color(0xFFCBD5E1),
@@ -1015,21 +1006,19 @@ class MedicationDialogHelper {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            fieldLabel('Nhóm thuốc (tùy chọn)'),
-                            DropdownButtonFormField<String>(
-                              value: selectedGroup,
-                              isExpanded: true,
+                            fieldLabel('Mô tả thuốc (hình dạng, màu sắc)'),
+                            TextField(
+                              controller: descCtrl,
+                              textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
-                                filled: true,
-                                fillColor: const Color(0xFFF8FAFC),
+                                hintText: 'VD: Viên tròn màu trắng',
+                                hintStyle: const TextStyle(
+                                  color: Color(0xFFCBD5E1),
+                                ),
                                 prefixIcon: const Icon(
-                                  Icons.category_rounded,
+                                  Icons.description_rounded,
                                   color: Color(0xFF2563EB),
                                   size: 20,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
                                 ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(14),
@@ -1050,24 +1039,10 @@ class MedicationDialogHelper {
                                     width: 1.5,
                                   ),
                                 ),
-                              ),
-                              items:
-                                  [
-                                        'Khác',
-                                        'Huyết áp',
-                                        'Tiểu đường',
-                                        'Tim mạch',
-                                        'Vitamin',
-                                      ]
-                                      .map(
-                                        (value) => DropdownMenuItem(
-                                          value: value,
-                                          child: Text(value),
-                                        ),
-                                      )
-                                      .toList(),
-                              onChanged: (value) => setDlg(
-                                () => selectedGroup = value ?? selectedGroup,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -1106,12 +1081,30 @@ class MedicationDialogHelper {
                               ? null
                               : () async {
                                   final name = nameCtrl.text.trim();
-                                  if (name.isEmpty) {
+                                  bool hasError = false;
+                                  
+                                  setDlg(() {
+                                    if (name.isEmpty) {
+                                      nameError = 'Vui lòng nhập tên thuốc';
+                                      hasError = true;
+                                    } else {
+                                      nameError = null;
+                                    }
+
+                                    if (doseAmountCtrl.text.trim().isEmpty) {
+                                      doseError = 'Vui lòng nhập liều lượng';
+                                      hasError = true;
+                                    } else {
+                                      doseError = null;
+                                    }
+                                  });
+
+                                  if (hasError) return;
+
+                                  if (timeSlots.isEmpty) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       const SnackBar(
-                                        content: Text(
-                                          'Vui lòng nhập tên thuốc',
-                                        ),
+                                        content: Text('Vui lòng thêm ít nhất một giờ uống'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -1127,10 +1120,13 @@ class MedicationDialogHelper {
                                       '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
                                   final endStr =
                                       '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
-                                  final description =
-                                      remainingCtrl.text.trim().isNotEmpty
-                                      ? 'Nhóm: $selectedGroup · Tổng số viên thuốc: ${remainingCtrl.text.trim()}'
-                                      : 'Nhóm: $selectedGroup';
+                                  String description = '';
+                                  if (descCtrl.text.trim().isNotEmpty) {
+                                    description = 'Mô tả: ${descCtrl.text.trim()}';
+                                  }
+                                  if (remainingCtrl.text.trim().isNotEmpty) {
+                                    description += (description.isNotEmpty ? ' · ' : '') + 'Tổng số viên thuốc: ${remainingCtrl.text.trim()}';
+                                  }
 
                                   bool ok = false;
                                   if (editScheduleId != null) {

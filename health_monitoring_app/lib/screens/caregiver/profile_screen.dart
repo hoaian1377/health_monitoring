@@ -140,8 +140,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.health_and_safety_outlined,
                       iconBg: const Color(0xFFE6FBF3),
                       iconColor: const Color(0xFF16A34A),
-                      title: 'Hồ sơ sức khỏe',
-                      subtitle: 'Tổng quan, toa thuốc, giấy tờ và lịch khám',
+                      title: 'Hồ sơ bệnh án',
+                      subtitle: 'Bệnh án, toa thuốc, giấy tờ và các lần khám bệnh',
                       onTap: () => _navigate(const HealthDashboardScreen()),
                     ),
                     _MenuItem(

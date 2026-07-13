@@ -312,12 +312,7 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
 # ─── API View ─────────────────────────────────────────────────────────────────
 
 class ElderlyChatbotView(generics.CreateAPIView):
-    """
-    POST /api/chatbot/
-
-    Body: { "elderly_id": int, "message": str }
-    Response: { "response": str, "intent": str }
-    """
+   
 
     def post(self, request):
         elderly_id = request.data.get('elderly_id')
