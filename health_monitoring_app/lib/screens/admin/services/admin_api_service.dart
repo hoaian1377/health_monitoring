@@ -85,6 +85,18 @@ class AdminApiService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getStatisticsCharts() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/statistics-charts/'));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('Error getting stats charts: $e');
+    }
+    return null;
+  }
+
   static Future<List<Map<String, dynamic>>> getBackups() async {
     try {
       final response = await http.get(Uri.parse('$_baseUrl/backups/'));
@@ -96,8 +108,16 @@ class AdminApiService {
   }
 
   static Future<bool> createBackup() async {
-    await Future.delayed(const Duration(seconds: 2));
-    return true;
+    try {
+      final response = await http.post(Uri.parse('$_baseUrl/backups/'));
+      return response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static String getDownloadBackupUrl(String filename) {
+    return '$_baseUrl/backups/$filename/download/';
   }
 
   static Future<bool> restoreBackup(String id) async {

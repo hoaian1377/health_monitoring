@@ -808,6 +808,20 @@ class ApiService {
     }
   }
 
+  static Future<bool> deleteNotification(int detailId) async {
+    final url = Uri.parse("$baseUrl/api/notification/notifications/$detailId/");
+    try {
+      final res = await http.delete(
+        url,
+        headers: {"Content-Type": "application/json"},
+      );
+      return res.statusCode == 200;
+    } catch (e) {
+      print("ERROR: $e");
+      return false;
+    }
+  }
+
   // ================= ADD HEALTH METRIC =================
   static Future<bool> addHealthMetric({
     required int elderlyId,

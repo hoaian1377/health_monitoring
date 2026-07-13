@@ -36,46 +36,63 @@ def _remove_accents(text: str) -> str:
     return s.lower().strip()
 
 
+from users.models import CaregiverElderly
+
 # ─── Intent keywords ─────────────────────────────────────────────────────────
 
-# Mỗi intent = (tên, danh sách từ khoá)
 INTENT_KEYWORDS = {
-    'appointment': [
-        'lich kham', 'tai kham', 'benh vien', 'di kham',
-        'hen kham', 'khi nao kham', 'kham o dau', 'may gio kham',
-        'hom nao di', 'lich hen', 'cuoc hen',
+    'emergency': [
+        'cap cuu', 'kho tho', 'dau nguc', 'chong mat', 'ngat', 'bi te', 'khong khoe', 'dau dau', 'chay mau',
+    ],
+    'emergency_contact': [
+        'nguoi than', 'nguoi cham soc', 'con trai', 'con gai', 'so dien thoai con', 'goi con', 'lien he',
+    ],
+    'pill_identification': [
+        'thuoc nay la', 'vien thuoc nay', 'vien mau trang', 'vien mau vang', 'vien tron', 'co phai thuoc', 'dung thuoc',
+    ],
+    'medication_instruction': [
+        'truoc an', 'sau an', 'uong nhieu nuoc', 'be vien', 'nghien thuoc', 'uong chung', 'tac dung phu', 'quen uong', 'uong nham', 'qua lieu',
     ],
     'medication': [
-        'thuoc', 'uong gi', 'lieu luong', 'uong thuoc',
-        'lich uong', 'hom nay uong', 'uong luc nao', 'don thuoc',
-        'toa thuoc', 'uong may vien',
+        'thuoc', 'uong gi', 'thuoc gi', 'uong thuoc', 'lich uong', 'hom nay uong', 'uong luc nao', 'don thuoc', 'toa thuoc', 'uong may vien', 'lieu luong', 'chua benh gi',
+    ],
+    'appointment': [
+        'lich kham', 'tai kham', 'benh vien', 'di kham', 'hen kham', 'khi nao kham', 'kham o dau', 'may gio kham', 'hom nao di', 'lich hen', 'cuoc hen', 'ngay mai kham', 'tuan nay kham',
     ],
     'health_metrics': [
-        'huyet ap', 'duong huyet', 'can nang', 'nhip tim',
-        'chi so', 'suc khoe', 'nhiet do', 'do huyet ap',
-        'do duong', 'lan do', 'ket qua do',
+        'huyet ap', 'duong huyet', 'can nang', 'nhip tim', 'chi so', 'suc khoe', 'nhiet do', 'do huyet ap', 'do duong', 'lan do', 'ket qua do',
     ],
     'medical_records': [
-        'benh an', 'ho so', 'ho so benh', 'giay to',
-        'ket qua', 'xet nghiem', 'chan doan', 'bi benh gi',
-        'giay kham', 'ket qua kham', 'benh ly',
+        'benh an', 'ho so', 'ho so benh', 'giay to', 'ket qua', 'xet nghiem', 'ket qua xet nghiem', 'chan doan', 'bi benh gi', 'giay kham', 'ket qua kham', 'benh ly',
+    ],
+    'medical_history': [
+        'tung bi benh', 'nhap vien', 'phau thuat', 'benh nen', 'bi cao huyet ap', 'bi tieu duong', 'mac benh gi',
+    ],
+    'allergy': [
+        'di ung', 'tien su di ung',
     ],
     'doctor': [
         'bac si', 'ai dieu tri', 'ai kham', 'bac sy',
     ],
+    'personal_info': [
+        'toi ten', 'bao nhieu tuoi', 'ngay sinh', 'nam hay nu', 'toi o dau', 'dia chi',
+    ],
+    'time': [
+        'ngay may', 'thu may', 'may gio', 'ngay nao',
+    ],
+    'app_support': [
+        'lam sao xem', 'khong biet dung', 'huong dan su dung', 'giup toi su dung',
+    ],
     'greeting': [
-        'chao', 'xin chao', 'khoe khong', 'ten gi',
-        'ban la ai', 'ai do', 'hello', 'hi',
+        'chao', 'xin chao', 'khoe khong', 'ten gi', 'ban la ai', 'ai do', 'hello', 'hi', 'giup gi', 'lam gi',
     ],
 }
 
-
 def _detect_intent(msg_norm: str) -> str:
-    """Xác định intent từ message đã chuẩn hoá (không dấu, viết thường)."""
-    # Ưu tiên theo thứ tự cụ thể → chung
     priority = [
-        'appointment', 'medical_records', 'medication',
-        'health_metrics', 'doctor', 'greeting',
+        'emergency', 'emergency_contact', 'pill_identification', 'medication_instruction', 'medication',
+        'appointment', 'health_metrics', 'medical_records', 'medical_history', 'allergy',
+        'doctor', 'personal_info', 'time', 'app_support', 'greeting',
     ]
     for intent in priority:
         for kw in INTENT_KEYWORDS[intent]:
@@ -83,106 +100,61 @@ def _detect_intent(msg_norm: str) -> str:
                 return intent
     return 'unknown'
 
-
-# ─── Thu thập context_data ────────────────────────────────────────────────────
-
 def _gather_context(elderly, now):
-    """Truy vấn DB, trả về dict context_data cho từng loại."""
     ctx = {}
-
-    # appointments (sắp tới)
-    ctx['appointments'] = list(
-        Appointment.objects.filter(
-            elderlyid=elderly,
-            appointment_date__gte=now.date(),
-        ).order_by('appointment_date', 'appointment_time')
-    )
-
-    # medications
-    ctx['medications'] = list(
-        MedicationSchedule.objects.filter(
-            elderlyid=elderly,
-        ).select_related('medicationid')
-    )
-
-    # health_metrics (bản ghi gần nhất)
-    ctx['health_metrics'] = (
-        HealthMetrics.objects.filter(elderlyid=elderly)
-        .order_by('-recorded_at')
-        .first()
-    )
-
-    # documents (bệnh án / giấy tờ, gần nhất trước)
-    ctx['documents'] = list(
-        MedicalDocument.objects.filter(elderlyid=elderly)
-        .order_by('-upload_at')[:5]
-    )
-
-    # doctor – tổng hợp từ appointment + document
+    ctx['appointments'] = list(Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date', 'appointment_time'))
+    ctx['medications'] = list(MedicationSchedule.objects.filter(elderlyid=elderly).select_related('medicationid'))
+    ctx['health_metrics'] = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
+    ctx['documents'] = list(MedicalDocument.objects.filter(elderlyid=elderly).order_by('-upload_at')[:5])
+    
     doctor = None
-    latest_app = (
-        Appointment.objects.filter(elderlyid=elderly)
-        .exclude(doctor_name__isnull=True).exclude(doctor_name='')
-        .order_by('-appointment_date').first()
-    )
+    latest_app = Appointment.objects.filter(elderlyid=elderly).exclude(doctor_name__isnull=True).exclude(doctor_name='').order_by('-appointment_date').first()
     if latest_app:
-        doctor = {
-            'name': latest_app.doctor_name,
-            'location': latest_app.location or '',
-            'source': 'appointment',
-        }
+        doctor = {'name': latest_app.doctor_name, 'location': latest_app.location or ''}
     else:
-        latest_doc = (
-            MedicalDocument.objects.filter(elderlyid=elderly)
-            .exclude(doctor_name__isnull=True).exclude(doctor_name='')
-            .order_by('-upload_at').first()
-        )
+        latest_doc = MedicalDocument.objects.filter(elderlyid=elderly).exclude(doctor_name__isnull=True).exclude(doctor_name='').order_by('-upload_at').first()
         if latest_doc:
-            doctor = {
-                'name': latest_doc.doctor_name,
-                'location': latest_doc.hospital or '',
-                'source': 'document',
-            }
+            doctor = {'name': latest_doc.doctor_name, 'location': latest_doc.hospital or ''}
     ctx['doctor'] = doctor
 
+    caregiver = CaregiverElderly.objects.filter(elderlyid=elderly).select_related('caregiverid').first()
+    ctx['caregiver'] = caregiver.caregiverid if caregiver else None
+    
+    ctx['elderly'] = elderly
     return ctx
 
-
-# ─── Tạo câu trả lời ─────────────────────────────────────────────────────────
-
 def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
-    # ── 1. Lịch khám ─────────────────────────────────────────────────────────
-    if intent == 'appointment':
-        appointments = ctx['appointments']
-        if not appointments:
-            return (
-                f"Dạ, hiện tại {pronoun} chưa có lịch hẹn khám "
-                f"hay tái khám nào sắp tới trong hệ thống ạ.",
-                []
-            )
-        parts = []
-        for a in appointments:
-            time_str = str(a.appointment_time)[:5] if a.appointment_time else "chưa rõ giờ"
-            date_str = a.appointment_date.strftime('%d/%m/%Y') if a.appointment_date else "chưa rõ ngày"
-            loc = a.location or "chưa rõ địa điểm"
-            doctor = f", bác sĩ {a.doctor_name}" if a.doctor_name else ""
-            parts.append(f"ngày {date_str} lúc {time_str} tại {loc}{doctor}")
-        return (
-            f"Dạ, {pronoun} có lịch khám vào "
-            + "; ".join(parts)
-            + f". {pronoun.capitalize()} nhớ đi đúng giờ nhé ạ.",
-            []
-        )
+    import datetime
+    now = timezone.now()
+    elderly = ctx['elderly']
 
-    # ── 2. Thuốc ─────────────────────────────────────────────────────────────
+    if intent == 'emergency':
+        caregiver = ctx['caregiver']
+        phone = caregiver.phone if caregiver and hasattr(caregiver, 'phone') else "người thân"
+        return (f"Dạ, nếu {pronoun} đang thấy không khỏe hoặc gặp tình trạng khẩn cấp, "
+                f"hãy nhờ người xung quanh gọi ngay cấp cứu 115 hoặc gọi cho số điện thoại {phone} ạ!", [])
+
+    if intent == 'emergency_contact':
+        caregiver = ctx['caregiver']
+        if not caregiver:
+            return (f"Dạ, hiện tại hệ thống chưa cập nhật thông tin người chăm sóc của {pronoun} ạ.", [])
+        phone = caregiver.phone if hasattr(caregiver, 'phone') else "chưa có SĐT"
+        name = caregiver.fullname if hasattr(caregiver, 'fullname') else "người thân"
+        return (f"Dạ, người chăm sóc của {pronoun} là {name}. {pronoun.capitalize()} có thể liên hệ qua số điện thoại: {phone} ạ.", [])
+
+    if intent == 'pill_identification':
+        return (f"Dạ, hệ thống chat hiện tại không thể nhìn thấy viên thuốc của {pronoun}. "
+                f"{pronoun.capitalize()} vui lòng thoát ra màn hình chính, nhờ người thân chụp ảnh đơn thuốc hoặc hỏi lại bác sĩ cho chắc chắn nhé ạ!", [])
+
+    if intent == 'medication_instruction':
+        return (f"Dạ, về cách uống thuốc chi tiết (bẻ viên, uống trước/sau ăn, tác dụng phụ), "
+                f"{pronoun} vui lòng xem ghi chú trong phần Lịch Uống Thuốc, hoặc hỏi trực tiếp người chăm sóc/bác sĩ nhé. "
+                f"Nếu quên uống thuốc, {pronoun} đừng uống bù gấp đôi liều mà hãy hỏi ý kiến bác sĩ ạ.", [])
+
     if intent == 'medication':
         meds = ctx['medications']
         if not meds:
-            return (
-                f"Dạ, hiện tại {pronoun} chưa có lịch uống thuốc nào "
-                f"được ghi nhận trong hệ thống ạ.",
-                []
-            )
+            return (f"Dạ, hiện tại {pronoun} chưa có lịch uống thuốc nào được ghi nhận trong hệ thống ạ.", [])
         med_parts = []
         for s in meds:
             if s.medicationid:
@@ -191,122 +163,94 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
                 time_str = str(s.time)[:5] if s.time else "chưa rõ giờ"
                 freq = f" ({s.frequency})" if s.frequency else ""
                 instruction = f" – {s.medicationid.instruction}" if s.medicationid.instruction else ""
-                med_parts.append(f"{name}{dosage} uống lúc {time_str}{freq}{instruction}")
+                clean_desc = s.medicationid.description or ""
+                if '· dose_history:' in clean_desc:
+                    clean_desc = clean_desc.split('· dose_history:')[0].strip()
+                desc = f" ({clean_desc})" if clean_desc else ""
+                med_parts.append(f"{name}{dosage} uống lúc {time_str}{freq}{instruction}{desc}")
         if not med_parts:
-            return (
-                f"Dạ, {pronoun} có lịch uống thuốc nhưng chưa có "
-                f"chi tiết tên thuốc trong hệ thống ạ.",
-                []
-            )
-        return (
-            f"Dạ, lịch uống thuốc của {pronoun} gồm có:\n• "
-            + "\n• ".join(med_parts)
-            + f"\n{pronoun.capitalize()} nhớ uống đúng giờ nhé ạ!",
-            []
-        )
+            return (f"Dạ, {pronoun} có lịch uống thuốc nhưng chưa có chi tiết tên thuốc trong hệ thống ạ.", [])
+        return (f"Dạ, lịch uống thuốc của {pronoun} gồm có:\n• " + "\n• ".join(med_parts) + f"\n{pronoun.capitalize()} nhớ uống đúng giờ nhé ạ!", [])
 
-    # ── 3. Chỉ số sức khỏe ───────────────────────────────────────────────────
+    if intent == 'appointment':
+        appointments = ctx['appointments']
+        if not appointments:
+            return (f"Dạ, hiện tại {pronoun} chưa có lịch hẹn khám hay tái khám nào sắp tới trong hệ thống ạ.", [])
+        parts = []
+        for a in appointments:
+            time_str = str(a.appointment_time)[:5] if a.appointment_time else "chưa rõ giờ"
+            date_str = a.appointment_date.strftime('%d/%m/%Y') if a.appointment_date else "chưa rõ ngày"
+            loc = a.location or "chưa rõ địa điểm"
+            doctor = f", bác sĩ {a.doctor_name}" if a.doctor_name else ""
+            parts.append(f"ngày {date_str} lúc {time_str} tại {loc}{doctor}")
+        return (f"Dạ, {pronoun} có lịch khám vào " + "; ".join(parts) + f". {pronoun.capitalize()} nhớ đi đúng giờ nhé ạ.", [])
+
     if intent == 'health_metrics':
         m = ctx['health_metrics']
         if not m:
-            return (
-                f"Dạ, hiện tại {pronoun} chưa có dữ liệu đo sức khỏe nào "
-                f"trong hệ thống ạ.",
-                []
-            )
+            return (f"Dạ, hiện tại {pronoun} chưa có dữ liệu đo sức khỏe nào trong hệ thống ạ.", [])
         date_str = m.recorded_at.strftime("%d/%m/%Y %H:%M") if m.recorded_at else "gần đây"
         parts = []
-        if m.blood_pressure:
-            parts.append(f"huyết áp {m.blood_pressure} mmHg")
-        if m.heart_rate:
-            parts.append(f"nhịp tim {m.heart_rate} bpm")
-        if m.blood_sugar:
-            parts.append(f"đường huyết {m.blood_sugar} mmol/L")
-        if m.temperature:
-            parts.append(f"nhiệt độ {m.temperature}°C")
+        if m.blood_pressure: parts.append(f"huyết áp {m.blood_pressure} mmHg")
+        if m.heart_rate: parts.append(f"nhịp tim {m.heart_rate} bpm")
+        if m.blood_sugar: parts.append(f"đường huyết {m.blood_sugar} mmol/L")
+        if m.temperature: parts.append(f"nhiệt độ {m.temperature}°C")
         if not parts:
-            return (
-                f"Dạ, bản ghi sức khỏe gần nhất của {pronoun} "
-                f"(ngày {date_str}) chưa có số liệu chi tiết ạ.",
-                []
-            )
-        return (
-            f"Dạ, theo lần đo gần nhất vào {date_str}: "
-            + ", ".join(parts)
-            + f". {pronoun.capitalize()} nhớ giữ gìn sức khỏe nhé ạ!",
-            []
-        )
+            return (f"Dạ, bản ghi sức khỏe gần nhất của {pronoun} (ngày {date_str}) chưa có số liệu chi tiết ạ.", [])
+        return (f"Dạ, theo lần đo gần nhất vào {date_str}: " + ", ".join(parts) + f". {pronoun.capitalize()} nhớ giữ gìn sức khỏe nhé ạ!", [])
 
-    # ── 4. Hồ sơ / bệnh án ──────────────────────────────────────────────────
     if intent == 'medical_records':
         docs = ctx['documents']
         if not docs:
-            return (
-                f"Dạ, hiện tại chưa có thông tin bệnh án "
-                f"hoặc hồ sơ khám bệnh của {pronoun} trong hệ thống ạ.",
-                []
-            )
-        doc = docs[0]  # bản ghi gần nhất
+            return (f"Dạ, hiện tại chưa có thông tin bệnh án hoặc hồ sơ khám bệnh của {pronoun} trong hệ thống ạ.", [])
+        doc = docs[0]
         date_str = doc.upload_at.strftime("%d/%m/%Y") if doc.upload_at else "gần đây"
         doc_type = doc.document_type or "hồ sơ y tế"
         hospital = doc.hospital or "chưa rõ bệnh viện"
         doctor = f", bác sĩ {doc.doctor_name}" if doc.doctor_name else ""
         diagnosis = f"\nChẩn đoán: {doc.diagnosis}" if doc.diagnosis else ""
         result_text = f"\nKết quả: {doc.result}" if doc.result else ""
+        images = [d.file_url for d in docs if d.file_url]
+        return (f"Dạ, bệnh án gần nhất của {pronoun} là \"{doc_type}\", khám tại {hospital}{doctor} vào ngày {date_str} ạ.{diagnosis}{result_text}", images)
 
-        # Thu thập ảnh từ tất cả documents có file_url
-        images = []
-        for d in docs:
-            if d.file_url:
-                images.append(d.file_url)
+    if intent == 'medical_history':
+        cond = elderly.underlying_conditions if elderly.underlying_conditions else "hệ thống chưa ghi nhận bệnh nền nào"
+        diagnosis_history = [doc.diagnosis for doc in ctx['documents'] if doc.diagnosis]
+        diag_str = "Các chẩn đoán gần đây: " + ", ".join(diagnosis_history) if diagnosis_history else ""
+        return (f"Dạ, theo hồ sơ thì {pronoun} có bệnh nền: {cond}. {diag_str}", [])
 
-        return (
-            f"Dạ, bệnh án gần nhất của {pronoun} là \"{doc_type}\", "
-            f"được khám tại {hospital}{doctor} vào ngày {date_str} ạ."
-            f"{diagnosis}{result_text}",
-            images
-        )
+    if intent == 'allergy':
+        alg = elderly.allergies if elderly.allergies else "hệ thống chưa ghi nhận thông tin dị ứng"
+        return (f"Dạ, theo hồ sơ thì tiền sử dị ứng của {pronoun} là: {alg}.", [])
 
-    # ── 5. Bác sĩ ────────────────────────────────────────────────────────────
     if intent == 'doctor':
         doc_info = ctx['doctor']
         if not doc_info:
-            return (
-                f"Dạ, hiện tại {pronoun} chưa có thông tin "
-                f"bác sĩ điều trị trong hệ thống ạ.",
-                []
-            )
+            return (f"Dạ, hiện tại {pronoun} chưa có thông tin bác sĩ điều trị trong hệ thống ạ.", [])
         loc = f" tại {doc_info['location']}" if doc_info['location'] else ""
-        return (
-            f"Dạ, bác sĩ theo dõi gần nhất của {pronoun} là "
-            f"Bác sĩ {doc_info['name']}{loc} ạ.",
-            []
-        )
+        return (f"Dạ, bác sĩ theo dõi gần nhất của {pronoun} là Bác sĩ {doc_info['name']}{loc} ạ.", [])
 
-    # ── 6. Chào hỏi ──────────────────────────────────────────────────────────
+    if intent == 'personal_info':
+        name = elderly.fullname or "chưa cập nhật"
+        dob = elderly.date_of_birthday.strftime('%d/%m/%Y') if elderly.date_of_birthday else "chưa cập nhật"
+        gender = "Nam" if elderly.gender else "Nữ"
+        return (f"Dạ, thông tin hồ sơ của {pronoun}: Tên là {name}, sinh ngày {dob}, giới tính {gender} ạ.", [])
+
+    if intent == 'time':
+        now_vn = now + datetime.timedelta(hours=7) # Convert to UTC+7 roughly
+        time_str = now_vn.strftime('%H:%M, thứ %w ngày %d/%m/%Y').replace('thứ 0', 'Chủ nhật').replace('thứ 1', 'Thứ 2').replace('thứ 2', 'Thứ 3').replace('thứ 3', 'Thứ 4').replace('thứ 4', 'Thứ 5').replace('thứ 5', 'Thứ 6').replace('thứ 6', 'Thứ 7')
+        return (f"Dạ, bây giờ là {time_str} ạ.", [])
+
+    if intent == 'app_support':
+        return (f"Dạ, cháu xin hướng dẫn {pronoun} ạ:\n"
+                f"1. Để xem lịch khám, {pronoun} vào mục 'Lịch Khám' ở màn hình chính.\n"
+                f"2. Để xem thuốc, {pronoun} lướt ngang ở trang chủ hoặc vào 'Đơn Thuốc'.\n"
+                f"3. Để xem bệnh án, {pronoun} nhấn vào nút 'Hồ sơ bệnh án' trong tab Cá nhân ạ.", [])
+
     if intent == 'greeting':
-        return (
-            f"Dạ cháu chào {pronoun}, cháu là trợ lý ảo chăm sóc sức khỏe. "
-            f"Cháu có thể giúp {pronoun} xem:\n"
-            f"• Lịch khám\n"
-            f"• Đơn thuốc & lịch uống thuốc\n"
-            f"• Chỉ số sức khỏe\n"
-            f"• Hồ sơ bệnh án\n"
-            f"{pronoun.capitalize()} cứ hỏi cháu nhé ạ!",
-            []
-        )
+        return (f"Dạ cháu chào {pronoun}, cháu là trợ lý ảo chăm sóc sức khỏe. Cháu có thể giúp {pronoun} xem Lịch khám, Đơn thuốc, Chỉ số sức khỏe, và gọi Người thân ạ. {pronoun.capitalize()} cần cháu giúp gì không ạ?", [])
 
-    # ── 7. Không hiểu ────────────────────────────────────────────────────────
-    return (
-        f"Dạ, cháu chưa hiểu rõ ý của {pronoun}. "
-        f"{pronoun.capitalize()} có thể hỏi cháu các câu như:\n"
-        f"• \"Lịch khám của tôi\"\n"
-        f"• \"Xem bệnh án\"\n"
-        f"• \"Hôm nay uống thuốc gì\"\n"
-        f"• \"Chỉ số huyết áp\"\n"
-        f"Cháu sẽ cố gắng giúp {pronoun} ạ!",
-        []
-    )
+    return (f"Dạ, cháu chưa hiểu rõ ý của {pronoun}. {pronoun.capitalize()} có thể hỏi cháu các câu như: \"Lịch khám của tôi\", \"Xem bệnh án\", \"Hôm nay uống thuốc gì\", \"Gọi người thân\". Cháu sẽ cố gắng giúp {pronoun} ạ!", [])
 
 
 # ─── API View ─────────────────────────────────────────────────────────────────

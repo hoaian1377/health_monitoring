@@ -49,7 +49,7 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF0F4FB),
       appBar: isDesktop ? null : AdminTopbar(title: _titles[_selectedIndex]),
       drawer: isDesktop
           ? null

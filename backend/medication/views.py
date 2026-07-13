@@ -182,144 +182,87 @@ class DeleteMedicationView(generics.DestroyAPIView):
 class ScanPrescriptionView(generics.CreateAPIView):
     """POST /api/medication/scan-prescription/"""
     def post(self, request):
-        import os, json, tempfile
-        import google.generativeai as genai
-        from PIL import Image
+        import json
+        import requests
+        import base64
+        import re
 
         image_file = request.FILES.get('image')
         if not image_file:
             return Response({"error": "Vui lòng tải lên hình ảnh đơn thuốc (image field)"}, status=status.HTTP_400_BAD_REQUEST)
 
-        from django.conf import settings
-        api_key = settings.GEMINI_API_KEY
-        if not api_key:
-            return Response({"error": "Chưa cấu hình GEMINI_API_KEY trong settings.py."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        suffix = '.' + (image_file.name.split('.')[-1] if '.' in image_file.name else 'jpg')
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            for chunk in image_file.chunks():
-                tmp.write(chunk)
-            tmp_path = tmp.name
-
         try:
-            genai.configure(api_key=api_key)
-            img = Image.open(tmp_path)
-
-            prompt = """Bạn là một dược sĩ/trợ lý y tế chuyên nghiệp. Hãy trích xuất danh sách thuốc và thông tin tái khám từ ảnh đơn thuốc này.
-            QUAN TRỌNG VỀ TẦN SUẤT UỐNG (PHẢI TÁCH DÒNG NẾU UỐNG NHIỀU LẦN):
-            - Nếu một thuốc uống nhiều lần/buổi trong ngày (VD: "Sáng 1 viên, Chiều 1 viên", "Ngày 2 lần", "3 buổi/ngày"), BẠN PHẢI TÁCH THÀNH NHIỀU OBJECT RIÊNG BIỆT cho cùng loại thuốc đó trong mảng `medications`. MỖI OBJECT LÀ MỘT LẦN UỐNG TRONG NGÀY.
-            - Quy tắc mặc định nếu không ghi rõ buổi:
-              + 3 lần (3 buổi/ngày): Tách làm 3 object riêng cho các buổi (Sáng, Trưa, Chiều/Tối).
-              + 2 lần (2 buổi/ngày): Tách làm 2 object riêng cho các buổi (Sáng, Chiều/Tối).
-            - Thuộc tính `frequency` của mỗi object CHỈ ĐƯỢC CHỨA 1 TRONG CÁC TỪ ĐẠI DIỆN CHO BUỔI ĐÓ: "Sáng", "Trưa", "Chiều", "Tối".
-
-            Trả về CHỈ một chuỗi JSON hợp lệ (KHÔNG chứa markdown ```json, không giải thích).
-            Định dạng JSON chuẩn:
-            {
-              "medications": [
-                {
-                  "name": "tên thuốc",
-                  "dosage": "liều lượng của LẦN UỐNG ĐÓ (VD: 1 viên, 5ml)",
-                  "instruction": "hướng dẫn (VD: Uống sau ăn)",
-                  "time": "thời gian gợi ý (VD: 08:00, 20:00)",
-                  "frequency": "chỉ ghi MỘT BUỔI DUY NHẤT (VD: Sáng, hoặc Trưa, hoặc Chiều, hoặc Tối)"
-                }
-              ],
-              "diagnosis": "chẩn đoán bệnh (nếu có) hoặc null",
-              "doctor_advice": "lời dặn của bác sĩ (nếu có) hoặc null",
-              "appointment": {
-                "doctor_name": "tên bác sĩ hoặc null",
-                "clinic": "tên phòng khám/bệnh viện hoặc null",
-                "phone": "số điện thoại hoặc null",
-                "appointment_date": "YYYY-MM-DD hoặc null",
-                "appointment_time": "HH:MM hoặc null",
-                "note": "ghi chú tái khám hoặc null"
-              }
-            }"""
-
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            image_content = image_file.read()
+            base64_img = base64.b64encode(image_content).decode('utf-8')
+            mime_type = "image/jpeg"
+            if image_file.name.lower().endswith('.png'):
+                mime_type = "image/png"
             
-            import time
-            max_retries = 5
-            response = None
+            payload = {
+                'apikey': 'helloworld',
+                'language': 'eng',
+                'base64Image': f"data:{mime_type};base64,{base64_img}",
+            }
             
-            for attempt in range(max_retries):
-                try:
-                    response = model.generate_content([prompt, img])
-                    break
-                except Exception as e:
-                    if "429" in str(e) and attempt < max_retries - 1:
-                        time.sleep(10) # Đợi 10 giây rồi thử lại nếu bị rate limit
-                    else:
-                        raise e
+            response = requests.post('https://api.ocr.space/parse/image', data=payload, timeout=30)
+            result = response.json()
             
-            text = response.text.strip()
+            parsed_text = ""
+            if result.get('ParsedResults') and len(result['ParsedResults']) > 0:
+                parsed_text = result['ParsedResults'][0].get('ParsedText', '')
             
-            start = text.find('{')
-            end = text.rfind('}')
-            if start != -1 and end != -1:
-                text = text[start:end+1]
-            else:
-                return Response({"error": "Không thể phân tích định dạng từ AI. Vui lòng thử lại."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if not parsed_text:
+                return Response({"error": "Không tìm thấy văn bản trong ảnh (OCR.space). Vui lòng chụp rõ hơn."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             
-            data = json.loads(text)
-
-            medications = data.get('medications', [])
-            if medications is None:
-                medications = []
+            lines = parsed_text.split('\n')
+            medications = []
             
-            appointment = data.get('appointment')
-            diagnosis = data.get('diagnosis')
-            doctor_advice = data.get('doctor_advice')
-            
-            if not appointment and (diagnosis or doctor_advice):
-                appointment = {}
-                data['appointment'] = appointment
+            for line in lines:
+                line = line.strip()
+                if len(line) < 4: continue
                 
-            if appointment is not None:
-                note_parts = []
-                if diagnosis:
-                    note_parts.append(f"Chẩn đoán: {diagnosis}")
-                if doctor_advice:
-                    note_parts.append(f"Lời dặn: {doctor_advice}")
-                
-                existing_note = appointment.get('note')
-                if existing_note:
-                    note_parts.append(f"Ghi chú: {existing_note}")
-                
-                if note_parts:
-                    appointment['note'] = "\n".join(note_parts)
-
+                # Biểu thức chính quy phát hiện dòng chứa tên thuốc/liều lượng cơ bản
+                if re.search(r'(mg|ml|viên|gói|tablet|capsule|pill|uống|ngày)', line, re.IGNORECASE):
+                    med = {
+                        "name": line[:50],  # Lấy 50 ký tự đầu làm tên để hiển thị
+                        "dosage": "",
+                        "instruction": "Sau ăn",
+                        "time": "08:00",
+                        "frequency": "Sáng"
+                    }
+                    if re.search(r'(viên)', line, re.IGNORECASE): med["dosage"] = "1 viên"
+                    elif re.search(r'(gói)', line, re.IGNORECASE): med["dosage"] = "1 gói"
+                    elif re.search(r'(ml)', line, re.IGNORECASE): med["dosage"] = "5 ml"
+                    
+                    if re.search(r'(trước)', line, re.IGNORECASE): med["instruction"] = "Trước ăn"
+                    if re.search(r'(trưa)', line, re.IGNORECASE):
+                        med["time"] = "12:00"
+                        med["frequency"] = "Trưa"
+                    elif re.search(r'(chiều|tối)', line, re.IGNORECASE):
+                        med["time"] = "19:30"
+                        med["frequency"] = "Tối"
+                        
+                    medications.append(med)
+            
+            # Nếu regex không bắt được dòng nào, trả về 1 dòng mặc định với toàn bộ text để người dùng tự sửa
             if not medications:
-                # Nếu không có thuốc nhưng có chẩn đoán/tái khám thì vẫn có thể trả về thông tin khám
-                if not appointment:
-                    return Response({"error": "Không nhận ra thuốc và thông tin khám trong ảnh. Vui lòng chụp rõ hơn."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-            for med in medications:
-                freq = str(med.get('frequency', '')).lower()
-                instr = str(med.get('instruction', '')).lower()
-                
-                if 'sáng' in freq or 'sáng' in instr:
-                    med['time'] = '08:00'
-                elif 'trưa' in freq or 'trưa' in instr:
-                    med['time'] = '12:00'
-                elif 'chiều' in freq or 'tối' in freq or 'chiều' in instr or 'tối' in instr:
-                    med['time'] = '19:30'
+                medications.append({
+                    "name": parsed_text[:50].replace('\n', ' ') + "...",
+                    "dosage": "1 viên",
+                    "instruction": "Cần kiểm tra lại",
+                    "time": "08:00",
+                    "frequency": "Sáng"
+                })
 
             return Response({
                 "message": "Quét thành công",
                 "medications": medications,
-                "appointment": data.get('appointment'),
-                "raw_text": text[:500]
+                "appointment": None,
+                "raw_text": parsed_text[:500]
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": f"Lỗi phân tích ảnh Gemini: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
+            return Response({"error": f"Lỗi phân tích OCR: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CreateAppointmentView(generics.CreateAPIView):

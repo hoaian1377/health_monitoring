@@ -76,7 +76,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9), // Light grayish background for admin
+      backgroundColor: const Color(0xFFF0F4FB), // Light grayish background for admin
       body: Center(
         child: SingleChildScrollView(
           child: Container(
@@ -101,7 +101,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   const Icon(
                     Icons.admin_panel_settings_rounded,
                     size: 64,
-                    color: Color(0xFF1E293B),
+                    color: Color(0xFF2563EB),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -160,7 +160,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E293B),
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

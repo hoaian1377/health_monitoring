@@ -7,7 +7,12 @@ class NotificationDetailSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class NotificationSerializer(serializers.ModelSerializer):
-    # Depending on how the related_name is defined in Django models. DO_NOTHING means no default reverse relation, but let's just serialize Notification for now.
+    details = serializers.SerializerMethodField()
+
     class Meta:
         model = Notification
         fields = '__all__'
+
+    def get_details(self, obj):
+        details = NotificationDetail.objects.filter(notificationid=obj)
+        return NotificationDetailSerializer(details, many=True).data

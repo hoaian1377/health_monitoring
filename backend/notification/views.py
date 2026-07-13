@@ -21,18 +21,25 @@ class NotificationListView(generics.ListAPIView):
             return Notification.objects.filter(caregiverid__in=caregivers).order_by('-created_at')
         return Notification.objects.all().order_by('-created_at')
 
-class NotificationDetailView(generics.UpdateAPIView):
-    """PUT /api/notification/notifications/<pk>/"""
-    serializer_class = NotificationDetailSerializer
-    queryset = NotificationDetail.objects.all()
-
-    def put(self, request, *args, **kwargs):
+class NotificationDetailView(APIView):
+    """PUT /api/notification/notifications/<pk>/ - Đánh dấu đã đọc
+       DELETE /api/notification/notifications/<pk>/ - Xóa thông báo"""
+    def put(self, request, pk, *args, **kwargs):
         try:
-            instance = self.get_object()
-            instance.is_read = True
-            instance.read_at = datetime.datetime.now()
-            instance.save()
+            notif = Notification.objects.get(pk=pk)
+            detail, created = NotificationDetail.objects.get_or_create(notificationid=notif)
+            detail.is_read = True
+            detail.read_at = datetime.datetime.now()
+            detail.save()
             return Response({"message": "Đã đánh dấu là đã đọc"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, *args, **kwargs):
+        try:
+            notif = Notification.objects.get(pk=pk)
+            notif.delete()
+            return Response({"message": "Đã xóa thông báo"}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

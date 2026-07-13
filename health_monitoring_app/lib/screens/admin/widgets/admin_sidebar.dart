@@ -22,14 +22,14 @@ class AdminSidebar extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: const Row(
               children: [
-                Icon(Icons.admin_panel_settings, color: Color(0xFF1976D2), size: 32),
+                Icon(Icons.admin_panel_settings, color: Color(0xFF2563EB), size: 32),
                 SizedBox(width: 12),
                 Text(
                   'Health Admin',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1976D2),
+                    color: Color(0xFF2563EB),
                   ),
                 ),
               ],
@@ -60,24 +60,24 @@ class AdminSidebar extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF1976D2).withOpacity(0.1) : Colors.transparent,
+        color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected ? const Color(0xFF1976D2) : Colors.grey[700],
+          color: isSelected ? const Color(0xFF2563EB) : Color(0xFF64748B),
         ),
         title: Text(
           title,
           style: TextStyle(
-            color: isSelected ? const Color(0xFF1976D2) : Colors.grey[800],
+            color: isSelected ? const Color(0xFF2563EB) : Color(0xFF1E293B),
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
         onTap: () => onItemSelected(index),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        hoverColor: Colors.grey[100],
+        hoverColor: const Color(0xFFF8FAFC),
       ),
     );
   }

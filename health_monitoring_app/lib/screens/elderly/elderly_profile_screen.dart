@@ -4,6 +4,7 @@ import 'elderly_emergency_contacts_screen.dart';
 import '../login_screen.dart';
 import 'elderly_change_password_screen.dart';
 import '../../utils/api_service.dart';
+import '../caregiver/caregiver_health_settings_screen.dart';
 
 class ElderlyProfileScreen extends StatefulWidget {
   const ElderlyProfileScreen({super.key});
@@ -142,32 +143,19 @@ class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
                   _buildElderlySOSButton(),
                   const SizedBox(height: 24),
 
-                  _sectionLabel('LIÊN LẠC & AN TOÀN'),
+                  _sectionLabel('HỒ SƠ SỨC KHOẺ'),
                   const SizedBox(height: 8),
                   _menuGroup([
                     _MenuItem(
-                      icon: Icons.contact_phone_outlined,
-                      iconBg: const Color(0xFFFFEBEB),
-                      iconColor: const Color(0xFFDC2626),
-                      title: 'Người liên hệ khẩn cấp',
-                      subtitle: 'Số điện thoại của người thân khi cần hỗ trợ',
-                      onTap: () => _navigate(const ElderlyEmergencyContactsScreen()),
+                      icon: Icons.health_and_safety_outlined,
+                      iconBg: const Color(0xFFE6FBF3),
+                      iconColor: const Color(0xFF16A34A),
+                      title: 'Hồ sơ bệnh án',
+                      subtitle: 'Bệnh án, toa thuốc, giấy tờ và các lần khám bệnh',
+                      onTap: () => _navigate(const HealthDashboardScreen()),
                     ),
                   ]),
                   const SizedBox(height: 24),
-
-                  _sectionLabel('CÀI ĐẶT & ỨNG DỤNG'),
-                  const SizedBox(height: 8),
-                  _menuGroup([
-                    _MenuItem(
-                      icon: Icons.lock_outline_rounded,
-                      iconBg: const Color(0xFFF3EEFF),
-                      iconColor: const Color(0xFF7C3AED),
-                      title: 'Đổi mật khẩu bảo mật',
-                      subtitle: 'Đổi mật khẩu đăng nhập của bác',
-                      onTap: () => _navigate(const ElderlyChangePasswordScreen()),
-                    ),
-                  ]),
 
                   const SizedBox(height: 16),
                   _buildElderlyLogoutButton(),

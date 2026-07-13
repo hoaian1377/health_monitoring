@@ -11,13 +11,13 @@ class AdminTopbar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         title,
         style: const TextStyle(
-          color: Colors.black87,
+          color: Color(0xFF1E293B),
           fontWeight: FontWeight.w600,
         ),
       ),
       backgroundColor: Colors.white,
       elevation: 0,
-      iconTheme: const IconThemeData(color: Colors.black87),
+      iconTheme: const IconThemeData(color: Color(0xFF1E293B)),
       actions: [
         IconButton(
           icon: const Icon(Icons.notifications_outlined),
@@ -28,7 +28,7 @@ class AdminTopbar extends StatelessWidget implements PreferredSizeWidget {
           child: Row(
             children: [
               const CircleAvatar(
-                backgroundColor: Color(0xFF1976D2),
+                backgroundColor: Color(0xFF2563EB),
                 child: Icon(Icons.person, color: Colors.white),
               ),
               const SizedBox(width: 8),
@@ -39,7 +39,7 @@ class AdminTopbar extends StatelessWidget implements PreferredSizeWidget {
                   Text(
                     'Admin',
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: Color(0xFF1E293B),
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -47,7 +47,7 @@ class AdminTopbar extends StatelessWidget implements PreferredSizeWidget {
                   Text(
                     'admin@health.com',
                     style: TextStyle(
-                      color: Colors.grey,
+                      color: Color(0xFF94A3B8),
                       fontSize: 12,
                     ),
                   ),

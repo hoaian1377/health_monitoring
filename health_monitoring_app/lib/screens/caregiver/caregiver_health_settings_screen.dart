@@ -3,12 +3,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/api_service.dart';
 
-// ======================================================================
-// UNIFIED: Hồ sơ bệnh án – gộp MedicalProfile + HistoryScreen
-// 4 tabs: Tổng quan | Khám bệnh | Thuốc | Tài liệu
-// ======================================================================
 class HealthDashboardScreen extends StatefulWidget {
   const HealthDashboardScreen({super.key});
 
@@ -1422,11 +1419,21 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
         } catch (_) {}
       }
+      String rawUrl = doc['file_url']?.toString() ?? '';
+      String fullUrl = '';
+      if (rawUrl.isNotEmpty) {
+        if (rawUrl.startsWith('http')) {
+          fullUrl = rawUrl;
+        } else {
+          fullUrl = '${ApiService.baseUrl}$rawUrl';
+        }
+      }
       return {
         'name': doc['file_url']?.split('/').last ??
             'Tai_lieu_${doc['medical_documentid']}.pdf',
         'date': date,
         'type': type,
+        'url': fullUrl,
       };
     }).toList();
 
@@ -1602,11 +1609,33 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                             children: [
                               _smallIconBtn(Icons.visibility_outlined,
                                   const Color(0xFF0EA5E9),
-                                  const Color(0xFFEBF3FF), () {}),
+                                  const Color(0xFFEBF3FF), () async {
+                                final url = Uri.parse(doc['url']!);
+                                try {
+                                  await launchUrl(url);
+                                } catch (_) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Không thể mở tài liệu này')),
+                                    );
+                                  }
+                                }
+                              }),
                               const SizedBox(height: 8),
                               _smallIconBtn(Icons.download_rounded,
                                   const Color(0xFF16A34A),
-                                  const Color(0xFFE6FBF3), () {}),
+                                  const Color(0xFFE6FBF3), () async {
+                                final url = Uri.parse(doc['url']!);
+                                try {
+                                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                                } catch (_) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Không thể tải xuống tài liệu này')),
+                                    );
+                                  }
+                                }
+                              }),
                             ],
                           ),
                         ],

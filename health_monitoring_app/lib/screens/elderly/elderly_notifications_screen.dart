@@ -56,9 +56,7 @@ class _ElderlyNotificationsScreenState
             ? item['details'][0]
             : null;
         bool isRead = notifDetail != null ? notifDetail['is_read'] : false;
-        String id = notifDetail != null
-            ? notifDetail['notification_detailid'].toString()
-            : item['notificationid'].toString();
+        String id = item['notificationid'].toString();
 
         String title = item['title'] ?? 'Thông báo';
         String desc = item['message'] ?? '';
@@ -433,18 +431,24 @@ class _ElderlyNotificationsScreenState
                   IconButton(
                     icon: Icon(Icons.close_rounded,
                         color: Colors.grey.shade400, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        _notifications
-                            .removeWhere((n) => n.id == item.id);
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          backgroundColor: Color(0xFFDC2626),
-                          content: Text('Đã xóa thông báo.'),
-                          duration: Duration(milliseconds: 800),
-                        ),
-                      );
+                    onPressed: () async {
+                      try {
+                        final id = int.parse(item.id);
+                        await ApiService.deleteNotification(id);
+                      } catch (_) {}
+                      if (mounted) {
+                        setState(() {
+                          _notifications
+                              .removeWhere((n) => n.id == item.id);
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFFDC2626),
+                            content: Text('Đã xóa thông báo.'),
+                            duration: Duration(milliseconds: 800),
+                          ),
+                        );
+                      }
                     },
                   ),
                   const SizedBox(width: 6),

@@ -92,14 +92,116 @@ class AdminUserStatusView(APIView):
         # Database doesn't support status, mock it
         return Response({'message': 'User status updated'}, status=status.HTTP_200_OK)
 
-class BackupListView(APIView):
+import os
+from django.conf import settings
+from django.core.management import call_command
+from django.http import FileResponse
+
+class StatisticsChartView(APIView):
     def get(self, request):
-        # Return empty for now as backup system isn't implemented
-        return Response([], status=status.HTTP_200_OK)
+        total_admin = Account.objects.filter(role__iexact='admin').count()
+        total_elderly = Elderly.objects.count()
+        total_caregivers = Caregiver.objects.count()
+        
+        roles_distribution = [
+            {'name': 'Admin', 'count': total_admin, 'color': '#64748B'},
+            {'name': 'Elderly', 'count': total_elderly, 'color': '#0EA5E9'},
+            {'name': 'Caregiver', 'count': total_caregivers, 'color': '#10B981'},
+        ]
+
+        # For alerts over the last 6 months
+        # Group notifications by month
+        from django.db.models import Count
+        from django.db.models.functions import TruncMonth
+        from dateutil.relativedelta import relativedelta
+
+        six_months_ago = datetime.now() - relativedelta(months=5)
+        six_months_ago = six_months_ago.replace(day=1)
+
+        monthly_alerts = Notification.objects.filter(created_at__gte=six_months_ago) \
+            .annotate(month=TruncMonth('created_at')) \
+            .values('month') \
+            .annotate(count=Count('notificationid')) \
+            .order_by('month')
+
+        monthly_data = []
+        for i in range(5, -1, -1):
+            target_date = datetime.now() - relativedelta(months=i)
+            month_str = target_date.strftime('%m/%Y')
+            
+            # Find in query results
+            count = 0
+            for item in monthly_alerts:
+                if item['month'] and item['month'].month == target_date.month and item['month'].year == target_date.year:
+                    count = item['count']
+                    break
+            
+            monthly_data.append({
+                'month': month_str,
+                'alerts': count
+            })
+
+        return Response({
+            'roles': roles_distribution,
+            'monthlyAlerts': monthly_data
+        }, status=status.HTTP_200_OK)
+
+
+class BackupListView(APIView):
+    def get_backup_dir(self):
+        backup_dir = os.path.join(settings.BASE_DIR, 'backups')
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+        return backup_dir
+
+    def get(self, request):
+        backup_dir = self.get_backup_dir()
+        files = []
+        for filename in os.listdir(backup_dir):
+            if filename.endswith('.json'):
+                filepath = os.path.join(backup_dir, filename)
+                stat = os.stat(filepath)
+                files.append({
+                    'id': filename,
+                    'name': filename,
+                    'size': f"{stat.st_size / 1024:.2f} KB",
+                    'date': datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M')
+                })
+        # Sort by date descending
+        files.sort(key=lambda x: os.path.getmtime(os.path.join(backup_dir, x['name'])), reverse=True)
+        return Response(files, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        backup_dir = self.get_backup_dir()
+        filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filepath = os.path.join(backup_dir, filename)
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                call_command('dumpdata', exclude=['admin', 'contenttypes', 'auth', 'sessions'], stdout=f)
+            return Response({'message': 'Backup created successfully', 'filename': filename}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DownloadBackupView(APIView):
+    def get(self, request, filename):
+        backup_dir = os.path.join(settings.BASE_DIR, 'backups')
+        filepath = os.path.join(backup_dir, filename)
+        if os.path.exists(filepath):
+            response = FileResponse(open(filepath, 'rb'), as_attachment=True, filename=filename)
+            return response
+        return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
         
 class BackupRestoreView(APIView):
     def post(self, request, backup_id):
-        return Response({'message': 'Restored'}, status=status.HTTP_200_OK)
+        backup_dir = os.path.join(settings.BASE_DIR, 'backups')
+        filepath = os.path.join(backup_dir, backup_id)
+        if os.path.exists(filepath):
+            try:
+                call_command('loaddata', filepath)
+                return Response({'message': 'Restored successfully'}, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class LatestAlertsView(APIView):
     def get(self, request):

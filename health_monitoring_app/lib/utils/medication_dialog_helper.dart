@@ -248,7 +248,7 @@ class MedicationDialogHelper {
     String selectedTime = initialTime ?? '08:00';
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 30));
-    List<String> timeSlots = [initialTime ?? '08:00'];
+    List<String> timeSlots = initialTime != null ? [initialTime] : ['08:00', '12:00', '18:00'];
     bool isSubmitting = false;
     String? nameError;
     String? doseError;
@@ -286,8 +286,8 @@ class MedicationDialogHelper {
           Future<void> pickDate(bool isStart) async {
             final picked = await showDatePicker(
               context: ctx,
-              initialDate: isStart ? startDate : endDate,
-              firstDate: DateTime(2020),
+              initialDate: isStart ? startDate : (endDate.isBefore(startDate) ? startDate : endDate),
+              firstDate: isStart ? DateTime(2020) : startDate,
               lastDate: DateTime(2030),
               locale: const Locale('vi'),
               builder: (c, child) => Theme(
@@ -302,10 +302,14 @@ class MedicationDialogHelper {
             );
             if (picked != null) {
               setDlg(() {
-                if (isStart)
+                if (isStart) {
                   startDate = picked;
-                else
+                  if (endDate.isBefore(startDate)) {
+                    endDate = startDate;
+                  }
+                } else {
                   endDate = picked;
+                }
               });
             }
           }

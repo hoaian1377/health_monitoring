@@ -81,12 +81,14 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   // Lịch tuần cuộn ngang theo trang (PageView) để cố định 1 tuần trên màn hình
   PageController? _pageController;
   int _currentCalendarPage = 1000;
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedMedFilter = _getCurrentSessionFilter();
     _loadMedications();
+    _loadNotifications();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -169,6 +171,25 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
         }
       });
     }
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final data = await ApiService.getNotifications();
+      int unread = 0;
+      for (var item in data) {
+        final notifDetail = item['details'] != null && item['details'].isNotEmpty ? item['details'][0] : null;
+        bool isRead = notifDetail != null ? notifDetail['is_read'] : false;
+        if (!isRead) {
+          unread++;
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _unreadCount = unread;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -957,21 +978,22 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
                 icon: Stack(
                   children: [
                     const Icon(Icons.mail_outline_rounded, size: 26),
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 8,
-                          minHeight: 8,
+                    if (_unreadCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 8,
+                            minHeight: 8,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 color: Colors.white,
@@ -1161,6 +1183,26 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
     };
 
     for (var schedule in _medicationSchedules) {
+      // Logic lọc theo ngày bắt đầu và kết thúc
+      final startDateStr = schedule['start_date'];
+      final endDateStr = schedule['end_date'];
+      DateTime? startDate;
+      DateTime? endDate;
+      try {
+        if (startDateStr != null) startDate = DateTime.parse(startDateStr);
+        if (endDateStr != null) endDate = DateTime.parse(endDateStr);
+      } catch (_) {}
+
+      final selectedDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+      if (startDate != null) {
+        final start = DateTime(startDate.year, startDate.month, startDate.day);
+        if (selectedDateOnly.isBefore(start)) continue; // Bỏ qua nếu chọn ngày trước ngày bắt đầu
+      }
+      if (endDate != null) {
+        final end = DateTime(endDate.year, endDate.month, endDate.day);
+        if (selectedDateOnly.isAfter(end)) continue; // Bỏ qua nếu chọn ngày sau ngày kết thúc
+      }
+
       final String time = schedule['time'] ?? '00:00';
       final session = _getMedicationSession(time);
       if (sessionSchedules.containsKey(session)) {

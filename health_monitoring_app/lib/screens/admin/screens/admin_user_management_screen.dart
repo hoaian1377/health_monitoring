@@ -209,7 +209,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Thêm người dùng'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1976D2),
+              backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
