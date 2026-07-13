@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../utils/api_service.dart';
 
@@ -804,7 +806,14 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                               }
                             : () async {
                                 Navigator.pop(context);
-                                await _toggleTaskCompletion(task);
+                                if (!isTaken && (task.type == 'appointment' || task.title.toLowerCase().contains('tái khám') || task.title.toLowerCase().contains('đi khám'))) {
+                                  await Future.delayed(const Duration(milliseconds: 300));
+                                  if (mounted) {
+                                    _showTreatmentResultDialog(task);
+                                  }
+                                } else {
+                                  await _toggleTaskCompletion(task);
+                                }
                               },
                         child: Text(
                           !canComplete
@@ -822,6 +831,231 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+    void _showTreatmentResultDialog(ElderlyTaskItem task) {
+    File? pickedImage;
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded,
+                              color: Color(0xFF10B981), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Chụp ảnh kết quả khám',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Bác hãy chụp lại Đơn thuốc hoặc Phiếu kết quả khám bệnh để gửi cho người chăm sóc nhé.',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    if (pickedImage != null)
+                      Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              pickedImage!,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white.withValues(alpha: 0.8),
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.red),
+                                onPressed: () {
+                                  setStateSheet(() => pickedImage = null);
+                                },
+                              ),
+                            ),
+                          )
+                        ],
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () async {
+                          final picker = ImagePicker();
+                          final image = await picker.pickImage(source: ImageSource.camera);
+                          if (image != null) {
+                            setStateSheet(() {
+                              pickedImage = File(image.path);
+                            });
+                          }
+                        },
+                        child: Container(
+                          height: 160,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            border: Border.all(color: const Color(0xFFE2E8F0), width: 2, style: BorderStyle.solid),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
+                                child: const Icon(Icons.camera_alt_rounded, size: 32, color: Color(0xFF10B981)),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text('Bấm để chụp ảnh',
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF64748B))),
+                            ],
+                          ),
+                        ),
+                      ),
+                    
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: isSubmitting
+                                ? null
+                                : () async {
+                                    Navigator.pop(context);
+                                    await _toggleTaskCompletion(task);
+                                  },
+                            child: const Text('Bỏ qua',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF64748B))),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: (isSubmitting || pickedImage == null)
+                                ? null
+                                : () async {
+                                    setStateSheet(() => isSubmitting = true);
+                                    
+                                    final response = await ApiService.createMedicalDocument(
+                                      elderlyId: ApiService.currentAccountId ?? 0,
+                                      hospital: task.hospital ?? '',
+                                      doctorName: task.doctor ?? '',
+                                      diagnosis: '',
+                                      result: '',
+                                      documentType: 'Kết quả khám bệnh',
+                                      filePath: pickedImage!.path,
+                                    );
+                                    
+                                    if (response["success"] == true) {
+                                      if (mounted) Navigator.pop(context);
+                                      await _toggleTaskCompletion(task);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Đã gửi kết quả khám thành công!'),
+                                            backgroundColor: Color(0xFF10B981),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      setStateSheet(() => isSubmitting = false);
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Lỗi khi gửi ảnh. Vui lòng thử lại!'),
+                                            backgroundColor: Color(0xFFEF4444),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Text('Gửi ảnh',
+                                    style: TextStyle(
+                                        fontSize: 15, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

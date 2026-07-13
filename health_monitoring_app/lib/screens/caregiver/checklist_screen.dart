@@ -41,7 +41,7 @@ class ChecklistScreen extends StatefulWidget {
 class _ChecklistScreenState extends State<ChecklistScreen>
     with SingleTickerProviderStateMixin {
   final List<TaskItem> _tasks = [];
-  String _selectedCategory = 'all'; // 'all' | 'task' | 'document' | 'appointment'
+  String _selectedCategory = 'task'; // 'task' | 'document' | 'appointment'
   bool _isLoading = true;
 
   int? _currentElderlyId;
@@ -500,7 +500,6 @@ class _ChecklistScreenState extends State<ChecklistScreen>
   // ─── Category Chips ────────────────────────────────────────────────────────
   Widget _buildCategoryChips() {
     final cats = [
-      {'key': 'all', 'label': 'Tất cả', 'icon': Icons.list_rounded},
       {'key': 'task', 'label': 'Công việc', 'icon': Icons.check_circle_outline_rounded},
       {'key': 'document', 'label': 'Hồ sơ mang theo', 'icon': Icons.assignment_rounded},
       {'key': 'appointment', 'label': 'Tái khám', 'icon': Icons.local_hospital_rounded},
@@ -668,9 +667,7 @@ class _ChecklistScreenState extends State<ChecklistScreen>
                     ],
                   ),
                 ),
-                child: GestureDetector(
-                  onTap: () => _toggleTask(task),
-                  child: AnimatedContainer(
+                child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     decoration: BoxDecoration(
                       color: task.isCompleted ? const Color(0xFFF8FAFC) : Colors.white,
@@ -700,28 +697,33 @@ class _ChecklistScreenState extends State<ChecklistScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
-                                children: [
-                                  if (task.time.isNotEmpty && task.time != 'Tùy lúc')
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      margin: const EdgeInsets.only(right: 8),
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(8),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    if (task.time.isNotEmpty && task.time != 'Tùy lúc')
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        margin: const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(task.time,
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: color)),
                                       ),
-                                      child: Text(task.time,
+                                    Expanded(
+                                      child: Text(label,
                                           style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: color)),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: task.isCompleted ? Colors.grey : const Color(0xFF64748B)),
+                                          overflow: TextOverflow.ellipsis),
                                     ),
-                                  Text(label,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: task.isCompleted ? Colors.grey : const Color(0xFF64748B))),
-                                ],
+                                  ],
+                                ),
                               ),
                               // Status badge
                               Container(
@@ -800,6 +802,44 @@ class _ChecklistScreenState extends State<ChecklistScreen>
                               ]),
                             ),
                           ],
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () => _deleteTask(task),
+                                icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                                label: const Text('Xóa', style: TextStyle(fontSize: 12)),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFFEF4444),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                onPressed: () => _toggleTask(task),
+                                icon: Icon(
+                                  task.isCompleted ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
+                                  size: 16,
+                                ),
+                                label: Text(
+                                  task.isCompleted ? 'Hoàn tác' : 'Xác nhận',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: task.isCompleted ? Colors.grey.shade200 : const Color(0xFF10B981),
+                                  foregroundColor: task.isCompleted ? Colors.grey.shade700 : Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -807,7 +847,6 @@ class _ChecklistScreenState extends State<ChecklistScreen>
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1137,6 +1176,34 @@ class _AddTaskSheetState extends State<_AddTaskSheet>
           decoration: _inputDecoration('Nhập tiêu đề...', Icons.title_rounded),
           textInputAction: TextInputAction.next,
         ),
+        if (_type == 'document') ...[
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              'CCCD/CMND',
+              'Thẻ BHYT',
+              'Sổ khám bệnh',
+              'Kết quả xét nghiệm',
+              'Giấy chuyển tuyến',
+              'Đơn thuốc cũ'
+            ].map((doc) => ActionChip(
+                  label: Text(doc, style: const TextStyle(fontSize: 11, color: Color(0xFFB45309))),
+                  backgroundColor: const Color(0xFFFEF3C7),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  onPressed: () {
+                    final current = _titleController.text.trim();
+                    if (current.isEmpty) {
+                      _titleController.text = doc;
+                    } else if (!current.contains(doc)) {
+                      _titleController.text = '$current, $doc';
+                    }
+                  },
+                )).toList(),
+          ),
+        ],
         const SizedBox(height: 16),
 
         // Appointment-specific: hospital + doctor
@@ -1283,19 +1350,22 @@ class _AddTaskSheetState extends State<_AddTaskSheet>
                     final date = _type == 'appointment'
                         ? '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}'
                         : null;
-                    await widget.onAddManual(
-                      _titleController.text.trim(),
-                      _type,
-                      time,
-                      _detailsController.text.trim(),
-                      _hospitalController.text.trim().isEmpty
-                          ? null
-                          : _hospitalController.text.trim(),
-                      _doctorController.text.trim().isEmpty
-                          ? null
-                          : _doctorController.text.trim(),
-                      date,
-                    );
+                    final titles = _titleController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+                    for (var title in titles) {
+                      await widget.onAddManual(
+                        title,
+                        _type,
+                        time,
+                        _detailsController.text.trim(),
+                        _hospitalController.text.trim().isEmpty
+                            ? null
+                            : _hospitalController.text.trim(),
+                        _doctorController.text.trim().isEmpty
+                            ? null
+                            : _doctorController.text.trim(),
+                        date,
+                      );
+                    }
                     if (mounted) Navigator.pop(context);
                   },
             style: ElevatedButton.styleFrom(

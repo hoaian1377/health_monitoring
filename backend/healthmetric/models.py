@@ -9,7 +9,6 @@ class HealthMetrics(models.Model):
     blood_pressure = models.CharField(max_length=20, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
     blood_sugar = models.FloatField(blank=True, null=True)
     temperature = models.FloatField(blank=True, null=True)
-    weight = models.FloatField(blank=True, null=True)
     recorded_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:

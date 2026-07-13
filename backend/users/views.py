@@ -30,8 +30,8 @@ class LoginView(generics.CreateAPIView):
             refresh = RefreshToken.for_user(user)
             access = AccessToken.for_user(user)
 
-            # Fetch caregiver info
-            caregiver_info = {}
+            # Fetch info based on role
+            user_info = {}
             if user.role and user.role.lower() == 'caregiver':
                 try:
                     from .models import Caregiver
@@ -41,7 +41,7 @@ class LoginView(generics.CreateAPIView):
                     if caregiver.gender is not None:
                         gender_str = 'Nam' if caregiver.gender else 'Nữ'
 
-                    caregiver_info = {
+                    user_info = {
                         'fullname': caregiver.fullname,
                         'email': caregiver.email,
                         'phone': caregiver.phone,
@@ -49,6 +49,23 @@ class LoginView(generics.CreateAPIView):
                         'dob': str(caregiver.date_of_birth) if caregiver.date_of_birth else '',
                     }
                 except Caregiver.DoesNotExist:
+                    pass
+            elif user.role and user.role.lower() == 'elderly':
+                try:
+                    from .models import Elderly
+                    elderly = Elderly.objects.get(accountid=user.accountid)
+                    
+                    gender_str = ''
+                    if elderly.gender is not None:
+                        gender_str = 'Nam' if elderly.gender else 'Nữ'
+
+                    user_info = {
+                        'elderly_id': elderly.elderlyid,
+                        'fullname': elderly.fullname,
+                        'gender': gender_str,
+                        'dob': str(elderly.date_of_birthday) if elderly.date_of_birthday else '',
+                    }
+                except Elderly.DoesNotExist:
                     pass
 
             return Response({
@@ -58,7 +75,7 @@ class LoginView(generics.CreateAPIView):
                     'username': user.usename,
                     'role': user.role,
                     'created_at': user.created_at,
-                    **caregiver_info,
+                    **user_info,
                 },
                 'access_token': str(access),
                 'refresh_token': str(refresh),
@@ -76,6 +93,15 @@ class CreateElderlyView(generics.CreateAPIView):
         dob_str = request.data.get('dob') # Expected: dd/mm/yyyy
         gender_str = request.data.get('gender')
         medical_note = request.data.get('medical_note', '')
+        raw_password = request.data.get('password', '')
+        username = request.data.get('username')
+
+        if not username or not raw_password:
+            return Response({"error": "Thiếu tên đăng nhập hoặc mật khẩu"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if username exists
+        if Account.objects.filter(usename=username).exists():
+            return Response({"error": "Tên đăng nhập đã tồn tại"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             caregiver = Caregiver.objects.get(accountid=caregiver_account_id)
@@ -93,8 +119,18 @@ class CreateElderlyView(generics.CreateAPIView):
         qr_token = str(uuid.uuid4())
         from datetime import timedelta
         from django.utils import timezone as tz
+        from django.contrib.auth.hashers import make_password
+
+        # Create Account
+        account = Account.objects.create(
+            usename=username,
+            password=make_password(raw_password),
+            role='elderly',
+            created_at=tz.now()
+        )
 
         elderly = Elderly.objects.create(
+            accountid=account,
             fullname=fullname,
             date_of_birthday=dob,
             gender=is_male,
@@ -133,8 +169,6 @@ class LoginByQrView(generics.CreateAPIView):
                 "gender": "Nam" if elderly.gender else "Nu",
                 "medical_note": elderly.medical_note,
                 "blood_type": elderly.blood_type,
-                "height": elderly.height,
-                "weight": elderly.weight,
                 "allergies": elderly.allergies,
                 "underlying_conditions": elderly.underlying_conditions,
             }
@@ -164,11 +198,10 @@ class GetElderlyListView(generics.RetrieveAPIView):
                     "gender": "Nam" if e.gender else "Nu",
                     "medical_note": e.medical_note or "",
                     "blood_type": e.blood_type or "",
-                    "height": e.height,
-                    "weight": e.weight,
                     "allergies": e.allergies or "",
                     "underlying_conditions": e.underlying_conditions or "",
                     "qr_token": e.qr_token or "",
+                    "username": e.accountid.usename if e.accountid else "",
                 })
         return Response({"elderly_list": elderly_list}, status=status.HTTP_200_OK)
 
@@ -186,8 +219,6 @@ class UpdateElderlyView(generics.UpdateAPIView):
         gender_str = request.data.get('gender')
         medical_note = request.data.get('medical_note', elderly.medical_note)
         blood_type = request.data.get('blood_type', elderly.blood_type)
-        height = request.data.get('height', elderly.height)
-        weight = request.data.get('weight', elderly.weight)
         allergies = request.data.get('allergies', elderly.allergies)
         underlying_conditions = request.data.get('underlying_conditions', elderly.underlying_conditions)
 
@@ -200,10 +231,39 @@ class UpdateElderlyView(generics.UpdateAPIView):
                 pass
         if gender_str is not None:
             elderly.gender = (gender_str == 'Nam')
+        
+        raw_password = request.data.get('password')
+        raw_username = request.data.get('username')
+        
+        if elderly.accountid:
+            update_data = {}
+            if raw_password:
+                from django.contrib.auth.hashers import make_password
+                update_data['password'] = make_password(raw_password)
+            if raw_username:
+                # Check if username exists and not the same
+                if elderly.accountid.usename != raw_username and Account.objects.filter(usename=raw_username).exists():
+                    return Response({"error": "Tên đăng nhập đã tồn tại"}, status=status.HTTP_400_BAD_REQUEST)
+                update_data['usename'] = raw_username
+            if update_data:
+                Account.objects.filter(accountid=elderly.accountid.accountid).update(**update_data)
+        else:
+            if raw_username:
+                if not raw_password:
+                    return Response({"error": "Vui lòng nhập mật khẩu mới khi tạo tên đăng nhập"}, status=status.HTTP_400_BAD_REQUEST)
+                from django.utils import timezone as tz
+                from django.contrib.auth.hashers import make_password
+                if Account.objects.filter(usename=raw_username).exists():
+                    return Response({"error": "Tên đăng nhập đã tồn tại"}, status=status.HTTP_400_BAD_REQUEST)
+                new_account = Account.objects.create(
+                    usename=raw_username,
+                    password=make_password(raw_password),
+                    role='elderly',
+                    created_at=tz.now()
+                )
+                elderly.accountid = new_account
         elderly.medical_note = medical_note
         elderly.blood_type = blood_type
-        elderly.height = height
-        elderly.weight = weight
         elderly.allergies = allergies
         elderly.underlying_conditions = underlying_conditions
         elderly.save()
@@ -217,8 +277,6 @@ class UpdateElderlyView(generics.UpdateAPIView):
                 "gender": "Nam" if elderly.gender else "Nu",
                 "medical_note": elderly.medical_note,
                 "blood_type": elderly.blood_type,
-                "height": elderly.height,
-                "weight": elderly.weight,
                 "allergies": elderly.allergies,
                 "underlying_conditions": elderly.underlying_conditions,
                 "qr_token": elderly.qr_token,
@@ -305,4 +363,29 @@ class UpdateCaregiverProfileView(generics.UpdateAPIView):
                 pass
                 
         caregiver.save()
-        return Response({"message": "Cập nhật thành công"}, status=status.HTTP_200_OK)
+        return Response({"message": "Cập nhật thành công"}, status=status.HTTP_200_OK)
+
+# ── Lấy danh sách Người chăm sóc của Người cao tuổi ────────────────────────────
+class GetCaregiversForElderlyView(generics.RetrieveAPIView):
+    """GET /api/users/elderly/<int:elderly_id>/caregivers/"""
+    def get(self, request, elderly_id):
+        try:
+            from .models import Elderly, CaregiverElderly
+            elderly = Elderly.objects.get(elderlyid=elderly_id)
+        except Elderly.DoesNotExist:
+            return Response({"error": "Không tìm thấy Người cao tuổi"}, status=status.HTTP_404_NOT_FOUND)
+
+        relations = CaregiverElderly.objects.filter(elderlyid=elderly).select_related('caregiverid')
+        caregiver_list = []
+        for rel in relations:
+            c = rel.caregiverid
+            if c:
+                caregiver_list.append({
+                    "id": c.caregiverid,
+                    "fullname": c.fullname,
+                    "phone": c.phone,
+                    "email": c.email,
+                })
+        
+        return Response({"caregivers": caregiver_list}, status=status.HTTP_200_OK)
+

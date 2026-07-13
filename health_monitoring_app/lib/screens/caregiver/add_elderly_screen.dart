@@ -21,6 +21,8 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullnameCtrl = TextEditingController();
   final _medicalNoteCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
 
   String? _selectedGender;
   DateTime? _selectedDob;
@@ -35,6 +37,8 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
   void dispose() {
     _fullnameCtrl.dispose();
     _medicalNoteCtrl.dispose();
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
@@ -78,6 +82,16 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
       return;
     }
 
+    if (_usernameCtrl.text.trim().isEmpty) {
+      _showError('Vui lòng nhập tên đăng nhập');
+      return;
+    }
+
+    if (_passwordCtrl.text.trim().isEmpty) {
+      _showError('Vui lòng nhập mật khẩu bảo vệ');
+      return;
+    }
+
     setState(() => _isLoading = true);
     final dob = _dobText;
     final result = await ApiService.createElderly(
@@ -85,6 +99,8 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
       dob: dob,
       gender: _selectedGender!,
       medicalNote: _medicalNoteCtrl.text.trim(),
+      username: _usernameCtrl.text.trim(),
+      password: _passwordCtrl.text.trim(),
     );
     setState(() => _isLoading = false);
 
@@ -123,6 +139,7 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
       _createdName = null;
       _fullnameCtrl.clear();
       _medicalNoteCtrl.clear();
+      _usernameCtrl.clear();
       _selectedDob = null;
       _selectedGender = null;
     });
@@ -464,6 +481,28 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
               maxLines: 4,
             ),
           ),
+          const SizedBox(height: 20),
+
+          // ── Mật khẩu (PIN code) bảo vệ ──────────────────────────────────────────────
+          _buildSection(
+            title: 'Tài khoản Đăng nhập *',
+            child: Column(
+              children: [
+                _buildTextField(
+                  controller: _usernameCtrl,
+                  hint: 'Tên đăng nhập (VD: ong_nam_123)',
+                  icon: Icons.person_rounded,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  controller: _passwordCtrl,
+                  hint: 'Mật khẩu',
+                  icon: Icons.lock_rounded,
+                  isPassword: true,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 28),
 
           // ── Submit button ────────────────────────────────────────────────
@@ -774,6 +813,7 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
     required IconData icon,
     int maxLines = 1,
     TextCapitalization capitalization = TextCapitalization.none,
+    bool isPassword = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -789,6 +829,9 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
       ),
       child: TextField(
         controller: controller,
+        obscureText: isPassword,
+        enableSuggestions: !isPassword,
+        autocorrect: !isPassword,
         maxLines: maxLines,
         textCapitalization: capitalization,
         style: const TextStyle(

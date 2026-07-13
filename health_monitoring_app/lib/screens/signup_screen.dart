@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../utils/api_service.dart';
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -274,6 +275,12 @@ class _SignupScreenState extends State<SignupScreen> {
                                     if (value == null || value.isEmpty) {
                                       return 'Vui lòng nhập email';
                                     }
+                                    final emailRegex = RegExp(
+                                      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                                    );
+                                    if (!emailRegex.hasMatch(value.trim())) {
+                                      return 'Email không đúng định dạng (VD: ten@gmail.com)';
+                                    }
                                     return null;
                                   },
                                 ),
@@ -283,17 +290,28 @@ class _SignupScreenState extends State<SignupScreen> {
                                 TextFormField(
                                   controller: _phoneController,
                                   keyboardType: TextInputType.phone,
+                                  maxLength: 11,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
                                   decoration: _buildInputDecoration(
                                     labelText: 'Số điện thoại',
-                                    hintText: 'Nhập số điện thoại',
+                                    hintText: 'Nhập số điện thoại (VD: 0901234567)',
                                     icon: Icons.phone_iphone_rounded,
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Vui lòng nhập số điện thoại';
                                     }
-                                    if (value.length < 9) {
-                                      return 'Số điện thoại phải từ 9-11 số';
+                                    final digitsOnly = value.replaceAll(RegExp(r'\D'), '');
+                                    if (digitsOnly.length != value.trim().length) {
+                                      return 'Số điện thoại chỉ được chứa chữ số';
+                                    }
+                                    if (digitsOnly.length < 10 || digitsOnly.length > 11) {
+                                      return 'Số điện thoại phải có 10-11 chữ số';
+                                    }
+                                    if (!digitsOnly.startsWith('0')) {
+                                      return 'Số điện thoại phải bắt đầu bằng số 0';
                                     }
                                     return null;
                                   },
@@ -324,8 +342,20 @@ class _SignupScreenState extends State<SignupScreen> {
                                     if (value == null || value.isEmpty) {
                                       return 'Vui lòng nhập mật khẩu';
                                     }
-                                    if (value.length < 6) {
-                                      return 'Mật khẩu phải từ 6 ký tự';
+                                    if (value.length < 8) {
+                                      return 'Mật khẩu phải có ít nhất 8 ký tự';
+                                    }
+                                    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                                      return 'Mật khẩu phải có ít nhất 1 chữ in hoa';
+                                    }
+                                    if (!RegExp(r'[a-z]').hasMatch(value)) {
+                                      return 'Mật khẩu phải có ít nhất 1 chữ in thường';
+                                    }
+                                    if (!RegExp(r'[0-9]').hasMatch(value)) {
+                                      return 'Mật khẩu phải có ít nhất 1 chữ số';
+                                    }
+                                    if (!RegExp(r'[!@#\$%\^&\*\(\)_\+\-=\[\]\{\};:,.<>?/\\|`~]').hasMatch(value)) {
+                                      return 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt (!@#\$%...)';
                                     }
                                     return null;
                                   },

@@ -23,30 +23,32 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   bool _isLoadingMedications = true;
   Set<int> _takenScheduleIds = {};
 
+  late String _selectedMedFilter;
+
+  String _getCurrentSessionFilter() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 11) {
+      return 'Sáng';
+    } else if (hour >= 11 && hour < 15) {
+      return 'Trưa';
+    } else {
+      return 'Chiều/Tối';
+    }
+  }
+
   String _getMedicationSession(String timeStr) {
-    if (timeStr.isEmpty || timeStr == '--:--') return 'Buổi chiều/tối';
+    if (timeStr.isEmpty || timeStr == '--:--') return 'Khác';
     try {
       final hour = int.parse(timeStr.split(':')[0]);
-      if (hour < 12) {
+      if (hour >= 5 && hour < 11) {
         return 'Buổi sáng';
-      } else if (hour >= 12 && hour < 15) {
+      } else if (hour >= 11 && hour < 15) {
         return 'Buổi trưa';
       } else {
         return 'Buổi chiều/tối';
       }
     } catch (_) {
-      return 'Buổi chiều/tối';
-    }
-  }
-
-  String _getActiveSessionByTime() {
-    final currentHour = DateTime.now().hour;
-    if (currentHour < 10) {
-      return 'Buổi sáng';
-    } else if (currentHour >= 10 && currentHour < 15) {
-      return 'Buổi trưa';
-    } else {
-      return 'Buổi chiều/tối';
+      return 'Khác';
     }
   }
 
@@ -83,6 +85,7 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
   @override
   void initState() {
     super.initState();
+    _selectedMedFilter = _getCurrentSessionFilter();
     _loadMedications();
     _pulseController = AnimationController(
       vsync: this,
@@ -1149,14 +1152,12 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       );
     }
 
-    // Xác định buổi hoạt động dựa trên giờ hiện tại
-    final activeSession = _getActiveSessionByTime();
-
-    // Phân chia danh sách thuốc theo 3 buổi: Sáng, Trưa, Chiều/Tối
+    // Phân chia danh sách thuốc theo 3 buổi: Sáng, Trưa/Chiều, Tối
     final Map<String, List<dynamic>> sessionSchedules = {
       'Buổi sáng': [],
       'Buổi trưa': [],
       'Buổi chiều/tối': [],
+      'Khác': [],
     };
 
     for (var schedule in _medicationSchedules) {
@@ -1165,109 +1166,44 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
       if (sessionSchedules.containsKey(session)) {
         sessionSchedules[session]!.add(schedule);
       } else {
-        sessionSchedules['Buổi chiều/tối']!.add(schedule);
+        sessionSchedules['Khác']!.add(schedule);
       }
     }
 
-    final schedules = sessionSchedules[activeSession]!;
-    
-    // Xác định icon và màu sắc cho buổi hoạt động
-    IconData sessionIcon;
-    Color sessionColor;
-    if (activeSession == 'Buổi sáng') {
-      sessionIcon = Icons.wb_sunny_rounded;
-      sessionColor = const Color(0xFFD97706); // Màu hổ phách/cam đậm
-    } else if (activeSession == 'Buổi trưa') {
-      sessionIcon = Icons.wb_cloudy_rounded;
-      sessionColor = const Color(0xFF0EA5E9); // Màu xanh da trời
-    } else {
-      sessionIcon = Icons.nights_stay_rounded;
-      sessionColor = const Color(0xFF4F46E5); // Màu chàm/tối
-    }
-
-    // Nhóm các thuốc trong buổi theo giờ uống cụ thể
-    final Map<String, List<dynamic>> groupedByTime = {};
-    for (var schedule in schedules) {
-      final String time = schedule['time'] ?? '00:00';
-      if (!groupedByTime.containsKey(time)) {
-        groupedByTime[time] = [];
-      }
-      groupedByTime[time]!.add(schedule);
-    }
-    final sortedTimes = groupedByTime.keys.toList()..sort();
+    final filteredGroups = sessionSchedules.entries.where((e) {
+      if (e.value.isEmpty) return false;
+      if (_selectedMedFilter == 'Tất cả') return true;
+      if (_selectedMedFilter == 'Sáng') return e.key == 'Buổi sáng';
+      if (_selectedMedFilter == 'Trưa') return e.key == 'Buổi trưa';
+      if (_selectedMedFilter == 'Chiều/Tối') return e.key == 'Buổi chiều/tối';
+      return false;
+    }).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header của buổi hiện tại (Hiển thị tên buổi và SỐ LƯỢNG LIST THUỐC)
+        // Tabs Lọc
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: sessionColor.withOpacity(0.3),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: sessionColor.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: sessionColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(sessionIcon, color: sessionColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    activeSession,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: sessionColor,
-                    ),
-                  ),
-                ),
-                // HIỆN SỐ LƯỢNG LIST THUỐC
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: sessionColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${schedules.length} thuốc',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: sessionColor,
-                    ),
-                  ),
-                ),
+                _buildFilterTab('Tất cả', _medicationSchedules.length),
+                _buildFilterTab('Sáng', sessionSchedules['Buổi sáng']!.length),
+                _buildFilterTab('Trưa', sessionSchedules['Buổi trưa']!.length),
+                _buildFilterTab('Chiều/Tối', sessionSchedules['Buổi chiều/tối']!.length),
               ],
             ),
           ),
         ),
         
-        // Danh sách thuốc
-        if (schedules.isEmpty)
+        if (filteredGroups.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
             child: Center(
               child: Text(
-                'Bác không có lịch uống thuốc nào trong $activeSession.',
+                'Bác không có lịch uống thuốc nào trong khoảng thời gian này.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -1278,7 +1214,118 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
             ),
           )
         else
-          ...sortedTimes.map((time) {
+          ...filteredGroups.map((groupEntry) {
+            final activeSession = groupEntry.key;
+            final schedules = groupEntry.value;
+
+            // Xác định icon và màu sắc cho buổi hoạt động
+            IconData sessionIcon;
+            Color sessionColor;
+            if (activeSession == 'Buổi sáng') {
+              sessionIcon = Icons.wb_sunny_rounded;
+              sessionColor = const Color(0xFFD97706); // Màu hổ phách/cam đậm
+            } else if (activeSession == 'Buổi trưa') {
+              sessionIcon = Icons.wb_cloudy_rounded;
+              sessionColor = const Color(0xFF0EA5E9); // Màu xanh da trời
+            } else {
+              sessionIcon = Icons.nights_stay_rounded;
+              sessionColor = const Color(0xFF4F46E5); // Màu chàm/tối
+            }
+
+            // Nhóm các thuốc trong buổi theo giờ uống cụ thể
+            final Map<String, List<dynamic>> groupedByTime = {};
+            for (var schedule in schedules) {
+              final String time = schedule['time'] ?? '00:00';
+              if (!groupedByTime.containsKey(time)) {
+                groupedByTime[time] = [];
+              }
+              groupedByTime[time]!.add(schedule);
+            }
+            final sortedTimes = groupedByTime.keys.toList()..sort();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header của buổi hiện tại (Hiển thị tên buổi và SỐ LƯỢNG LIST THUỐC)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: sessionColor.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: sessionColor.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: sessionColor.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(sessionIcon, color: sessionColor, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            activeSession,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: sessionColor,
+                            ),
+                          ),
+                        ),
+                        // HIỆN SỐ LƯỢNG LIST THUỐC
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: sessionColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${schedules.length} thuốc',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: sessionColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // Danh sách thuốc
+                if (schedules.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'Bác không có lịch uống thuốc nào trong $activeSession.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade500,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  ...sortedTimes.map((time) {
             final List<dynamic> schedulesAtTime = groupedByTime[time]!;
             return Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -1493,7 +1540,61 @@ class _ElderlyHomeScreenState extends State<ElderlyHomeScreen>
               ),
             );
           }),
+              ],
+            );
+          }),
       ],
+    );
+  }
+
+  Widget _buildFilterTab(String label, int count) {
+    final isSelected = _selectedMedFilter == label;
+    final color = isSelected ? const Color(0xFF0EA5E9) : const Color(0xFF64748B);
+    final bgColor = isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9);
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedMedFilter = label;
+        });
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFBAE6FD) : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

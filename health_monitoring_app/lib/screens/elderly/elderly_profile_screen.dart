@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'elderly_emergency_contacts_screen.dart';
 import '../login_screen.dart';
 import 'elderly_change_password_screen.dart';
@@ -13,13 +14,22 @@ class ElderlyProfileScreen extends StatefulWidget {
 
 class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
   // ─── SOS Bottom Sheet ───────────────────────────────────────────────────────
-  void _showSOSSheet() {
-    showModalBottomSheet(
+  void _showSOSSheet() async {
+    showDialog(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => const _ElderlySOSBottomSheet(),
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
+    final caregivers = await ApiService.getCaregiversForElderly();
+    if (mounted) {
+      Navigator.pop(context); // close loading
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (_) => _ElderlySOSBottomSheet(caregivers: caregivers),
+      );
+    }
   }
 
   // ─── Logout Dialog ──────────────────────────────────────────────────────────
@@ -493,28 +503,25 @@ class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
 
 // ─── Elderly SOS Bottom Sheet ─────────────────────────────────────────────────
 class _ElderlySOSBottomSheet extends StatelessWidget {
-  const _ElderlySOSBottomSheet();
-
-  static const _contacts = [
-    _SOSContact(
-        name: 'Nguyễn Thị Bình',
-        role: 'Con gái',
-        phone: '0901 234 567',
-        isEmergency: false),
-    _SOSContact(
-        name: 'Trần Văn C',
-        role: 'Người chăm sóc',
-        phone: '0912 345 678',
-        isEmergency: false),
-    _SOSContact(
-        name: 'Cấp cứu',
-        role: 'Khẩn cấp',
-        phone: '115',
-        isEmergency: true),
-  ];
+  final List<Map<String, dynamic>> caregivers;
+  const _ElderlySOSBottomSheet({required this.caregivers});
 
   @override
   Widget build(BuildContext context) {
+    // Thêm các số liên lạc khẩn cấp mặc định vào cuối
+    List<_SOSContact> allContacts = caregivers.map((c) => _SOSContact(
+      name: c['fullname'] ?? 'Người chăm sóc',
+      role: 'Người chăm sóc',
+      phone: c['phone'] ?? '',
+      isEmergency: false,
+    )).toList();
+
+    allContacts.add(const _SOSContact(
+        name: 'Cấp cứu',
+        role: 'Khẩn cấp',
+        phone: '115',
+        isEmergency: true));
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -566,7 +573,7 @@ class _ElderlySOSBottomSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          ..._contacts.map((c) => _buildContactRow(context, c)),
+          ...allContacts.map((c) => _buildContactRow(context, c)),
         ],
       ),
     );
@@ -622,13 +629,33 @@ class _ElderlySOSBottomSheet extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                backgroundColor: const Color(0xFF16A34A),
-                content: Text('Đang gọi ${c.phone}...'),
-                duration: const Duration(seconds: 2),
-              ));
+              // Gửi notification tới người chăm sóc
+              ApiService.sendSOSNotification();
+
+              // Gọi điện bằng url_launcher
+              final Uri phoneUri = Uri(
+                scheme: 'tel',
+                path: c.phone.replaceAll(' ', ''),
+              );
+              try {
+                if (await canLaunchUrl(phoneUri)) {
+                  await launchUrl(phoneUri);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    backgroundColor: const Color(0xFFEF4444),
+                    content: Text('Không thể gọi số ${c.phone}'),
+                    duration: const Duration(seconds: 2),
+                  ));
+                }
+              } catch (_) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  backgroundColor: const Color(0xFFEF4444),
+                  content: Text('Thiết bị không hỗ trợ gọi điện'),
+                  duration: const Duration(seconds: 2),
+                ));
+              }
             },
             child: Container(
               width: 44,
@@ -648,7 +675,9 @@ class _ElderlySOSBottomSheet extends StatelessWidget {
 }
 
 class _SOSContact {
-  final String name, role, phone;
+  final String name;
+  final String role;
+  final String phone;
   final bool isEmergency;
   const _SOSContact(
       {required this.name,

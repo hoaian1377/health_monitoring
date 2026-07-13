@@ -508,6 +508,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
   bool _isEditing = false;
   late TextEditingController _fullnameCtrl;
   late TextEditingController _medNoteCtrl;
+  late TextEditingController _usernameCtrl;
+  late TextEditingController _passwordCtrl;
   String? _selectedGender;
   DateTime? _selectedDob;
   bool _isSaving = false;
@@ -520,6 +522,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
         TextEditingController(text: widget.elderly['fullname'] ?? '');
     _medNoteCtrl =
         TextEditingController(text: widget.elderly['medical_note'] ?? '');
+    _usernameCtrl = TextEditingController(text: widget.elderly['username'] ?? '');
+    _passwordCtrl = TextEditingController();
     _selectedGender = widget.elderly['gender'];
     // parse dob yyyy-MM-dd
     final dobStr = widget.elderly['dob'] as String?;
@@ -539,6 +543,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
     _tabController.dispose();
     _fullnameCtrl.dispose();
     _medNoteCtrl.dispose();
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
@@ -589,6 +595,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
       dob: _dobForApi,
       gender: _selectedGender ?? '',
       medicalNote: _medNoteCtrl.text.trim(),
+      password: _passwordCtrl.text.trim(),
+      username: _usernameCtrl.text.trim(),
     );
     setState(() => _isSaving = false);
     if (!mounted) return;
@@ -1043,6 +1051,51 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
                   widget.elderly['medical_note']?.isNotEmpty == true
                       ? widget.elderly['medical_note']
                       : 'Chưa có ghi chú'),
+          const Divider(height: 1, indent: 60, color: Color(0xFFF1F5F9)),
+
+          // Tên đăng nhập
+          _isEditing
+              ? (widget.elderly['username']?.isNotEmpty == true
+                  ? _infoRowView(
+                      Icons.account_circle_rounded,
+                      const Color(0xFFE0E7FF),
+                      const Color(0xFF4F46E5),
+                      'Tên đăng nhập',
+                      widget.elderly['username'],
+                    )
+                  : _editFieldRow(
+                      icon: Icons.account_circle_rounded,
+                      iconBg: const Color(0xFFE0E7FF),
+                      label: 'Tên đăng nhập',
+                      controller: _usernameCtrl,
+                      hint: 'Nhập tên đăng nhập',
+                    ))
+              : _infoRowView(
+                  Icons.account_circle_rounded,
+                  const Color(0xFFE0E7FF),
+                  const Color(0xFF4F46E5),
+                  'Tên đăng nhập',
+                  widget.elderly['username']?.isNotEmpty == true
+                      ? widget.elderly['username']
+                      : 'Chưa có tên đăng nhập'),
+          const Divider(height: 1, indent: 60, color: Color(0xFFF1F5F9)),
+
+          // Đổi mật khẩu
+          if (_isEditing)
+            _editFieldRow(
+              icon: Icons.lock_outline_rounded,
+              iconBg: const Color(0xFFFEE2E2),
+              label: 'Đổi mật khẩu mới',
+              controller: _passwordCtrl,
+              hint: 'Bỏ trống nếu không muốn đổi',
+            )
+          else
+            _infoRowView(
+                Icons.lock_rounded,
+                const Color(0xFFFEE2E2),
+                const Color(0xFFDC2626),
+                'Mật khẩu',
+                'Đã thiết lập (Bảo mật)'),
         ],
       ),
     );

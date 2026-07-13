@@ -18,7 +18,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _bpDia = '--';
   String _heartRate = '--';
   String _bloodSugar = '--';
-  String _weight = '--';
   String _temperature = '--';
 
   // Elderly
@@ -37,7 +36,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    ApiService.dataRefreshTrigger.addListener(_onDataChanged);
     _loadElderlyThenMetrics();
+  }
+
+  void _onDataChanged() {
+    if (mounted) {
+      _loadElderlyThenMetrics();
+    }
+  }
+
+  @override
+  void dispose() {
+    ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
+    super.dispose();
   }
 
   Map<String, dynamic>? _nextAppointment;
@@ -74,7 +86,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           bool foundBp = false;
           bool foundSugar = false;
           bool foundTemp = false;
-          bool foundWeight = false;
 
           for (var item in data) {
             if (!foundHr && item['heart_rate'] != null) {
@@ -96,10 +107,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             if (!foundTemp && item['temperature'] != null) {
               _temperature = item['temperature'].toString();
               foundTemp = true;
-            }
-            if (!foundWeight && item['weight'] != null) {
-              _weight = item['weight'].toString();
-              foundWeight = true;
             }
           }
         }
@@ -130,10 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
+
 
   // ── Bottom sheet nhập / sửa chỉ số ─────────────────────────────────────────
   void _showMetricsSheet() {
@@ -141,7 +145,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final bpDiaCtrl = TextEditingController(text: _bpDia);
     final heartCtrl = TextEditingController(text: _heartRate);
     final sugarCtrl = TextEditingController(text: _bloodSugar);
-    final weightCtrl = TextEditingController(text: _weight);
     final tempCtrl = TextEditingController(text: _temperature);
 
     showModalBottomSheet(
@@ -263,48 +266,17 @@ class _DashboardScreenState extends State<DashboardScreen>
                 Icons.water_drop_outlined,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _sheetSection(
-                          'Cân Nặng',
-                          Icons.scale_rounded,
-                          const Color(0xFF7C3AED),
-                        ),
-                        const SizedBox(height: 10),
-                        _inputField(
-                          'Cân nặng',
-                          weightCtrl,
-                          'kg',
-                          Icons.scale_outlined,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _sheetSection(
-                          'Nhiệt Độ',
-                          Icons.thermostat_rounded,
-                          const Color(0xFFEA580C),
-                        ),
-                        const SizedBox(height: 10),
-                        _inputField(
-                          'Nhiệt độ',
-                          tempCtrl,
-                          '°C',
-                          Icons.thermostat_outlined,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              _sheetSection(
+                'Nhiệt Độ',
+                Icons.thermostat_rounded,
+                const Color(0xFFEA580C),
+              ),
+              const SizedBox(height: 10),
+              _inputField(
+                'Nhiệt độ',
+                tempCtrl,
+                '°C',
+                Icons.thermostat_outlined,
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -329,9 +301,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _bloodSugar = sugarCtrl.text.isEmpty
                           ? _bloodSugar
                           : sugarCtrl.text;
-                      _weight = weightCtrl.text.isEmpty
-                          ? _weight
-                          : weightCtrl.text;
                       _temperature = tempCtrl.text.isEmpty
                           ? _temperature
                           : tempCtrl.text;
@@ -344,7 +313,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                         bloodPressure: '$_bpSys/$_bpDia',
                         bloodSugar: double.tryParse(_bloodSugar),
                         temperature: double.tryParse(_temperature),
-                        weight: double.tryParse(_weight),
                       );
                     }
 
@@ -647,8 +615,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                   const SizedBox(height: 12),
 
-                  // Hàng 3: Cân nặng (full width hoặc có thể thêm BMI)
-                  _buildWeightCard(),
+
 
                   const SizedBox(height: 24),
 
@@ -989,113 +956,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // ── Cân nặng + BMI card ────────────────────────────────────────────────────
-  Widget _buildWeightCard() {
-    final w = double.tryParse(_weight) ?? 62.0;
-    // BMI giả định chiều cao 1.65m
-    final bmi = w / (1.65 * 1.65);
-    String bmiStatus;
-    Color bmiColor;
-    if (bmi < 18.5) {
-      bmiStatus = 'Thiếu cân';
-      bmiColor = const Color(0xFF0284C7);
-    } else if (bmi < 25) {
-      bmiStatus = 'Bình thường';
-      bmiColor = const Color(0xFF16A34A);
-    } else if (bmi < 30) {
-      bmiStatus = 'Thừa cân';
-      bmiColor = const Color(0xFFD97706);
-    } else {
-      bmiStatus = 'Béo phì';
-      bmiColor = const Color(0xFFDC2626);
-    }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF7C3AED).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.scale_rounded,
-              color: Color(0xFF7C3AED),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Cân nặng',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF64748B),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                '${_weight} kg',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text(
-                'BMI (est.)',
-                style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-              ),
-              Text(
-                bmi.toStringAsFixed(1),
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: bmiColor,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: bmiColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  bmiStatus,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: bmiColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Biểu đồ sử dụng thuốc ─────────────────────────────────────────────────────
   Widget _buildMedicationChart() {

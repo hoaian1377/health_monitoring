@@ -28,7 +28,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     'Huyết áp',
     'Nhịp tim',
     'Đường huyết',
-    'Cân nặng',
     'Nhiệt độ',
   ];
 
@@ -50,7 +49,14 @@ class _HistoryScreenState extends State<HistoryScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    ApiService.dataRefreshTrigger.addListener(_onDataChanged);
     _fetchTreatmentHistory();
+  }
+
+  void _onDataChanged() {
+    if (mounted) {
+      _fetchTreatmentHistory();
+    }
   }
 
   Future<void> _fetchTreatmentHistory() async {
@@ -86,6 +92,7 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   @override
   void dispose() {
+    ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     _tabController.dispose();
     _hospitalController.dispose();
     _doctorController.dispose();
@@ -524,11 +531,6 @@ class _HistoryScreenState extends State<HistoryScreen>
                 ic = Icons.thermostat_rounded;
                 icC = const Color(0xFFEA580C);
                 bgC = const Color(0xFFFFEDD5);
-              } else if (_selectedChartMetric == 'Cân nặng') {
-                valStr = '${item['weight'] ?? '--'} kg';
-                ic = Icons.monitor_weight_rounded;
-                icC = const Color(0xFF7C3AED);
-                bgC = const Color(0xFFEDE9FE);
               }
 
               String dateStr = item['recorded_at']?.toString() ?? '';
@@ -2065,8 +2067,6 @@ class _HistoryScreenState extends State<HistoryScreen>
     switch (_selectedChartMetric) {
       case 'Nhịp tim':
         chartColor = const Color(0xFFE11D48);
-        minY = 50;
-        maxY = 150;
         for (int i = 0; i < dataToUse.length; i++) {
           final val =
               double.tryParse(dataToUse[i]['heart_rate']?.toString() ?? '0') ??
@@ -2076,8 +2076,6 @@ class _HistoryScreenState extends State<HistoryScreen>
         break;
       case 'Đường huyết':
         chartColor = const Color(0xFF0284C7);
-        minY = 3.0;
-        maxY = 15.0;
         for (int i = 0; i < dataToUse.length; i++) {
           final val =
               double.tryParse(dataToUse[i]['blood_sugar']?.toString() ?? '0') ??
@@ -2085,20 +2083,9 @@ class _HistoryScreenState extends State<HistoryScreen>
           spots.add(FlSpot(i.toDouble(), val));
         }
         break;
-      case 'Cân nặng':
-        chartColor = const Color(0xFF7C3AED);
-        minY = 40.0;
-        maxY = 100.0;
-        for (int i = 0; i < dataToUse.length; i++) {
-          final val =
-              double.tryParse(dataToUse[i]['weight']?.toString() ?? '0') ?? 0;
-          spots.add(FlSpot(i.toDouble(), val));
-        }
-        break;
+
       case 'Nhiệt độ':
         chartColor = const Color(0xFFEA580C);
-        minY = 35.0;
-        maxY = 42.0;
         for (int i = 0; i < dataToUse.length; i++) {
           final val =
               double.tryParse(dataToUse[i]['temperature']?.toString() ?? '0') ??
@@ -2109,14 +2096,28 @@ class _HistoryScreenState extends State<HistoryScreen>
       case 'Huyết áp':
       default:
         chartColor = const Color(0xFFDC2626);
-        minY = 80;
-        maxY = 200;
         for (int i = 0; i < dataToUse.length; i++) {
           final bpStr = dataToUse[i]['blood_pressure']?.toString() ?? '120/80';
           final sys = double.tryParse(bpStr.split('/')[0]) ?? 120;
           spots.add(FlSpot(i.toDouble(), sys)); // Using systolic for chart
         }
         break;
+    }
+
+    if (spots.isNotEmpty) {
+      minY = spots.map((e) => e.y).reduce((a, b) => a < b ? a : b);
+      maxY = spots.map((e) => e.y).reduce((a, b) => a > b ? a : b);
+      if (minY == maxY) {
+        minY -= 10;
+        maxY += 10;
+      } else {
+        double padding = (maxY - minY) * 0.2;
+        minY -= padding;
+        maxY += padding;
+      }
+      if (minY < 0 && _selectedChartMetric != 'Nhiệt độ') {
+        minY = 0;
+      }
     }
 
     double maxX = (dataToUse.length - 1).toDouble();
@@ -2140,7 +2141,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                 reservedSize: 40,
                 getTitlesWidget: (value, meta) {
                   return Text(
-                    value.toInt().toString(),
+                    value.toStringAsFixed(1).replaceAll('.0', ''),
                     style: const TextStyle(fontSize: 10, color: Colors.grey),
                   );
                 },
@@ -2156,7 +2157,7 @@ class _HistoryScreenState extends State<HistoryScreen>
               sideTitles: SideTitles(
                 showTitles: true,
                 interval: 1,
-                reservedSize: 30,
+                reservedSize: 36,
                 getTitlesWidget: (value, meta) {
                   int idx = value.toInt();
                   if (idx >= 0 && idx < dataToUse.length) {
@@ -2165,12 +2166,14 @@ class _HistoryScreenState extends State<HistoryScreen>
                       try {
                         final date = DateTime.parse(dateStr).toLocal();
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
+                          padding: const EdgeInsets.only(top: 6.0),
                           child: Text(
-                            '${date.day}/${date.month}',
+                            '${date.day}/${date.month}\n${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.grey,
+                              height: 1.2,
                             ),
                           ),
                         );

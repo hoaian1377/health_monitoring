@@ -1,5 +1,9 @@
 from django.urls import path
-from .views import RegisterView, LoginView, CreateElderlyView, LoginByQrView, GetElderlyListView, UpdateElderlyView, ChangePasswordView, ForgotPasswordView, UpdateCaregiverProfileView
+from .views import (
+    RegisterView, LoginView, CreateElderlyView, LoginByQrView, 
+    GetElderlyListView, UpdateElderlyView, ChangePasswordView, 
+    ForgotPasswordView, UpdateCaregiverProfileView, GetCaregiversForElderlyView
+)
 
 urlpatterns = [
     path('register/', RegisterView.as_view()),
@@ -7,6 +11,7 @@ urlpatterns = [
     path('elderly/', CreateElderlyView.as_view()),
     path('elderly-list/', GetElderlyListView.as_view()),
     path('elderly/<int:elderly_id>/update/', UpdateElderlyView.as_view()),
+    path('elderly/<int:elderly_id>/caregivers/', GetCaregiversForElderlyView.as_view()),
     path('login-qr/', LoginByQrView.as_view()),
     path('change-password/', ChangePasswordView.as_view()),
     path('forgot-password/', ForgotPasswordView.as_view()),

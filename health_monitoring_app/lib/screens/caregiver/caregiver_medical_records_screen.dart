@@ -395,8 +395,6 @@ class MedicalProfileScreen extends StatefulWidget {
 class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
   bool _isLoading = true;
   String _bloodType = 'N/A';
-  double _height = 0;
-  double _weight = 0;
   List<String> _conditions = [];
   List<String> _allergies = [];
   Map<String, dynamic>? _currentElderly;
@@ -419,8 +417,6 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
           setState(() {
             _currentElderly = elderly;
             _bloodType = elderly['blood_type']?.toString().isNotEmpty == true ? elderly['blood_type'] : 'N/A';
-            _height = (elderly['height'] as num?)?.toDouble() ?? 0;
-            _weight = (elderly['weight'] as num?)?.toDouble() ?? 0;
             
             final condStr = elderly['underlying_conditions']?.toString() ?? '';
             _conditions = condStr.isNotEmpty ? condStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() : [];
@@ -434,29 +430,7 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  double get _bmi {
-    if (_height > 0 && _weight > 0) {
-      final h = _height / 100;
-      return _weight / (h * h);
-    }
-    return 0;
-  }
 
-  String get _bmiLabel {
-    if (_bmi == 0) return 'N/A';
-    if (_bmi < 18.5) return 'Thiếu cân';
-    if (_bmi < 25) return 'Bình thường';
-    if (_bmi < 30) return 'Thừa cân';
-    return 'Béo phì';
-  }
-
-  Color get _bmiColor {
-    if (_bmi == 0) return const Color(0xFF94A3B8);
-    if (_bmi < 18.5) return const Color(0xFFD97706);
-    if (_bmi < 25) return const Color(0xFF16A34A);
-    if (_bmi < 30) return const Color(0xFFEA580C);
-    return const Color(0xFFC81E1E);
-  }
 
   void _showAddConditionDialog() {
     final ctrl = TextEditingController();
@@ -490,8 +464,6 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                   gender: _currentElderly!['gender'],
                   medicalNote: _currentElderly!['medical_note'] ?? '',
                   bloodType: _bloodType,
-                  height: _height,
-                  weight: _weight,
                   allergies: _allergies.join(', '),
                   underlyingConditions: _conditions.join(', '),
                 );
@@ -540,8 +512,6 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                   gender: _currentElderly!['gender'],
                   medicalNote: _currentElderly!['medical_note'] ?? '',
                   bloodType: _bloodType,
-                  height: _height,
-                  weight: _weight,
                   allergies: _allergies.join(', '),
                   underlyingConditions: _conditions.join(', '),
                 );
@@ -631,63 +601,6 @@ class _MedicalProfileScreenState extends State<MedicalProfileScreen> {
                   children: [
                     _infoTile('🩸', 'Nhóm máu', _bloodType,
                         const Color(0xFFFFEBEB), const Color(0xFFC81E1E)),
-                    _divider(),
-                    _infoTile('📏', 'Chiều cao', '$_height cm',
-                        const Color(0xFFEBF3FF), const Color(0xFF0EA5E9)),
-                    _divider(),
-                    _infoTile('⚖️', 'Cân nặng', '$_weight kg',
-                        const Color(0xFFFFF4E6), const Color(0xFFEA580C)),
-                    _divider(),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 13),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE6FBF3),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Text('📊',
-                                style: TextStyle(fontSize: 16)),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                const Text('BMI',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF94A3B8))),
-                                Text(_bmi.toStringAsFixed(1),
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF1E293B))),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _bmiColor.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(_bmiLabel,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: _bmiColor)),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),

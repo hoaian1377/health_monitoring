@@ -114,12 +114,22 @@ class _ElderlyNotificationsScreenState
     }
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      for (var item in _notifications) {
-        item.isRead = true;
+  Future<void> _markAllAsRead() async {
+    for (var item in _notifications) {
+      if (!item.isRead) {
+        try {
+          final id = int.parse(item.id);
+          await ApiService.markNotificationRead(id);
+        } catch (_) {}
       }
-    });
+    }
+    if (mounted) {
+      setState(() {
+        for (var item in _notifications) {
+          item.isRead = true;
+        }
+      });
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         backgroundColor: Color(0xFF0284C7),
@@ -318,10 +328,18 @@ class _ElderlyNotificationsScreenState
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () {
-                setState(() {
-                  item.isRead = !item.isRead;
-                });
+              onTap: () async {
+                if (!item.isRead) {
+                  try {
+                    final id = int.parse(item.id);
+                    await ApiService.markNotificationRead(id);
+                  } catch (_) {}
+                  if (mounted) {
+                    setState(() {
+                      item.isRead = true;
+                    });
+                  }
+                }
                 if (item.onTapAction != null) {
                   item.onTapAction!();
                 }

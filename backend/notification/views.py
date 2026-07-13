@@ -1,4 +1,5 @@
 from rest_framework import generics, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Notification, NotificationDetail
 from .serializers import NotificationSerializer, NotificationDetailSerializer
@@ -103,4 +104,37 @@ class NotifyMissedMedicationView(generics.CreateAPIView):
         NotificationDetail.objects.create(notificationid=notif, is_read=False)
 
         return Response({"message": "Đã gửi thông báo quên uống thuốc cho Caregiver!"}, status=status.HTTP_201_CREATED)
+
+class SendSOSView(APIView):
+    """POST /api/notification/send-sos/"""
+    def post(self, request):
+        elderly_id = request.data.get('elderly_id')
+        if not elderly_id:
+            return Response({"error": "Thiếu elderly_id"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from users.models import Elderly, CaregiverElderly
+            elderly = Elderly.objects.get(elderlyid=elderly_id)
+        except Exception:
+            return Response({"error": "Người cao tuổi không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
+            
+        relations = CaregiverElderly.objects.filter(elderlyid=elderly)
+        if not relations.exists():
+            return Response({"error": "Không có Caregiver nào liên kết"}, status=status.HTTP_404_NOT_FOUND)
+            
+        count = 0
+        for rel in relations:
+            caregiver = rel.caregiverid
+            if caregiver:
+                notif = Notification.objects.create(
+                    caregiverid=caregiver,
+                    elderlyid=elderly,
+                    title="CẢNH BÁO KHẨN CẤP (SOS)",
+                    message=f"Bác {elderly.fullname} vừa nhấn nút GỌI KHẨN CẤP. Hãy liên lạc ngay lập tức!",
+                    created_at=datetime.datetime.now()
+                )
+                NotificationDetail.objects.create(notificationid=notif, is_read=False)
+                count += 1
+                
+        return Response({"message": f"Đã gửi thông báo SOS tới {count} Caregiver(s)"}, status=status.HTTP_201_CREATED)
 

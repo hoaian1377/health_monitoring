@@ -24,6 +24,13 @@ class ApiService {
   static String currentDob = '';
   static String currentGender = '';
 
+  // Trigger for refreshing data across tabs (e.g. medications, appointments)
+  static final ValueNotifier<int> dataRefreshTrigger = ValueNotifier<int>(0);
+
+  static void notifyDataChanged() {
+    dataRefreshTrigger.value++;
+  }
+
   // ================= REGISTER =================
   static Future<bool> register({
     required String username,
@@ -86,6 +93,9 @@ class ApiService {
           currentPhone = data["user"]["phone"] ?? '';
           currentDob = data["user"]["dob"] ?? '';
           currentGender = data["user"]["gender"] ?? '';
+          if (currentRole == 'elderly') {
+            currentAccountId = data["user"]["elderly_id"] ?? currentAccountId;
+          }
         }
         return {"success": true, "data": data};
       } else {
@@ -106,6 +116,8 @@ class ApiService {
     required String dob,
     required String gender,
     required String medicalNote,
+    required String username,
+    required String password,
   }) async {
     final url = Uri.parse("$baseUrl/api/users/elderly/");
 
@@ -119,6 +131,8 @@ class ApiService {
           "dob": dob,
           "gender": gender,
           "medical_note": medicalNote,
+          "username": username,
+          "password": password,
         }),
       );
 
@@ -165,27 +179,33 @@ class ApiService {
     required String gender,
     required String medicalNote,
     String? bloodType,
-    double? height,
-    double? weight,
     String? allergies,
     String? underlyingConditions,
+    String? password,
+    String? username,
   }) async {
     final url = Uri.parse("$baseUrl/api/users/elderly/$elderlyId/update/");
     try {
+      final body = {
+        "fullname": fullname,
+        "dob": dob,
+        "gender": gender,
+        "medical_note": medicalNote,
+        "blood_type": bloodType,
+        "allergies": allergies,
+        "underlying_conditions": underlyingConditions,
+      };
+      if (password != null && password.isNotEmpty) {
+        body["password"] = password;
+      }
+      if (username != null && username.isNotEmpty) {
+        body["username"] = username;
+      }
+
       final res = await http.put(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "fullname": fullname,
-          "dob": dob,
-          "gender": gender,
-          "medical_note": medicalNote,
-          "blood_type": bloodType,
-          "height": height,
-          "weight": weight,
-          "allergies": allergies,
-          "underlying_conditions": underlyingConditions,
-        }),
+        body: jsonEncode(body),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -196,6 +216,8 @@ class ApiService {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
   }
+
+
 
   // ================= UPDATE CAREGIVER =================
   static Future<Map<String, dynamic>> updateCaregiverProfile({
@@ -237,7 +259,9 @@ class ApiService {
       final res = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"qr_token": qrToken}),
+        body: jsonEncode({
+          "qr_token": qrToken,
+        }),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
@@ -379,7 +403,33 @@ class ApiService {
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        final List<dynamic> schedules = jsonDecode(res.body);
+        
+        final now = DateTime.now();
+        final normalizedNow = DateTime(now.year, now.month, now.day);
+        
+        return schedules.where((schedule) {
+          int stock = schedule['stock_remaining'] is int ? schedule['stock_remaining'] as int : 30;
+          final med = schedule['medication'] ?? {};
+          final description = med['description']?.toString() ?? '';
+          if (description.contains('Tổng số viên thuốc:')) {
+            final match = RegExp(r'Tổng số viên thuốc:\s*(\d+)').firstMatch(description);
+            if (match != null) {
+              stock = int.parse(match.group(1)!);
+            }
+          }
+          if (stock <= 0) return false;
+
+          final endDateStr = schedule['end_date']?.toString() ?? '';
+          if (endDateStr.isNotEmpty) {
+            final endDate = DateTime.tryParse(endDateStr);
+            if (endDate != null) {
+              final normalizedEndDate = DateTime(endDate.year, endDate.month, endDate.day);
+              if (normalizedEndDate.isBefore(normalizedNow)) return false;
+            }
+          }
+          return true;
+        }).toList();
       }
       return [];
     } catch (e) {
@@ -399,7 +449,33 @@ class ApiService {
       final res = await http.get(url);
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        return data["schedules"] ?? [];
+        final List<dynamic> schedules = data["schedules"] ?? [];
+        
+        final now = DateTime.now();
+        final normalizedNow = DateTime(now.year, now.month, now.day);
+        
+        return schedules.where((schedule) {
+          int stock = schedule['stock_remaining'] is int ? schedule['stock_remaining'] as int : 30;
+          final med = schedule['medication'] ?? {};
+          final description = med['description']?.toString() ?? '';
+          if (description.contains('Tổng số viên thuốc:')) {
+            final match = RegExp(r'Tổng số viên thuốc:\s*(\d+)').firstMatch(description);
+            if (match != null) {
+              stock = int.parse(match.group(1)!);
+            }
+          }
+          if (stock <= 0) return false;
+
+          final endDateStr = schedule['end_date']?.toString() ?? '';
+          if (endDateStr.isNotEmpty) {
+            final endDate = DateTime.tryParse(endDateStr);
+            if (endDate != null) {
+              final normalizedEndDate = DateTime(endDate.year, endDate.month, endDate.day);
+              if (normalizedEndDate.isBefore(normalizedNow)) return false;
+            }
+          }
+          return true;
+        }).toList();
       }
       return [];
     } catch (e) {
@@ -440,7 +516,11 @@ class ApiService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
       );
-      return res.statusCode == 201;
+      if (res.statusCode == 201) {
+        notifyDataChanged();
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }
@@ -479,7 +559,11 @@ class ApiService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(body),
       );
-      return res.statusCode == 200;
+      if (res.statusCode == 200) {
+        notifyDataChanged();
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }
@@ -492,7 +576,11 @@ class ApiService {
     );
     try {
       final res = await http.delete(url);
-      return res.statusCode == 200;
+      if (res.statusCode == 200) {
+        notifyDataChanged();
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }
@@ -727,7 +815,6 @@ class ApiService {
     String? bloodPressure,
     double? bloodSugar,
     double? temperature,
-    double? weight,
   }) async {
     final url = Uri.parse("$baseUrl/api/healthmetrics/create/");
     try {
@@ -740,10 +827,13 @@ class ApiService {
           "blood_pressure": bloodPressure,
           "blood_sugar": bloodSugar,
           "temperature": temperature,
-          "weight": weight,
         }),
       );
-      return res.statusCode == 201;
+      if (res.statusCode == 201) {
+        notifyDataChanged();
+        return true;
+      }
+      return false;
     } catch (e) {
       print("ERROR: $e");
       return false;
@@ -1094,6 +1184,7 @@ class ApiService {
         }
       }
 
+      notifyDataChanged();
       return {"success": true, "message": "Tạo bệnh án thành công"};
     } catch (e) {
       print("ERROR createMedicalVisit: $e");
@@ -1101,6 +1192,25 @@ class ApiService {
     }
   }
 
+  /// Tạo mới lịch sử điều trị
+  static Future<bool> createTreatmentHistory(Map<String, dynamic> data) async {
+    final url = Uri.parse("$baseUrl/api/treatmenthistory/create/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        notifyDataChanged();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print("ERROR createTreatmentHistory: $e");
+      return false;
+    }
+  }
   /// Cập nhật lịch sử điều trị
   static Future<bool> updateTreatmentHistory(
     int id,
@@ -1150,7 +1260,7 @@ class ApiService {
 
   // ================= CHATBOT =================
   static Future<String> chatWithAssistant(int elderlyId, String message) async {
-    final url = Uri.parse("$baseUrl/api/medication/chatbot/");
+    final url = Uri.parse("$baseUrl/api/chatbot/");
     try {
       final res = await http.post(
         url,
@@ -1166,4 +1276,39 @@ class ApiService {
       return "Không thể kết nối với trợ lý ảo: $e";
     }
   }
+
+  // ================= GET CAREGIVERS FOR ELDERLY =================
+  static Future<List<Map<String, dynamic>>> getCaregiversForElderly() async {
+    if (currentRole != 'elderly' || currentAccountId == null) return [];
+    final url = Uri.parse("$baseUrl/api/users/elderly/$currentAccountId/caregivers/");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final list = data['caregivers'] as List;
+        return list.map((e) => e as Map<String, dynamic>).toList();
+      }
+    } catch (e) {
+      print("ERROR getCaregiversForElderly: $e");
+    }
+    return [];
+  }
+
+  // ================= SEND SOS NOTIFICATION =================
+  static Future<bool> sendSOSNotification() async {
+    if (currentRole != 'elderly' || currentAccountId == null) return false;
+    final url = Uri.parse("$baseUrl/api/notification/send-sos/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"elderly_id": currentAccountId}),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ERROR sendSOSNotification: $e");
+      return false;
+    }
+  }
 }
+

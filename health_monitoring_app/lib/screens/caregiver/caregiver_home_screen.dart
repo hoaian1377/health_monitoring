@@ -12,6 +12,7 @@ import 'dart:io' show Platform;
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
+import 'checklist_screen.dart';
 
 class CaregiverHomeScreen extends StatefulWidget {
   const CaregiverHomeScreen({super.key});
@@ -30,7 +31,18 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   List<dynamic> _medicationSchedules = [];
   List<dynamic> _appointments = [];
   bool _isLoadingMedications = false;
-  String _selectedMedFilter = 'Tất cả';
+  late String _selectedMedFilter;
+
+  String _getCurrentSessionFilter() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 11) {
+      return 'Sáng';
+    } else if (hour >= 11 && hour < 15) {
+      return 'Trưa';
+    } else {
+      return 'Chiều/Tối';
+    }
+  }
   late final ScrollController _medListScrollController;
 
   // Chỉ số sức khoẻ
@@ -46,9 +58,17 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedMedFilter = _getCurrentSessionFilter();
     _medListScrollController = ScrollController();
+    ApiService.dataRefreshTrigger.addListener(_onDataChanged);
     _loadElderlyList();
     _loadNotifications();
+  }
+
+  void _onDataChanged() {
+    if (mounted && _selectedElderlyId != null) {
+      _loadElderlyDetails();
+    }
   }
 
   Future<void> _loadNotifications() async {
@@ -64,6 +84,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
   @override
   void dispose() {
+    ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     _medListScrollController.dispose();
     super.dispose();
   }
@@ -547,14 +568,14 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   Widget _buildMedFilterTabs(Map<String, List<dynamic>> groupedMeds) {
     final int allCount = _medicationSchedules.length;
     final int morningCount = groupedMeds['Buổi sáng']!.length;
-    final int afternoonCount = groupedMeds['Buổi trưa/chiều']!.length;
-    final int eveningCount = groupedMeds['Buổi tối']!.length;
+    final int afternoonCount = groupedMeds['Buổi trưa']!.length;
+    final int eveningCount = groupedMeds['Buổi chiều/tối']!.length;
 
     final filters = [
       {'label': 'Tất cả', 'count': allCount},
       {'label': 'Sáng', 'count': morningCount},
-      {'label': 'Trưa/Chiều', 'count': afternoonCount},
-      {'label': 'Tối', 'count': eveningCount},
+      {'label': 'Trưa', 'count': afternoonCount},
+      {'label': 'Chiều/Tối', 'count': eveningCount},
     ];
 
     return Container(
@@ -651,8 +672,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     // Group schedules by time
     final Map<String, List<dynamic>> groupedMeds = {
       'Buổi sáng': [],
-      'Buổi trưa/chiều': [],
-      'Buổi tối': [],
+      'Buổi trưa': [],
+      'Buổi chiều/tối': [],
       'Khác': [],
     };
 
@@ -666,12 +687,12 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       if (timeStr.isNotEmpty && timeStr != '--:--') {
         try {
           final hour = int.parse(timeStr.split(':')[0]);
-          if (hour >= 5 && hour < 12) {
+          if (hour >= 5 && hour < 11) {
             group = 'Buổi sáng';
-          } else if (hour >= 12 && hour < 18) {
-            group = 'Buổi trưa/chiều';
+          } else if (hour >= 11 && hour < 15) {
+            group = 'Buổi trưa';
           } else {
-            group = 'Buổi tối';
+            group = 'Buổi chiều/tối';
           }
         } catch (_) {}
       }
@@ -684,8 +705,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       if (e.value.isEmpty) return false;
       if (_selectedMedFilter == 'Tất cả') return true;
       if (_selectedMedFilter == 'Sáng') return e.key == 'Buổi sáng';
-      if (_selectedMedFilter == 'Trưa/Chiều') return e.key == 'Buổi trưa/chiều';
-      if (_selectedMedFilter == 'Tối') return e.key == 'Buổi tối';
+      if (_selectedMedFilter == 'Trưa') return e.key == 'Buổi trưa';
+      if (_selectedMedFilter == 'Chiều/Tối') return e.key == 'Buổi chiều/tối';
       return false;
     }).toList();
 
@@ -860,10 +881,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                           if (groupName == 'Buổi sáng') {
                             groupIcon = Icons.wb_sunny_rounded;
                             groupColor = const Color(0xFFD97706);
-                          } else if (groupName == 'Buổi trưa/chiều') {
+                          } else if (groupName == 'Buổi trưa') {
                             groupIcon = Icons.wb_cloudy_rounded;
                             groupColor = const Color(0xFF0EA5E9);
-                          } else if (groupName == 'Buổi tối') {
+                          } else if (groupName == 'Buổi chiều/tối') {
                             groupIcon = Icons.nights_stay_rounded;
                             groupColor = const Color(0xFF4F46E5);
                           } else {
@@ -1273,6 +1294,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     }
 
     return Container(
+      clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -1421,33 +1443,38 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF0F9FF),
+                foregroundColor: const Color(0xFF0EA5E9),
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                side: const BorderSide(color: Color(0xFF0EA5E9)),
               ),
               onPressed: () {
-                MainNavigator.of(
+                Navigator.push(
                   context,
-                )?.setTab(1); // Chuyển sang tab Checklist
+                  MaterialPageRoute(
+                    builder: (context) => const ChecklistScreen(),
+                  ),
+                );
               },
               icon: const Icon(
                 Icons.add_task_rounded,
-                color: Color(0xFF0EA5E9),
-                size: 18,
+                size: 20,
               ),
               label: const Text(
                 'Chuẩn bị giấy tờ đi khám',
                 style: TextStyle(
-                  color: Color(0xFF0EA5E9),
                   fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
             ),
           ),
+          const SizedBox(height: 4), // Thêm một chút padding giả để tránh sát viền
         ],
       ),
     );
@@ -2129,6 +2156,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   void _showAddElderlyDialog() {
     final fullnameCtrl = TextEditingController();
     final medicalNoteCtrl = TextEditingController();
+    final usernameCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
     String? selectedGender;
     DateTime? selectedDob;
     bool isLoading = false;
@@ -2331,6 +2360,31 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       icon: Icons.medical_information_rounded,
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  const _FieldLabel(label: 'Tên đăng nhập *'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: usernameCtrl,
+                    decoration: _inputDecoration(
+                      hint: 'Tên đăng nhập (VD: ong_nam_123)',
+                      icon: Icons.person_rounded,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  const _FieldLabel(label: 'Mật khẩu *'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: passwordCtrl,
+                    obscureText: true,
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    decoration: _inputDecoration(
+                      hint: 'Nhập mật khẩu để bảo vệ tài khoản',
+                      icon: Icons.lock_rounded,
+                    ),
+                  ),
                   const SizedBox(height: 28),
 
                   // Submit button
@@ -2368,6 +2422,24 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                 );
                                 return;
                               }
+                              if (usernameCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Vui lòng nhập tên đăng nhập'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                              if (passwordCtrl.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Vui lòng nhập mật khẩu'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
                               if (selectedGender == null) {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   const SnackBar(
@@ -2385,6 +2457,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                                 dob: dob,
                                 gender: selectedGender!,
                                 medicalNote: medicalNoteCtrl.text.trim(),
+                                username: usernameCtrl.text.trim(),
+                                password: passwordCtrl.text.trim(),
                               );
                               setDialogState(() => isLoading = false);
                               if (!ctx.mounted) return;

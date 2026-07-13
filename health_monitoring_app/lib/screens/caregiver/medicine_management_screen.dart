@@ -139,8 +139,17 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    ApiService.dataRefreshTrigger.addListener(_onDataChanged);
     _loadElderlyList();
   }
+
+  void _onDataChanged() {
+    if (mounted && _selectedElderlyId != null) {
+      _loadMedicationSchedules(_selectedElderlyId!);
+    }
+  }
+
+
 
   Future<void> _loadElderlyList() async {
     setState(() => _isLoadingElderly = true);
@@ -347,6 +356,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
   @override
   void dispose() {
+    ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     _tabController.dispose();
     _nameCtrl.dispose();
     _dosageCtrl.dispose();
@@ -1280,11 +1290,6 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
               // Search
               _buildSearchBar(),
               const SizedBox(height: 12),
-              
-              // Filter chips
-              _buildCategoryFilter(),
-              const SizedBox(height: 14),
-              
               // Section label
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2147,7 +2152,18 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        MedicationDialogHelper.showAddMedicationDialog(context: context, elderlyId: _selectedElderlyId!, onSuccess: () => _loadMedicationSchedules(_selectedElderlyId!), initialName: med.name, initialDosage: med.dosage, initialInstruction: med.instruction, initialTime: med.times.isNotEmpty ? med.times.first : null, editScheduleId: int.tryParse(med.id));
+                        MedicationDialogHelper.showAddMedicationDialog(
+                            context: context,
+                            elderlyId: _selectedElderlyId!,
+                            onSuccess: () =>
+                                _loadMedicationSchedules(_selectedElderlyId!),
+                            initialName: med.name,
+                            initialDosage: med.dosage,
+                            initialInstruction: med.instruction,
+                            initialTime: med.times.isNotEmpty
+                                ? med.times.first
+                                : null,
+                            editScheduleId: int.tryParse(med.id));
                       },
                       icon: const Icon(Icons.edit_rounded, size: 16),
                       label: const Text('Chỉnh sửa'),
@@ -2163,20 +2179,58 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context);
-                        setState(() => med.isActive = !med.isActive);
+                        final scheduleId = int.tryParse(med.id);
+                        if (scheduleId != null) {
+                          bool confirm = await showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Xác nhận xóa'),
+                                  content: const Text(
+                                      'Bạn có chắc chắn muốn xóa lịch uống thuốc này?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, false),
+                                      child: const Text('Hủy'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(ctx, true),
+                                      child: const Text(
+                                        'Xóa',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ) ??
+                              false;
+                          if (confirm) {
+                            final success = await ApiService.deleteMedication(
+                                scheduleId);
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Đã xóa thành công!'),
+                                    backgroundColor: Colors.green),
+                              );
+                              // _loadMedicationSchedules is automatically called by dataRefreshTrigger
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Xóa thất bại!'),
+                                    backgroundColor: Colors.red),
+                              );
+                            }
+                          }
+                        }
                       },
-                      icon: Icon(
-                          med.isActive
-                              ? Icons.pause_circle_rounded
-                              : Icons.play_circle_rounded,
-                          size: 16),
-                      label: Text(med.isActive ? 'Tạm dừng' : 'Kích hoạt'),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                      label: const Text('Xóa'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: med.isActive
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF16A34A),
+                        backgroundColor: const Color(0xFFDC2626),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),

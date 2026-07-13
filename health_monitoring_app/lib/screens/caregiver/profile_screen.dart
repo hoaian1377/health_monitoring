@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'personal_profile_screen.dart';
 import '../login_screen.dart';
 import '../change_password_screen.dart';
-import 'manage_profiles_screen.dart';
 import '../admin_backup_screen.dart';
 import 'caregiver_health_settings_screen.dart';
 import 'add_elderly_screen.dart';
@@ -18,16 +17,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // ─── SOS Bottom Sheet ───────────────────────────────────────────────────────
-  void _showSOSSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => const _SOSBottomSheet(),
-    );
-  }
-
   // ─── Logout Dialog ──────────────────────────────────────────────────────────
   void _showLogoutDialog() {
     showDialog(
@@ -136,9 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSOSButton(),
-                  const SizedBox(height: 24),
-
                   _sectionLabel('HỒ SƠ & THÔNG TIN CÁ NHÂN'),
                   const SizedBox(height: 8),
                   _menuGroup([
@@ -211,14 +197,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _sectionLabel('QUẢN TRỊ HỆ THỐNG'),
                     const SizedBox(height: 8),
                     _menuGroup([
-                      _MenuItem(
-                        icon: Icons.switch_account_rounded,
-                        iconBg: const Color(0xFFE0F2FE),
-                        iconColor: const Color(0xFF0284C7),
-                        title: 'Quản lý người dùng',
-                        subtitle: 'Thêm, xóa, phân quyền (F02)',
-                        onTap: () => _navigate(const ManageProfilesScreen()),
-                      ),
                       _MenuItem(
                         icon: Icons.storage_rounded,
                         iconBg: const Color(0xFFF3EEFF),
@@ -345,62 +323,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ManageProfilesScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.swap_horiz_rounded, color: Colors.white),
-                  tooltip: 'Chuyển đổi hồ sơ',
-                ),
               ],
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ─── SOS Button ─────────────────────────────────────────────────────────────
-  Widget _buildSOSButton() {
-    return Material(
-      color: const Color(0xFFC81E1E),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: _showSOSSheet,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Row(
-            children: [
-              const Icon(Icons.phone_callback_rounded,
-                  color: Colors.white, size: 22),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SOS — Gọi người thân',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    SizedBox(height: 2),
-                    Text('Gọi ngay cho người liên hệ khẩn cấp',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.white70)),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Colors.white70, size: 20),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -549,169 +475,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-}
-
-// ─── SOS Bottom Sheet ─────────────────────────────────────────────────────────
-class _SOSBottomSheet extends StatelessWidget {
-  const _SOSBottomSheet();
-
-  static const _contacts = [
-    _SOSContact(
-        name: 'Nguyễn Thị Bình',
-        role: 'Con gái',
-        phone: '0901 234 567',
-        isEmergency: false),
-    _SOSContact(
-        name: 'Trần Văn C',
-        role: 'Người chăm sóc',
-        phone: '0912 345 678',
-        isEmergency: false),
-    _SOSContact(
-        name: 'Cấp cứu',
-        role: 'Khẩn cấp',
-        phone: '115',
-        isEmergency: true),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(20, 0, 20, 32 + MediaQuery.of(context).padding.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEB),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.phone_callback_rounded,
-                    color: Color(0xFFC81E1E), size: 22),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SOS — Gọi người thân',
-                        style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B))),
-                    Text('Chọn người để gọi ngay',
-                        style:
-                            TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          ..._contacts.map((c) => _buildContactRow(context, c)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactRow(BuildContext context, _SOSContact c) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: c.isEmergency
-                  ? const Color(0xFFFFEBEB)
-                  : const Color(0xFFEBFDFB),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              c.isEmergency ? '🚑' : c.name[0],
-              style: TextStyle(
-                fontSize: c.isEmergency ? 20 : 16,
-                fontWeight: FontWeight.bold,
-                color: c.isEmergency ? const Color(0xFFC81E1E) : const Color(0xFF0F605A),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(c.name,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B))),
-                const SizedBox(height: 2),
-                Text('${c.role} · ${c.phone}',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF64748B))),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                backgroundColor: const Color(0xFF16A34A),
-                content: Text('Đang gọi ${c.phone}...'),
-                duration: const Duration(seconds: 2),
-              ));
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF16A34A),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.phone_rounded,
-                  color: Colors.white, size: 20),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SOSContact {
-  final String name, role, phone;
-  final bool isEmergency;
-  const _SOSContact(
-      {required this.name,
-      required this.role,
-      required this.phone,
-      required this.isEmergency});
 }
 
 class _MenuItem {

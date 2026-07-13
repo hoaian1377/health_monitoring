@@ -868,7 +868,7 @@ class _QrScanLoginScreenState extends State<QrScanLoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFFDC2626),
-          content: Text(res['error'] ?? 'Mã QR không hợp lệ.'),
+          content: Text(res['error'] ?? 'Mã QR hoặc PIN không hợp lệ.'),
         ),
       );
       setState(() => _isProcessing = false);
