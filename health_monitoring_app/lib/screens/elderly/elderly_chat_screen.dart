@@ -124,10 +124,11 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
 
   void _listen() async {
     if (!_isListening) {
-      var status = await Permission.microphone.status;
-      if (!status.isGranted) {
-        status = await Permission.microphone.request();
-        if (!status.isGranted) {
+      // ── Bắt đầu ghi âm ──
+      var micStatus = await Permission.microphone.status;
+      if (!micStatus.isGranted) {
+        micStatus = await Permission.microphone.request();
+        if (!micStatus.isGranted) {
            ScaffoldMessenger.of(context).showSnackBar(
              const SnackBar(content: Text('Cần cấp quyền Microphone để sử dụng tính năng này.'))
            );
@@ -137,29 +138,53 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
 
       bool available = await _speech.initialize(
         onStatus: (val) {
+          // Khi engine tự dừng (hết giọng nói / timeout)
           if (val == 'done' || val == 'notListening') {
-             setState(() => _isListening = false);
-             if (_tempVoiceText.isNotEmpty) {
-               _sendMessage(_tempVoiceText);
-               _tempVoiceText = '';
-             }
+            if (mounted && _isListening) {
+              setState(() {
+                _isListening = false;
+                // Đưa text vào ô nhập để người dùng xem lại trước khi gửi
+                if (_tempVoiceText.isNotEmpty) {
+                  _textController.text = _tempVoiceText;
+                  _textController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _textController.text.length),
+                  );
+                }
+              });
+            }
           }
         },
-        onError: (val) => print('onError: $val'),
+        onError: (val) {
+          if (mounted) {
+            setState(() => _isListening = false);
+          }
+        },
       );
       if (available) {
+        _tempVoiceText = '';
         setState(() => _isListening = true);
         await _stopSpeaking();
         _speech.listen(
-          onResult: (val) => setState(() {
-            _tempVoiceText = val.recognizedWords;
-          }),
-          localeId: 'vi_VN'
+          onResult: (val) {
+            if (mounted) {
+              setState(() {
+                _tempVoiceText = val.recognizedWords;
+                // Cập nhật text trực tiếp vào ô nhập để người dùng thấy
+                _textController.text = _tempVoiceText;
+                _textController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _textController.text.length),
+                );
+              });
+            }
+          },
+          localeId: 'vi_VN',
         );
       }
     } else {
+      // ── Dừng ghi âm (bấm lần 2) ──
       setState(() => _isListening = false);
       _speech.stop();
+      // Text đã nằm sẵn trong ô nhập, người dùng bấm Gửi để gửi
     }
   }
 
@@ -284,10 +309,9 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTapDown: (_) => _listen(),
-                    onTapUp: (_) => _speech.stop(),
-                    onTapCancel: () => _speech.stop(),
-                    child: Container(
+                    onTap: _listen,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
@@ -302,8 +326,8 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
                             )
                         ]
                       ),
-                      child: const Icon(
-                        Icons.mic,
+                      child: Icon(
+                        _isListening ? Icons.stop_rounded : Icons.mic,
                         color: Colors.white,
                         size: 28,
                       ),

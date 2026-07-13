@@ -1259,7 +1259,7 @@ class ApiService {
   }
 
   // ================= CHATBOT =================
-  static Future<String> chatWithAssistant(int elderlyId, String message) async {
+  static Future<Map<String, dynamic>> chatWithAssistant(int elderlyId, String message) async {
     final url = Uri.parse("$baseUrl/api/chatbot/");
     try {
       final res = await http.post(
@@ -1269,11 +1269,16 @@ class ApiService {
       );
       if (res.statusCode == 200) {
         final decoded = jsonDecode(utf8.decode(res.bodyBytes));
-        return decoded['response'] ?? "Xin lỗi, tôi không thể trả lời lúc này.";
+        final String responseText = decoded['response'] ?? "Xin lỗi, tôi không thể trả lời lúc này.";
+        final List<String> images = (decoded['images'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .where((url) => url.isNotEmpty)
+            .toList() ?? [];
+        return {'response': responseText, 'images': images};
       }
-      return "Xin lỗi, đã có lỗi kết nối máy chủ (Mã: ${res.statusCode}).";
+      return {'response': "Xin lỗi, đã có lỗi kết nối máy chủ (Mã: ${res.statusCode}).", 'images': <String>[]};
     } catch (e) {
-      return "Không thể kết nối với trợ lý ảo: $e";
+      return {'response': "Không thể kết nối với trợ lý ảo: $e", 'images': <String>[]};
     }
   }
 
