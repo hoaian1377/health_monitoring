@@ -95,17 +95,15 @@ class _ChecklistScreenState extends State<ChecklistScreen>
     setState(() => _isLoading = true);
 
     final checklistsRes = await ApiService.getChecklists(_currentElderlyId!);
-    List<dynamic> checklistItems = [];
     if (checklistsRes.isNotEmpty) {
       final defaultChecklist = checklistsRes.firstWhere(
           (c) => c['title'] == 'Nhiệm vụ hàng ngày',
           orElse: () => checklistsRes.first);
       _dailyChecklistId =
           defaultChecklist['checklistID'] ?? defaultChecklist['id'] ?? defaultChecklist['checklistid'];
-      if (_dailyChecklistId != null) {
-        checklistItems = await ApiService.getChecklistItems(_dailyChecklistId!);
-      }
     }
+    
+    List<dynamic> checklistItems = await ApiService.getChecklistItemsByElderly(_currentElderlyId!);
 
     if (mounted) {
       setState(() {
@@ -246,7 +244,7 @@ class _ChecklistScreenState extends State<ChecklistScreen>
             }
           }
 
-          if (_dailyChecklistId != null) {
+          if (type != 'appointment' && _dailyChecklistId != null) {
             await ApiService.createChecklistItem(
               checklistId: _dailyChecklistId!,
               title: title,

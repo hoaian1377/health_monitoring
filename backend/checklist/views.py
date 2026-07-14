@@ -22,24 +22,28 @@ class ChecklistListView(generics.ListAPIView):
     serializer_class = ChecklistSerializer
 
     def get_queryset(self):
-        qs = Checklist.objects.all()
         appointment_id = self.request.query_params.get('appointment_id')
         elderly_id = self.request.query_params.get('elderly_id')
-        if appointment_id:
-            qs = qs.filter(appointmentid_id=appointment_id)
-        if elderly_id:
-            qs = qs.filter(elderlyid_id=elderly_id)
+        
+        if appointment_id and appointment_id != "null":
+            qs = Checklist.objects.filter(appointmentid_id=appointment_id)
+        elif elderly_id and elderly_id != "null":
+            qs = Checklist.objects.filter(elderlyid_id=elderly_id)
+        else:
+            return Checklist.objects.none()
+            
         return qs.order_by('-created_at')
 
 
 class ChecklistDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET/PUT/PATCH/DELETE /api/checklist/<pk>/"""
+    """GET/PUT/PATCH/DELETE /api/checklist/<id>/"""
     queryset = Checklist.objects.all()
     serializer_class = ChecklistSerializer
-    lookup_field = 'pk'
 
 
-# ─── CHECKLIST ITEM VIEWS ──────────────────────────────────────────────────────
+# =====================================================================
+# Checklist Item Views
+# =====================================================================
 
 class ChecklistItemCreateView(generics.CreateAPIView):
     """POST /api/checklist/item/create/"""
@@ -47,18 +51,21 @@ class ChecklistItemCreateView(generics.CreateAPIView):
     serializer_class = ChecklistItemSerializer
 
 
-class ChecklistItemListView(generics.ListAPIView):
-    """GET /api/checklist/item/?checklist_id=<id> hoac ?elderly_id=<id>"""
+class ChecklistItemListView(generics.ListCreateAPIView):
+    """GET /api/checklist/item/ | POST /api/checklist/item/"""
     serializer_class = ChecklistItemSerializer
 
     def get_queryset(self):
-        qs = ChecklistItem.objects.all()
         checklist_id = self.request.query_params.get('checklist_id')
         elderly_id = self.request.query_params.get('elderly_id')
-        if checklist_id:
-            qs = qs.filter(checklistid_id=checklist_id)
-        elif elderly_id:
-            qs = qs.filter(checklistid__elderlyid=elderly_id)
+        
+        if checklist_id and checklist_id != "null":
+            qs = ChecklistItem.objects.filter(checklistid_id=checklist_id)
+        elif elderly_id and elderly_id != "null":
+            qs = ChecklistItem.objects.filter(checklistid__elderlyid=elderly_id)
+        else:
+            return ChecklistItem.objects.none()
+            
         return qs.order_by('checklist_itemid')
 
 

@@ -5,6 +5,7 @@ import '../login_screen.dart';
 import 'elderly_change_password_screen.dart';
 import '../../utils/api_service.dart';
 import '../caregiver/caregiver_health_settings_screen.dart';
+import '../../utils/elderly_provider.dart';
 
 class ElderlyProfileScreen extends StatefulWidget {
   const ElderlyProfileScreen({super.key});
@@ -94,6 +95,8 @@ class _ElderlyProfileScreenState extends State<ElderlyProfileScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
+                        ApiService.logout();
+                        ElderlyProvider.instance.clear();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (_) => const LoginScreen()),

@@ -41,7 +41,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         });
 
         if (res["success"]) {
-          if (ApiService.currentRole == 'admin') {
+          if (ApiService.currentRole.toLowerCase().trim() == 'admin') {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 backgroundColor: Color(0xFF16A34A),

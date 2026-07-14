@@ -731,7 +731,10 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     final parts = slot.time.split(':');
     final slotHour = parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 0) : 0;
     final slotMin = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
-    final isPast = slotHour < now.hour || (slotHour == now.hour && slotMin <= now.minute);
+    final nowTimeInMinutes = now.hour * 60 + now.minute;
+    final slotTimeInMinutes = slotHour * 60 + slotMin;
+    final isPast = nowTimeInMinutes >= slotTimeInMinutes;
+    final isOverdue = nowTimeInMinutes - slotTimeInMinutes >= 5;
     
     final isConfirmed = slot.confirmed;
     final badgeColor = isConfirmed ? const Color(0xFF16A34A) : (isPast ? const Color(0xFFEF4444) : const Color(0xFF0EA5E9));
@@ -856,7 +859,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                           )
                         ],
                       )
-                    else if (isPast)
+                    else if (isOverdue)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -892,25 +895,14 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                               Text('Chưa uống', style: TextStyle(color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          ElevatedButton.icon(
-                            onPressed: () => _sendReminder(slot),
-                            icon: const Icon(Icons.notifications_active_rounded, size: 16),
-                            label: const Text('Nhắc nhở'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFFBEB),
-                              foregroundColor: const Color(0xFFD97706),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                          ),
+                          // Nút nhắc nhở bị ẩn nếu chưa quá 5 phút
                         ],
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

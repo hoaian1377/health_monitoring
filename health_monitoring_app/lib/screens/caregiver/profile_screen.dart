@@ -9,6 +9,8 @@ import 'elderly_list_screen.dart';
 import 'checklist_screen.dart';
 import '../../utils/api_service.dart';
 
+import '../../utils/elderly_provider.dart';
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -85,6 +87,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         Navigator.of(ctx).pop();
+                        ApiService.logout();
+                        ElderlyProvider.instance.clear();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (_) => const LoginScreen()),

@@ -59,11 +59,14 @@ class _AppointmentScreenState extends State<AppointmentScreen>
   }
 
   Future<void> _loadAppointments() async {
-    if (ApiService.currentAccountId == null) {
+    final accountId = ApiService.currentRole == 'caregiver'
+        ? ApiService.currentElderlyId
+        : ApiService.currentAccountId;
+    if (accountId == null) {
       setState(() => _isLoading = false);
       return;
     }
-    final data = await ApiService.getAppointments(ApiService.currentAccountId!);
+    final data = await ApiService.getAppointments(accountId);
     List<AppointmentItem> loaded = [];
     for (var item in data) {
       loaded.add(AppointmentItem(
@@ -117,6 +120,7 @@ class _AppointmentScreenState extends State<AppointmentScreen>
     _notesCtrl.clear();
     _pickedDate = DateTime.now().add(const Duration(days: 7));
     _pickedTime = const TimeOfDay(hour: 8, minute: 30);
+    bool isSaving = false;
 
     showModalBottomSheet(
       context: context,
@@ -191,12 +195,14 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                           borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
-                    onPressed: () async {
+                    onPressed: isSaving ? null : () async {
                       if (_hospitalCtrl.text.trim().isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                             content: Text('Vui lòng nhập tên bệnh viện')));
                         return;
                       }
+                      
+                      setModal(() => isSaving = true);
                       
                       final doctorName = _doctorCtrl.text.trim().isEmpty ? 'Chưa xác định' : _doctorCtrl.text.trim();
                       final location = _hospitalCtrl.text.trim();
@@ -212,6 +218,8 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                         appointmentTime: timeStr,
                         note: notes,
                       );
+                      
+                      setModal(() => isSaving = false);
 
                       if (success) {
                         Navigator.pop(ctx);
@@ -231,7 +239,16 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                         );
                       }
                     },
-                    child: const Text('Lưu lịch khám',
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text('Lưu lịch khám',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
@@ -667,18 +684,35 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                       borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                onPressed: () {
-                  setState(() {
-                    item.result = ctrl.text.trim();
-                    item.isCompleted = true;
-                  });
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: Color(0xFF10B981),
-                      content: Text('✓ Đã lưu kết quả khám!'),
-                    ),
+                onPressed: () async {
+                  bool success = await ApiService.updateAppointment(
+                    int.parse(item.id),
+                    {'diagnosis': ctrl.text.trim()},
                   );
+                  if (success) {
+                    setState(() {
+                      item.result = ctrl.text.trim();
+                      item.isCompleted = true;
+                    });
+                    if (mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Color(0xFF10B981),
+                          content: Text('✓ Đã lưu kết quả khám!'),
+                        ),
+                      );
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Colors.red,
+                          content: Text('Lưu thất bại, vui lòng thử lại!'),
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: Text('Lưu kết quả',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

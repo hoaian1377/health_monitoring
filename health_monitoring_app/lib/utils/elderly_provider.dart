@@ -89,6 +89,14 @@ class ElderlyProvider extends ChangeNotifier {
     await loadElderlyList();
   }
 
+  /// Clear all state upon logout
+  void clear() {
+    _elderlyList = [];
+    _selectedElderlyId = null;
+    _error = null;
+    notifyListeners();
+  }
+
   /// Utility: calculate age from date of birth string.
   static int? calculateAge(String? dobString) {
     if (dobString == null || dobString.isEmpty) return null;

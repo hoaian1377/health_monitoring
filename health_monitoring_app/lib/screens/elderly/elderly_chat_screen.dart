@@ -186,6 +186,12 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
           },
           localeId: 'vi_VN',
         );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không thể khởi tạo tính năng nhận diện giọng nói trên thiết bị này.')),
+          );
+        }
       }
     } else {
       // ── Dừng ghi âm (bấm lần 2) ──

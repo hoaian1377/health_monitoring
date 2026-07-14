@@ -18,6 +18,22 @@ class ApiService {
   static int? currentElderlyId;
   static String currentUsername = 'Người dùng';
   static String currentRole = 'caregiver';
+
+
+
+  /// Xoá toàn bộ thông tin đăng nhập khi đăng xuất
+  static void logout() {
+    currentAccountId = null;
+    currentElderlyId = null;
+    currentUsername = 'Người dùng';
+    currentRole = 'caregiver';
+    currentFullname = '';
+    currentEmail = '';
+    currentPhone = '';
+    currentDob = '';
+    currentGender = '';
+  }
+
   static String currentFullname = '';
   static String currentEmail = '';
   static String currentPhone = '';
@@ -1178,6 +1194,7 @@ class ApiService {
     required String diagnosis,
     required String result,
     required String documentType,
+    int? appointmentId,
     String? filePath,
   }) async {
     final url = Uri.parse("$baseUrl/api/medication/elderly-document/upload/");
@@ -1189,6 +1206,10 @@ class ApiService {
       request.fields['doctor_name'] = doctorName;
       request.fields['diagnosis'] = diagnosis;
       request.fields['result'] = result;
+
+      if (appointmentId != null) {
+        request.fields['appointment_id'] = appointmentId.toString();
+      }
 
       if (filePath != null && filePath.isNotEmpty) {
         request.files.add(await http.MultipartFile.fromPath('file', filePath));

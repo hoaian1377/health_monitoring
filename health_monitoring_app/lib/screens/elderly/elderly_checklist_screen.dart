@@ -28,6 +28,7 @@ class ElderlyTaskItem {
   String? hospital;
   String? doctor;
   String? appointmentDate;
+  int? appointmentId;
 
   ElderlyTaskItem({
     required this.id,
@@ -47,6 +48,7 @@ class ElderlyTaskItem {
     this.hospital,
     this.doctor,
     this.appointmentDate,
+    this.appointmentId,
   });
 }
 
@@ -151,20 +153,41 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
     );
 
     bool isTaken = true;
+    int pillsChange = 0;
+    
     if (idx >= 0) {
       final currentlyTaken = historyList[idx]['taken'] ?? false;
       isTaken = !currentlyTaken;
+      if (isTaken) {
+        pillsChange = -1;
+      } else {
+        pillsChange = 1;
+      }
       historyList[idx]['taken'] = isTaken;
       historyList[idx]['takenAt'] = isTaken
           ? DateTime.now().toIso8601String()
           : null;
     } else {
+      pillsChange = -1;
       historyList.add({
         'date': DateTime(date.year, date.month, date.day).toIso8601String(),
         'time': timeStr,
         'taken': true,
         'takenAt': DateTime.now().toIso8601String(),
       });
+    }
+
+    // Update total pills in baseDesc
+    final regExp = RegExp(r'Tổng số viên thuốc:\s*(\d+)');
+    final match = regExp.firstMatch(baseDesc);
+    if (match != null) {
+      int currentPills = int.parse(match.group(1)!);
+      currentPills += pillsChange;
+      if (currentPills < 0) currentPills = 0;
+      baseDesc = baseDesc.replaceFirst(
+        regExp,
+        'Tổng số viên thuốc: $currentPills',
+      );
     }
 
     // Construct new description
@@ -253,6 +276,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
               hospital: item['hospital'],
               doctor: item['doctor'],
               appointmentDate: item['appointment_date'],
+              appointmentId: item['appointment_id'],
             ),
           );
         }
@@ -1012,6 +1036,7 @@ class _ElderlyChecklistScreenState extends State<ElderlyChecklistScreen> {
                                       diagnosis: '',
                                       result: '',
                                       documentType: 'Kết quả khám bệnh',
+                                      appointmentId: task.appointmentId,
                                       filePath: pickedImage!.path,
                                     );
                                     

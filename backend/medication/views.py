@@ -362,23 +362,12 @@ class AppointmentListView(generics.ListAPIView):
 
     def get_queryset(self):
         elderly_id = self.request.query_params.get('elderly_id')
-        if elderly_id:
+        if elderly_id and elderly_id != "null":
             qs = Appointment.objects.filter(elderlyid=elderly_id).order_by('appointment_date')
         else:
-            qs = Appointment.objects.all().order_by('appointment_date')
+            qs = Appointment.objects.none()
             
-        from checklist.models import Checklist, ChecklistItem
-        valid_ids = []
-        for appt in qs:
-            chk = Checklist.objects.filter(appointmentid=appt).first()
-            if chk:
-                chk_item = ChecklistItem.objects.filter(checklistid=chk).first()
-                if chk_item and chk_item.is_complete:
-                    valid_ids.append(appt.appointmentid)
-            else:
-                valid_ids.append(appt.appointmentid)
-                
-        return qs.filter(appointmentid__in=valid_ids)
+        return qs
 
 class UpdateAppointmentView(generics.UpdateAPIView):
     """PUT /api/medication/appointment/<id>/update/"""
@@ -421,6 +410,8 @@ class DeleteAppointmentView(generics.DestroyAPIView):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        # Xóa các MedicalDocument liên quan trước để tránh lỗi ForeignKey constraint
+        MedicalDocument.objects.filter(appointmentid=instance.appointmentid).delete()
         instance.delete()
         return Response({"message": "Xóa lịch khám thành công"}, status=status.HTTP_200_OK)
 
@@ -454,6 +445,15 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
         if appointment_id:
             try:
                 appointment = Appointment.objects.get(appointmentid=appointment_id)
+                # Fallback to appointment fields if missing
+                if not hospital and appointment.location:
+                    hospital = appointment.location
+                if not doctor_name and appointment.doctor_name:
+                    doctor_name = appointment.doctor_name
+                if not diagnosis and appointment.diagnosis:
+                    diagnosis = appointment.diagnosis
+                if not result and appointment.note:
+                    result = appointment.note
             except Appointment.DoesNotExist:
                 pass
 

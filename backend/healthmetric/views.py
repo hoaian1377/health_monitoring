@@ -22,8 +22,7 @@ class HealthMetricListView(generics.ListAPIView):
     serializer_class = HealthMetricsSerializer
 
     def get_queryset(self):
-        queryset = HealthMetrics.objects.all()
         elderly_id = self.request.query_params.get('elderly_id', None)
-        if elderly_id is not None:
-            queryset = queryset.filter(elderlyid_id=elderly_id)
-        return queryset.order_by('-recorded_at')
+        if elderly_id is not None and elderly_id != "null":
+            return HealthMetrics.objects.filter(elderlyid_id=elderly_id).order_by('-recorded_at')
+        return HealthMetrics.objects.none()

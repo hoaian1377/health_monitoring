@@ -100,13 +100,14 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
   }
 
   Future<void> _fetchAllData() async {
-    if (_selectedElderlyId == null) return;
+    final elderlyId = _selectedElderlyId;
+    if (elderlyId == null) return;
     setState(() => _isLoading = true);
 
     // Use elderly profile data from provider or fetch it if role is elderly
     Map<String, dynamic>? elderly;
     if (ApiService.currentRole == 'elderly') {
-      final res = await ApiService.getElderlyProfile(_selectedElderlyId!);
+      final res = await ApiService.getElderlyProfile(elderlyId);
       if (res['success'] == true) {
         elderly = res['data'];
       }
@@ -139,12 +140,12 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     }
 
     // Fetch appointments, medications, documents, metrics
-    final appts = await ApiService.getAppointments(_selectedElderlyId!);
+    final appts = await ApiService.getAppointments(elderlyId);
     final meds =
-        await ApiService.getElderlyMedicationSchedule(_selectedElderlyId!);
+        await ApiService.getElderlyMedicationSchedule(elderlyId);
     final docs =
-        await ApiService.getMedicalDocument(elderlyId: _selectedElderlyId!);
-    final metrics = await ApiService.getHealthMetrics(_selectedElderlyId!);
+        await ApiService.getMedicalDocument(elderlyId: elderlyId);
+    final metrics = await ApiService.getHealthMetrics(elderlyId);
 
     if (mounted) {
       setState(() {
@@ -603,7 +604,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               Expanded(
                 child: _buildStatCard(
                   'Tổng số lần khám',
-                  '${_appointments.length} lần',
+                  '${completedAppts.length} lần',
                   const Color(0xFF16A34A),
                   Icons.calendar_month_rounded,
                 ),
@@ -612,7 +613,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               Expanded(
                 child: _buildStatCard(
                   'Bác sĩ theo dõi',
-                  '${_appointments.map((a) => a['doctor_name']).where((n) => n != null && n.toString().isNotEmpty).toSet().length} bác sĩ',
+                  '${completedAppts.map((a) => a['doctor_name']).where((n) => n != null && n.toString().isNotEmpty).toSet().length} bác sĩ',
                   const Color(0xFF0EA5E9),
                   Icons.person_rounded,
                 ),
@@ -679,7 +680,10 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
 
           // ── Appointments list ──
           Builder(builder: (context) {
-            var filteredAppts = _appointments;
+            var filteredAppts = _appointments.where((appt) {
+              final diag = appt['diagnosis']?.toString().trim();
+              return diag != null && diag.isNotEmpty;
+            }).toList();
             final query = _searchApptCtrl.text.toLowerCase();
 
             if (query.isNotEmpty) {

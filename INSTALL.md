@@ -46,8 +46,7 @@ Hệ thống sử dụng cơ sở dữ liệu `Health_monitoring`. Bạn cần i
    ```bash
    pip install -r requirements.txt
    ```
-   *(Nếu dự án chưa có file `requirements.txt`, hãy đảm bảo cài đặt các package chính như `django`, `djangorestframework`, `django-cors-headers`, `pyodbc`, `pillow`...)*
-
+   
 4. Kiểm tra cấu hình kết nối CSDL trong file `backend/settings.py` (khu vực `DATABASES`). Mặc định đã được cấu hình kết nối tới `Health_monitoring` qua `mssql` (Windows Authentication).
 
 5. Chạy server backend:

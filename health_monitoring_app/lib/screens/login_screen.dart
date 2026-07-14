@@ -69,6 +69,16 @@ class _LoginScreenState extends State<LoginScreen> {
         });
 
         if (res["success"]) {
+          if (ApiService.currentRole.toLowerCase().trim() == 'admin') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: Color(0xFFDC2626),
+                content: Text('Tài khoản này là Quản trị viên, vui lòng dùng trang đăng nhập dành cho Admin.'),
+              ),
+            );
+            return;
+          }
+
           final prefs = await SharedPreferences.getInstance();
           if (_rememberMe) {
             await prefs.setString('saved_username', _usernameController.text.trim());

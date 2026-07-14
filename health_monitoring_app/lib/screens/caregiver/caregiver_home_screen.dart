@@ -203,8 +203,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildAddElderlyCard(),
-                  const SizedBox(height: 16),
+
                   _buildMedicationManagementCard(),
                   const SizedBox(height: 16),
                   _buildAppointmentCard(),

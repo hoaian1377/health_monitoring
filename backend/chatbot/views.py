@@ -105,7 +105,8 @@ def _gather_context(elderly, now):
     ctx['appointments'] = list(Appointment.objects.filter(elderlyid=elderly, appointment_date__gte=now.date()).order_by('appointment_date', 'appointment_time'))
     ctx['medications'] = list(MedicationSchedule.objects.filter(elderlyid=elderly).select_related('medicationid'))
     ctx['health_metrics'] = HealthMetrics.objects.filter(elderlyid=elderly).order_by('-recorded_at').first()
-    ctx['documents'] = list(MedicalDocument.objects.filter(elderlyid=elderly).order_by('-upload_at')[:5])
+    ctx['documents'] = list(MedicalDocument.objects.filter(elderlyid=elderly).select_related('appointmentid').order_by('-upload_at')[:5])
+    ctx['past_appointments'] = list(Appointment.objects.filter(elderlyid=elderly, appointment_date__lte=now.date()).order_by('-appointment_date', '-appointment_time')[:5])
     
     doctor = None
     latest_app = Appointment.objects.filter(elderlyid=elderly).exclude(doctor_name__isnull=True).exclude(doctor_name='').order_by('-appointment_date').first()
@@ -201,17 +202,69 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
 
     if intent == 'medical_records':
         docs = ctx['documents']
-        if not docs:
+        past_apps = ctx.get('past_appointments', [])
+        
+        if not docs and not past_apps:
             return (f"Dạ, hiện tại chưa có thông tin bệnh án hoặc hồ sơ khám bệnh của {pronoun} trong hệ thống ạ.", [])
-        doc = docs[0]
-        date_str = doc.upload_at.strftime("%d/%m/%Y") if doc.upload_at else "gần đây"
-        doc_type = doc.document_type or "hồ sơ y tế"
-        hospital = doc.hospital or "chưa rõ bệnh viện"
-        doctor = f", bác sĩ {doc.doctor_name}" if doc.doctor_name else ""
-        diagnosis = f"\nChẩn đoán: {doc.diagnosis}" if doc.diagnosis else ""
-        result_text = f"\nKết quả: {doc.result}" if doc.result else ""
-        images = [d.file_url for d in docs if d.file_url]
-        return (f"Dạ, bệnh án gần nhất của {pronoun} là \"{doc_type}\", khám tại {hospital}{doctor} vào ngày {date_str} ạ.{diagnosis}{result_text}", images)
+        
+        if docs:
+            doc = docs[0]
+            date_str = doc.upload_at.strftime("%d/%m/%Y") if doc.upload_at else "gần đây"
+            
+            hospital = doc.hospital or (doc.appointmentid.location if doc.appointmentid else "") or "cơ sở y tế"
+            doc_doctor_name = doc.doctor_name or (doc.appointmentid.doctor_name if doc.appointmentid else "")
+            doctor = f" (bác sĩ {doc_doctor_name})" if doc_doctor_name else ""
+            
+            diagnosis = ""
+            for d in docs:
+                if d.diagnosis:
+                    diagnosis = d.diagnosis
+                    break
+                if d.appointmentid and d.appointmentid.diagnosis:
+                    diagnosis = d.appointmentid.diagnosis
+                    break
+            if not diagnosis:
+                diagnosis = "chưa có chẩn đoán cụ thể"
+                    
+            result_text = ""
+            for d in docs:
+                if d.result:
+                    result_text = f" (Kết quả: {d.result})"
+                    break
+                if d.appointmentid and d.appointmentid.note:
+                    result_text = f" (Ghi chú: {d.appointmentid.note})"
+                    break
+                    
+            recent_date = doc.upload_at.date() if doc.upload_at else None
+            doc_types = set()
+            for d in docs:
+                if (d.upload_at and recent_date and d.upload_at.date() == recent_date) or (not d.upload_at and not recent_date):
+                    doc_types.add(d.document_type or "Hồ sơ y tế")
+            
+            doc_types_str = ", ".join(doc_types) if doc_types else "giấy tờ y tế"
+            images = [d.file_url for d in docs if d.file_url]
+            
+            response_text = (
+                f"Dạ, theo bệnh án gần nhất vào ngày {date_str}, {pronoun} đi khám tại {hospital}{doctor}. "
+                f"Bác sĩ chẩn đoán {pronoun} bị {diagnosis}{result_text}. "
+                f"Hồ sơ đợt khám này có lưu các giấy tờ gồm: {doc_types_str} ạ."
+            )
+            return (response_text, images)
+        else:
+            # Fallback to past appointment if no docs exist
+            app = past_apps[0]
+            date_str = app.appointment_date.strftime("%d/%m/%Y") if app.appointment_date else "gần đây"
+            hospital = app.location or "cơ sở y tế"
+            doctor = f" (bác sĩ {app.doctor_name})" if app.doctor_name else ""
+            diagnosis = app.diagnosis or "chưa có chẩn đoán cụ thể"
+            result_text = f" (Ghi chú: {app.note})" if app.note else ""
+            
+            response_text = (
+                f"Dạ, theo thông tin khám bệnh gần nhất vào ngày {date_str}, {pronoun} đã đi khám tại {hospital}{doctor}. "
+                f"Bác sĩ chẩn đoán {pronoun} bị {diagnosis}{result_text}. "
+                f"Đợt khám này chưa có giấy tờ nào được tải lên hệ thống ạ."
+            )
+            return (response_text, [])
 
     if intent == 'medical_history':
         cond = elderly.underlying_conditions if elderly.underlying_conditions else "hệ thống chưa ghi nhận bệnh nền nào"

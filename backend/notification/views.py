@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .models import Notification, NotificationDetail
 from .serializers import NotificationSerializer, NotificationDetailSerializer
 import datetime
+from django.utils import timezone
 
 class NotificationListView(generics.ListAPIView):
     """GET /api/notification/notifications/?caregiver_id=<id> hoặc ?elderly_id=<id>"""
@@ -29,7 +30,7 @@ class NotificationDetailView(APIView):
             notif = Notification.objects.get(pk=pk)
             detail, created = NotificationDetail.objects.get_or_create(notificationid=notif)
             detail.is_read = True
-            detail.read_at = datetime.datetime.now()
+            detail.read_at = timezone.now()
             detail.save()
             return Response({"message": "Đã đánh dấu là đã đọc"}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -61,7 +62,7 @@ class GenerateMockNotificationsView(generics.CreateAPIView):
             elderlyid_id=elderly_id,
             title="Nhắc nhở uống thuốc",
             message="Người thân của bạn có lịch uống thuốc (Paracetamol) vào lúc 14:00 nhưng chưa xác nhận uống.",
-            created_at=datetime.datetime.now()
+            created_at=timezone.now()
         )
         NotificationDetail.objects.create(notificationid=notif1, is_read=False)
 
@@ -70,7 +71,7 @@ class GenerateMockNotificationsView(generics.CreateAPIView):
             elderlyid_id=elderly_id,
             title="Chỉ số sinh tồn bất thường",
             message="Nhịp tim của người thân đang ở mức cao (110 bpm). Vui lòng kiểm tra ngay.",
-            created_at=datetime.datetime.now()
+            created_at=timezone.now()
         )
         NotificationDetail.objects.create(notificationid=notif2, is_read=False)
         
@@ -98,7 +99,7 @@ class NotifyMissedMedicationView(generics.CreateAPIView):
             caregiverid_id=caregiver_id,
             title="Quên uống thuốc",
             message__contains=medication_name,
-            created_at__gte=datetime.datetime.now() - datetime.timedelta(hours=1)
+            created_at__gte=timezone.now() - datetime.timedelta(hours=1)
         )
         
         if recent_notifs.exists():
@@ -109,7 +110,7 @@ class NotifyMissedMedicationView(generics.CreateAPIView):
             elderlyid_id=elderly_id,
             title="Quên uống thuốc",
             message=f"Bác chưa xác nhận đã uống thuốc '{medication_name}' theo lịch. Hãy nhắc nhở bác!",
-            created_at=datetime.datetime.now()
+            created_at=timezone.now()
         )
         NotificationDetail.objects.create(notificationid=notif, is_read=False)
 
@@ -141,7 +142,7 @@ class SendSOSView(APIView):
                     elderlyid=elderly,
                     title="CẢNH BÁO KHẨN CẤP (SOS)",
                     message=f"Bác {elderly.fullname} vừa nhấn nút GỌI KHẨN CẤP. Hãy liên lạc ngay lập tức!",
-                    created_at=datetime.datetime.now()
+                    created_at=timezone.now()
                 )
                 NotificationDetail.objects.create(notificationid=notif, is_read=False)
                 count += 1
@@ -154,20 +155,27 @@ class SendReminderView(APIView):
     Caregiver gửi nhắc nhở uống thuốc cho Elderly
     """
     def post(self, request):
-        caregiver_id = request.data.get('caregiver_id')
+        caregiver_account_id = request.data.get('caregiver_id')
         elderly_id = request.data.get('elderly_id')
         medication_name = request.data.get('medication_name', 'thuốc')
 
-        if not caregiver_id or not elderly_id:
+        if not caregiver_account_id or not elderly_id:
             return Response({"error": "Thiếu caregiver_id hoặc elderly_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from users.models import Caregiver
+        try:
+            caregiver = Caregiver.objects.get(accountid_id=caregiver_account_id)
+            actual_caregiver_id = caregiver.caregiverid
+        except Caregiver.DoesNotExist:
+            return Response({"error": "Không tìm thấy Caregiver"}, status=status.HTTP_404_NOT_FOUND)
 
         # Tạo notification cho elderly
         notif = Notification.objects.create(
-            caregiverid_id=caregiver_id,
+            caregiverid_id=actual_caregiver_id,
             elderlyid_id=elderly_id,
             title="Nhắc nhở uống thuốc",
             message=f"Người chăm sóc nhắc bạn uống thuốc '{medication_name}' ngay bây giờ!",
-            created_at=datetime.datetime.now()
+            created_at=timezone.now()
         )
         NotificationDetail.objects.create(notificationid=notif, is_read=False)
 

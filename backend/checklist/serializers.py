@@ -3,6 +3,8 @@ from .models import Checklist, ChecklistItem
 
 
 class ChecklistItemSerializer(serializers.ModelSerializer):
+    appointment_id = serializers.IntegerField(source='checklistid.appointmentid_id', read_only=True)
+
     class Meta:
         model = ChecklistItem
         fields = [
@@ -17,6 +19,7 @@ class ChecklistItemSerializer(serializers.ModelSerializer):
             'doctor',
             'appointment_date',
             'file_path',
+            'appointment_id',
         ]
 
 
