@@ -410,8 +410,17 @@ class DeleteAppointmentView(generics.DestroyAPIView):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        
         # Xóa các MedicalDocument liên quan trước để tránh lỗi ForeignKey constraint
         MedicalDocument.objects.filter(appointmentid=instance.appointmentid).delete()
+        
+        # Xóa Checklist và ChecklistItem liên quan
+        from checklist.models import Checklist, ChecklistItem
+        checklists = Checklist.objects.filter(appointmentid=instance.appointmentid)
+        for cl in checklists:
+            ChecklistItem.objects.filter(checklistid=cl.checklistid).delete()
+            cl.delete()
+            
         instance.delete()
         return Response({"message": "Xóa lịch khám thành công"}, status=status.HTTP_200_OK)
 
@@ -485,4 +494,13 @@ class UploadMedicalDocumentView(generics.CreateAPIView):
             result=result
         )
         return Response({"success": True, "message": "Đã lưu kết quả thành công", "id": doc.medical_documentid})
+
+class DeleteMedicalDocumentView(generics.DestroyAPIView):
+    """DELETE /api/medication/elderly-document/<id>/delete/"""
+    queryset = MedicalDocument.objects.all()
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response({"message": "Xóa tài liệu thành công"}, status=status.HTTP_200_OK)
 

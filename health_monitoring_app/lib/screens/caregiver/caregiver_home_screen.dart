@@ -3276,10 +3276,10 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                   item['times_per_day']?.toString() ??
                   '',
             ),
-            'time': originalTime.isNotEmpty
+            'times': [originalTime.isNotEmpty
                 ? originalTime
-                : _defaultTimeForSession(session),
-            'session': session,
+                : _defaultTimeForSession(session)],
+            'sessions': [session],
             'daysController': TextEditingController(
               text: item['days']?.toString() ?? '',
             ),
@@ -3330,9 +3330,9 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: sessionOptions.map((option) {
-                  final isSelected =
-                      editableResults[index]['session'] == option;
-                  return ChoiceChip(
+                  final sessions = editableResults[index]['sessions'] as List;
+                  final isSelected = sessions.contains(option);
+                  return FilterChip(
                     label: Text(option),
                     selected: isSelected,
                     selectedColor: const Color(0xFFDCFCE7),
@@ -3344,13 +3344,26 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                     onSelected: (selected) {
-                      if (selected) {
-                        setStateModal(() {
-                          editableResults[index]['session'] = option;
-                          editableResults[index]['time'] =
-                              _defaultTimeForSession(option);
-                        });
-                      }
+                      setStateModal(() {
+                        final times = editableResults[index]['times'] as List;
+                        if (selected) {
+                          sessions.add(option);
+                          times.add(_defaultTimeForSession(option));
+                        } else {
+                          if (sessions.length > 1) {
+                            final idx = sessions.indexOf(option);
+                            sessions.removeAt(idx);
+                            times.removeAt(idx);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Vui lòng chọn ít nhất một buổi uống'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        }
+                      });
                     },
                   );
                 }).toList(),
@@ -3678,52 +3691,75 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                             item['dosageController']?.text.trim() ?? '';
                         final instruction =
                             item['noteController']?.text.trim() ?? '';
-                        final time = item['time']?.toString() ?? '08:00';
+                        final times = item['times'] as List;
                         final frequency =
                             item['frequencyController']?.text.trim() ?? '';
 
-                        final success = await ApiService.addMedication(
-                          elderlyId: _selectedElderlyId!,
-                          name: name,
-                          dosage: dosage,
-                          instruction: instruction,
-                          time: time,
-                          frequency: frequency.isNotEmpty
-                              ? frequency
-                              : 'Hàng ngày',
-                        );
-                        if (success) successCount++;
+                        for (final t in times) {
+                          final success = await ApiService.addMedication(
+                            elderlyId: _selectedElderlyId!,
+                            name: name,
+                            dosage: dosage,
+                            instruction: instruction,
+                            time: t.toString(),
+                            frequency: frequency.isNotEmpty
+                                ? frequency
+                                : 'Hàng ngày',
+                          );
+                          if (success) successCount++;
+                        }
                       }
 
                       bool appointmentSaved = false;
                       if (appointmentFields != null) {
+                        String appDateStr = appointmentFields['dateController']?.text.trim() ?? '';
+                        String appTimeStr = appointmentFields['timeController']?.text.trim() ?? '08:00';
+                        if (appTimeStr.isEmpty) appTimeStr = '08:00';
+                        
+                        // Parse date and time to validate if it's after current time
+                        bool isValidFuture = true;
+                        if (appDateStr.isNotEmpty) {
+                          try {
+                            List<String> parts = appDateStr.split('-');
+                            if (parts.length == 3) {
+                              int year = int.parse(parts[0]);
+                              int month = int.parse(parts[1]);
+                              int day = int.parse(parts[2]);
+                              
+                              List<String> timeParts = appTimeStr.split(':');
+                              int hour = timeParts.isNotEmpty ? int.parse(timeParts[0]) : 8;
+                              int minute = timeParts.length > 1 ? int.parse(timeParts[1]) : 0;
+                              
+                              final selectedDateTime = DateTime(year, month, day, hour, minute);
+                              if (!selectedDateTime.isAfter(DateTime.now())) {
+                                isValidFuture = false;
+                              }
+                            }
+                          } catch (e) {
+                            // If format is invalid, we might still proceed or reject.
+                            // Assuming we proceed if we can't parse or let backend handle it, 
+                            // but let's strictly reject if it's successfully parsed and not in future.
+                          }
+                        }
+
+                        if (!isValidFuture) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                              backgroundColor: Colors.red,
+                              content: Text('Ngày giờ tái khám phải sau thời gian hiện tại!'),
+                            ));
+                          }
+                          setStateModal(() => isSaving = false);
+                          return;
+                        }
+
                         appointmentSaved = await ApiService.createAppointment(
                           elderlyId: _selectedElderlyId!,
-                          doctorName:
-                              appointmentFields['doctorController']?.text
-                                  .trim() ??
-                              '',
-                          location:
-                              appointmentFields['clinicController']?.text
-                                  .trim() ??
-                              '',
-                          appointmentDate:
-                              appointmentFields['dateController']?.text
-                                  .trim() ??
-                              '',
-                          appointmentTime:
-                              appointmentFields['timeController']?.text
-                                      .trim()
-                                      .isNotEmpty ==
-                                  true
-                              ? appointmentFields['timeController']?.text
-                                        .trim() ??
-                                    '08:00'
-                              : '08:00',
-                          note:
-                              appointmentFields['noteController']?.text
-                                  .trim() ??
-                              '',
+                          doctorName: appointmentFields['doctorController']?.text.trim() ?? '',
+                          location: appointmentFields['clinicController']?.text.trim() ?? '',
+                          appointmentDate: appDateStr,
+                          appointmentTime: appTimeStr,
+                          note: appointmentFields['noteController']?.text.trim() ?? '',
                         );
                       }
 

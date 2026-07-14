@@ -202,6 +202,19 @@ class _AppointmentScreenState extends State<AppointmentScreen>
                         return;
                       }
                       
+                      // Kiểm tra thời gian không được bằng hoặc trước thời gian hiện tại
+                      final selectedDateTime = DateTime(
+                        _pickedDate.year, _pickedDate.month, _pickedDate.day,
+                        _pickedTime.hour, _pickedTime.minute,
+                      );
+                      if (!selectedDateTime.isAfter(DateTime.now())) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          backgroundColor: Colors.red,
+                          content: Text('Ngày giờ khám phải sau thời gian hiện tại!'),
+                        ));
+                        return;
+                      }
+                      
                       setModal(() => isSaving = true);
                       
                       final doctorName = _doctorCtrl.text.trim().isEmpty ? 'Chưa xác định' : _doctorCtrl.text.trim();

@@ -1367,6 +1367,20 @@ class _AddTaskSheetState extends State<_AddTaskSheet>
                       );
                       return;
                     }
+                    // Kiểm tra thời gian lịch khám phải sau thời gian hiện tại
+                    if (_type == 'appointment') {
+                      final selectedDateTime = DateTime(
+                        _date.year, _date.month, _date.day,
+                        _time.hour, _time.minute,
+                      );
+                      if (!selectedDateTime.isAfter(DateTime.now())) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          backgroundColor: Colors.red,
+                          content: Text('Ngày giờ khám phải sau thời gian hiện tại!'),
+                        ));
+                        return;
+                      }
+                    }
                     setState(() => _isSubmitting = true);
                     final time = _type == 'document'
                         ? 'Trước khám'

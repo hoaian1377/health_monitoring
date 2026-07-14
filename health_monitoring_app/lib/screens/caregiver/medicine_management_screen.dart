@@ -219,7 +219,10 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
         if (description.contains('Tổng số viên thuốc:')) {
           final match = RegExp(r'Tổng số viên thuốc:\s*(\d+)').firstMatch(description);
           if (match != null) {
-            stock = int.parse(match.group(1)!);
+            totalStock = int.parse(match.group(1)!);
+            final int takenCount = doseHistory.where((d) => d.taken).length;
+            stock = totalStock - takenCount;
+            if (stock < 0) stock = 0;
           }
         }
 
@@ -468,7 +471,6 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: ElderlySwitcherBar(provider: _elderlyProvider),
               ),
-            _buildTabBar(),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -494,144 +496,154 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     );
   }
 
-  // ── App Bar ───────────────────────────────────────────────────────────────────
   Widget _buildAppBar() {
-    final adherence = _overallAdherence();
     final alerts = _medicines.where((m) => m.isLowStock || m.isExpiringSoon).length;
 
-    return SliverAppBar(
-      expandedHeight: 160.0,
-      floating: true,
-      pinned: false,
-      backgroundColor: const Color(0xFF0284C7),
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      shape: const ContinuousRectangleBorder(
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
-        ),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: EdgeInsets.zero,
-        background: Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-            Positioned(
-              right: -20,
-              top: -20,
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              right: 40,
-              bottom: 10,
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.medication_rounded,
-                              color: Colors.white, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Quản Lý Thuốc',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 22,
-                                letterSpacing: 0.3),
-                          ),
-                        ),
-                        if (alerts > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.warning_amber_rounded,
-                                    color: Color(0xFFD97706), size: 14),
-                                const SizedBox(width: 4),
-                                Text('$alerts cảnh báo',
-                                    style: const TextStyle(
-                                        color: Color(0xFFD97706),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+    return SliverToBoxAdapter(
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(28),
+            bottomRight: Radius.circular(28),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x330EA5E9),
+              blurRadius: 16,
+              offset: Offset(0, 8),
             ),
           ],
         ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(28),
+            bottomRight: Radius.circular(28),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -20,
+                top: -20,
+                child: Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 40,
+                bottom: 10,
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              SafeArea(
+                bottom: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                      child: Row(
+                        children: [
+                          if (Navigator.canPop(context))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: IconButton(
+                                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                                onPressed: () => Navigator.pop(context),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.medication_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Quản Lý Thuốc',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 22,
+                                  letterSpacing: 0.3),
+                            ),
+                          ),
+                          if (alerts > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded,
+                                      color: Color(0xFFD97706), size: 14),
+                                  const SizedBox(width: 4),
+                                  Text('$alerts cảnh báo',
+                                      style: const TextStyle(
+                                          color: Color(0xFFD97706),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.white,
+                      indicatorWeight: 3,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white60,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      indicatorSize: TabBarIndicatorSize.label,
+                      tabs: const [
+                        Tab(text: 'Hôm nay'),
+                        Tab(text: 'Danh sách'),
+                        Tab(text: 'Thống kê'),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-
-  // ── Tab Bar ───────────────────────────────────────────────────────────────────
-  Widget _buildTabBar() {
-    return Container(
-      color: Colors.white,
-      child: TabBar(
-        controller: _tabController,
-        labelColor: const Color(0xFF0EA5E9),
-        unselectedLabelColor: const Color(0xFF94A3B8),
-        indicatorColor: const Color(0xFF0EA5E9),
-        indicatorWeight: 2.5,
-        labelStyle:
-            const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-        tabs: const [
-          Tab(icon: Icon(Icons.today_rounded, size: 18), text: 'Hôm nay'),
-          Tab(icon: Icon(Icons.medication_rounded, size: 18), text: 'Danh sách'),
-          Tab(icon: Icon(Icons.bar_chart_rounded, size: 18), text: 'Thống kê'),
-        ],
-      ),
-    );
-  }
 
   Future<void> _syncMedications() async {
     if (_selectedElderlyId != null) {

@@ -713,6 +713,16 @@ class ApiService {
     }
   }
 
+  static Future<bool> deleteMedicalDocument(int id) async {
+    final url = Uri.parse("$baseUrl/api/medication/elderly-document/$id/delete/");
+    try {
+      final res = await http.delete(url);
+      return res.statusCode == 200 || res.statusCode == 204;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // ================= GET APPOINTMENTS =================
   static Future<List<dynamic>> getAppointments(int elderlyId) async {
     final url = Uri.parse(

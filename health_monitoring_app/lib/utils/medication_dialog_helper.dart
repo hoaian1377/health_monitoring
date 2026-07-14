@@ -245,7 +245,7 @@ class MedicationDialogHelper {
 
     String selectedInstruction = 'Sau ăn';
     String selectedDoseUnit = 'viên';
-    String selectedTime = initialTime ?? '08:00';
+    List<String> selectedTimes = initialTime != null ? [initialTime] : ['08:00'];
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 30));
     List<String> timeSlots = initialTime != null ? [initialTime] : ['08:00', '12:00', '18:00'];
@@ -315,11 +315,12 @@ class MedicationDialogHelper {
           }
 
           Future<void> pickTime() async {
+            final firstTime = selectedTimes.isNotEmpty ? selectedTimes.first : '08:00';
             final t = await showTimePicker(
               context: ctx,
               initialTime: TimeOfDay(
-                hour: selectedTime.contains(':') ? (int.tryParse(selectedTime.split(':')[0]) ?? 8) : 8,
-                minute: selectedTime.contains(':') ? (int.tryParse(selectedTime.split(':')[1]) ?? 0) : 0,
+                hour: firstTime.contains(':') ? (int.tryParse(firstTime.split(':')[0]) ?? 8) : 8,
+                minute: firstTime.contains(':') ? (int.tryParse(firstTime.split(':')[1]) ?? 0) : 0,
               ),
               builder: (c, child) => Theme(
                 data: Theme.of(c).copyWith(
@@ -337,8 +338,12 @@ class MedicationDialogHelper {
                     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
                 if (!timeSlots.contains(formatted)) {
                   timeSlots.add(formatted);
+                  timeSlots.sort();
                 }
-                selectedTime = formatted;
+                if (!selectedTimes.contains(formatted)) {
+                  selectedTimes.add(formatted);
+                  selectedTimes.sort();
+                }
               });
             }
           }
@@ -775,10 +780,18 @@ class MedicationDialogHelper {
                               spacing: 8,
                               runSpacing: 8,
                               children: timeSlots.map((slot) {
-                                final isSelected = selectedTime == slot;
+                                final isSelected = selectedTimes.contains(slot);
                                 return GestureDetector(
-                                  onTap: () =>
-                                      setDlg(() => selectedTime = slot),
+                                  onTap: () => setDlg(() {
+                                    if (isSelected) {
+                                      if (selectedTimes.length > 1) {
+                                        selectedTimes.remove(slot);
+                                      }
+                                    } else {
+                                      selectedTimes.add(slot);
+                                      selectedTimes.sort();
+                                    }
+                                  }),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
@@ -1105,7 +1118,7 @@ class MedicationDialogHelper {
 
                                   if (hasError) return;
 
-                                  if (timeSlots.isEmpty) {
+                                  if (selectedTimes.isEmpty) {
                                     ScaffoldMessenger.of(ctx).showSnackBar(
                                       const SnackBar(
                                         content: Text('Vui lòng thêm ít nhất một giờ uống'),
@@ -1139,14 +1152,30 @@ class MedicationDialogHelper {
                                       name: name,
                                       dosage: dosageStr,
                                       instruction: selectedInstruction,
-                                      time: selectedTime,
-                                      frequency: timeSlots.length > 1
-                                          ? '${timeSlots.length} lần/ngày'
+                                      time: selectedTimes.first,
+                                      frequency: selectedTimes.length > 1
+                                          ? '${selectedTimes.length} lần/ngày'
                                           : 'Hàng ngày',
                                       description: description,
                                       startDate: startStr,
                                       endDate: endStr,
                                     );
+                                    // Create new schedules for additional times
+                                    for (int i = 1; i < selectedTimes.length; i++) {
+                                      await ApiService.addMedication(
+                                        elderlyId: elderlyId,
+                                        name: name,
+                                        dosage: dosageStr,
+                                        instruction: selectedInstruction,
+                                        time: selectedTimes[i],
+                                        frequency: selectedTimes.length > 1
+                                            ? '${selectedTimes.length} lần/ngày'
+                                            : 'Hàng ngày',
+                                        description: description,
+                                        startDate: startStr,
+                                        endDate: endStr,
+                                      );
+                                    }
                                   } else {
                                     final medicationsToSave =
                                         scannedSelections.isNotEmpty
@@ -1157,7 +1186,6 @@ class MedicationDialogHelper {
                                               'dosage': dosageStr,
                                               'instruction':
                                                   selectedInstruction,
-                                              'time': selectedTime,
                                             },
                                           ];
 
@@ -1177,25 +1205,28 @@ class MedicationDialogHelper {
                                                   selectedInstruction)
                                               .toString()
                                               .trim();
-                                      final itemTime =
-                                          (scannedItem['time'] ?? selectedTime)
-                                              .toString()
-                                              .trim();
-                                      final success =
-                                          await ApiService.addMedication(
-                                            elderlyId: elderlyId,
-                                            name: itemName,
-                                            dosage: itemDosage,
-                                            instruction: itemInstruction,
-                                            time: itemTime,
-                                            frequency: timeSlots.length > 1
-                                                ? '${timeSlots.length} lần/ngày'
-                                                : 'Hàng ngày',
-                                            description: description,
-                                            startDate: startStr,
-                                            endDate: endStr,
-                                          );
-                                      if (success) ok = true;
+                                      
+                                      List<String> timesToSave = scannedItem.containsKey('time') 
+                                          ? [scannedItem['time'].toString().trim()] 
+                                          : selectedTimes;
+                                          
+                                      for (final t in timesToSave) {
+                                        final success =
+                                            await ApiService.addMedication(
+                                              elderlyId: elderlyId,
+                                              name: itemName,
+                                              dosage: itemDosage,
+                                              instruction: itemInstruction,
+                                              time: t,
+                                              frequency: selectedTimes.length > 1
+                                                  ? '${selectedTimes.length} lần/ngày'
+                                                  : 'Hàng ngày',
+                                              description: description,
+                                              startDate: startStr,
+                                              endDate: endStr,
+                                            );
+                                        if (success) ok = true;
+                                      }
                                     }
                                   }
 

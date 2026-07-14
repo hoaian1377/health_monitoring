@@ -19,4 +19,5 @@ urlpatterns = [
     path('appointment/<int:pk>/delete/', views.DeleteAppointmentView.as_view(), name='delete_appointment'),
     path('elderly-document/list/', views.ElderlyMedicalDocumentListView.as_view(), name='list_elderly_document'),
     path('elderly-document/upload/', views.UploadMedicalDocumentView.as_view(), name='upload_elderly_document'),
+    path('elderly-document/<int:pk>/delete/', views.DeleteMedicalDocumentView.as_view(), name='delete_elderly_document'),
 ]

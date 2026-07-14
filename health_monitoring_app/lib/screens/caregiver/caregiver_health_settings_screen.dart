@@ -68,13 +68,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     _tabController = TabController(length: 4, vsync: this);
     _elderlyProvider.addListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.addListener(_onDataChanged);
-    // Load data if elderly already selected
-    if (_selectedElderlyId != null) {
-      _fetchAllData();
-    } else if (ApiService.currentRole != 'caregiver') {
-      // Elderly role
-      _fetchAllData();
-    }
+    _fetchAllData();
   }
 
   void _onElderlyChanged() {
@@ -101,7 +95,10 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
 
   Future<void> _fetchAllData() async {
     final elderlyId = _selectedElderlyId;
-    if (elderlyId == null) return;
+    if (elderlyId == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
     setState(() => _isLoading = true);
 
     // Use elderly profile data from provider or fetch it if role is elderly
@@ -140,7 +137,8 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     }
 
     // Fetch appointments, medications, documents, metrics
-    final appts = await ApiService.getAppointments(elderlyId);
+    final rawAppts = await ApiService.getAppointments(elderlyId);
+    final confirmedAppts = rawAppts.where((a) => a['is_confirmed'] == true).toList();
     final meds =
         await ApiService.getElderlyMedicationSchedule(elderlyId);
     final docs =
@@ -149,7 +147,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
 
     if (mounted) {
       setState(() {
-        _appointments = appts;
+        _appointments = confirmedAppts;
         _medicationSchedules = meds;
         _medicalDocuments = docs;
         _healthMetrics = metrics;
@@ -270,36 +268,6 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                       ],
                     ),
                   ),
-                  if (ApiService.currentRole == 'caregiver' &&
-                      _elderlyList.isNotEmpty && _selectedElderlyId != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.person_rounded,
-                              color: Colors.white, size: 16),
-                          const SizedBox(width: 6),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 100),
-                            child: Text(
-                              _elderlyProvider.selectedElderlyName,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -555,6 +523,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
   // TAB 2: KHÁM BỆNH
   // ═══════════════════════════════════════════════════════════════════════
   Widget _buildAppointmentsTab() {
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 100),
       child: Column(
@@ -604,7 +573,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               Expanded(
                 child: _buildStatCard(
                   'Tổng số lần khám',
-                  '${completedAppts.length} lần',
+                  '${_appointments.length} lần',
                   const Color(0xFF16A34A),
                   Icons.calendar_month_rounded,
                 ),
@@ -613,7 +582,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               Expanded(
                 child: _buildStatCard(
                   'Bác sĩ theo dõi',
-                  '${completedAppts.map((a) => a['doctor_name']).where((n) => n != null && n.toString().isNotEmpty).toSet().length} bác sĩ',
+                  '${_appointments.map((a) => a['doctor_name']).where((n) => n != null && n.toString().isNotEmpty).toSet().length} bác sĩ',
                   const Color(0xFF0EA5E9),
                   Icons.person_rounded,
                 ),
@@ -680,10 +649,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
 
           // ── Appointments list ──
           Builder(builder: (context) {
-            var filteredAppts = _appointments.where((appt) {
-              final diag = appt['diagnosis']?.toString().trim();
-              return diag != null && diag.isNotEmpty;
-            }).toList();
+            var filteredAppts = List<Map<String, dynamic>>.from(_appointments);
             final query = _searchApptCtrl.text.toLowerCase();
 
             if (query.isNotEmpty) {
@@ -770,6 +736,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                   result: resultText,
                   documents: docs,
                   appointmentId: appointmentId,
+                  isConfirmed: appt['is_confirmed'] == true,
                 );
               }).toList(),
             );
@@ -894,6 +861,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     required String diagnosis,
     required int? appointmentId,
     List<dynamic> documents = const [],
+    bool isConfirmed = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -912,7 +880,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _showAppointmentDetailsSheet(
-            date, hospital, doctor, diagnosis, result, documents, appointmentId,
+            date, hospital, doctor, diagnosis, result, documents, appointmentId, isConfirmed,
           ),
           borderRadius: BorderRadius.circular(18),
           child: Padding(
@@ -1406,6 +1374,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
         }
       }
       return {
+        'id': doc['medical_documentid'],
         'name': doc['file_url']?.split('/').last ??
             'Tai_lieu_${doc['medical_documentid']}.pdf',
         'date': date,
@@ -1612,6 +1581,48 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                                     );
                                   }
                                 }
+                              }),
+                              const SizedBox(height: 8),
+                              _smallIconBtn(Icons.delete_outline_rounded,
+                                  const Color(0xFFEF4444),
+                                  const Color(0xFFFEF2F2), () {
+                                showDialog(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Xóa tài liệu'),
+                                    content: const Text('Bạn có chắc chắn muốn xóa tài liệu này không?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: const Text('Hủy'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.pop(ctx);
+                                          final docId = doc['id'] as int?;
+                                          if (docId != null) {
+                                            bool success = await ApiService.deleteMedicalDocument(docId);
+                                            if (success) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Xóa thành công!')),
+                                                );
+                                                _fetchAllData();
+                                              }
+                                            } else {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(content: Text('Có lỗi xảy ra khi xóa.')),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        },
+                                        child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               }),
                             ],
                           ),
@@ -2365,6 +2376,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     String result,
     List<dynamic> documents,
     int? appointmentId,
+    bool isConfirmed,
   ) {
     showModalBottomSheet(
       context: context,
@@ -2405,7 +2417,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                             fontSize: 22,
                             color: Color(0xFF0F172A))),
                   ),
-                  if (appointmentId != null)
+                  if (appointmentId != null && isConfirmed)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -2512,7 +2524,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF0F172A))),
-                          if (appointmentId != null)
+                          if (appointmentId != null && isConfirmed)
                             TextButton.icon(
                               onPressed: () =>
                                   _addDocumentToAppointment(appointmentId),
