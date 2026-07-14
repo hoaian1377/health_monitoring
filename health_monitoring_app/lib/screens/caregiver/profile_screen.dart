@@ -3,7 +3,7 @@ import 'personal_profile_screen.dart';
 import '../login_screen.dart';
 import '../change_password_screen.dart';
 import '../admin_backup_screen.dart';
-import 'caregiver_health_settings_screen.dart';
+import '../../main.dart';
 import 'add_elderly_screen.dart';
 import 'elderly_list_screen.dart';
 import 'checklist_screen.dart';
@@ -17,6 +17,13 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _handleRefresh() async {
+    // There is no dynamic data fetched on this static screen,
+    // but we simulate a reload to fulfill the pull-to-refresh effect.
+    await Future.delayed(const Duration(milliseconds: 600));
+    setState(() {});
+  }
+
   // ─── Logout Dialog ──────────────────────────────────────────────────────────
   void _showLogoutDialog() {
     showDialog(
@@ -115,8 +122,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: SingleChildScrollView(
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF0EA5E9),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
           children: [
             _buildHeader(),
             Padding(
@@ -142,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       iconColor: const Color(0xFF16A34A),
                       title: 'Hồ sơ bệnh án',
                       subtitle: 'Bệnh án, toa thuốc, giấy tờ và các lần khám bệnh',
-                      onTap: () => _navigate(const HealthDashboardScreen()),
+                      onTap: () => MainNavigator.of(context)?.setTab(2),
                     ),
                     _MenuItem(
                       icon: Icons.checklist_rounded,
@@ -216,6 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

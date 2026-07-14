@@ -5,6 +5,7 @@ from django.db import models
 class Notification(models.Model):
     notificationid = models.AutoField(db_column='notificationID', primary_key=True)  # Field name made lowercase.
     caregiverid = models.ForeignKey('users.Caregiver', models.DO_NOTHING, db_column='caregiverID', blank=True, null=True)  # Field name made lowercase.
+    elderlyid = models.ForeignKey('users.Elderly', models.DO_NOTHING, db_column='elderlyID', blank=True, null=True)
     title = models.CharField(max_length=1000, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
     message = models.CharField(max_length=1000, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)

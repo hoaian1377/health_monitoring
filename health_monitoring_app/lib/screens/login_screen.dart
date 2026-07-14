@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../main.dart';
 import 'signup_screen.dart';
 import '../utils/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +24,27 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUsername = prefs.getString('saved_username');
+    final savedPassword = prefs.getString('saved_password');
+    final rememberMe = prefs.getBool('remember_me') ?? false;
+
+    if (rememberMe && savedUsername != null && savedPassword != null) {
+      setState(() {
+        _usernameController.text = savedUsername;
+        _passwordController.text = savedPassword;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
@@ -38,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final res = await ApiService.login(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
+        rememberMe: _rememberMe,
       );
 
       if (mounted) {
@@ -46,6 +69,17 @@ class _LoginScreenState extends State<LoginScreen> {
         });
 
         if (res["success"]) {
+          final prefs = await SharedPreferences.getInstance();
+          if (_rememberMe) {
+            await prefs.setString('saved_username', _usernameController.text.trim());
+            await prefs.setString('saved_password', _passwordController.text);
+            await prefs.setBool('remember_me', true);
+          } else {
+            await prefs.remove('saved_username');
+            await prefs.remove('saved_password');
+            await prefs.setBool('remember_me', false);
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               backgroundColor: Color(0xFF16A34A),
@@ -298,12 +332,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Vui lòng nhập mật khẩu mới';
-                        }
-                        if (value.length < 6) {
-                          return 'Mật khẩu phải chứa ít nhất 6 ký tự';
-                        }
+                        if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu mới';
+                        if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
+                        if (!RegExp(r'(?=.*[A-Z])').hasMatch(value)) return 'Phải chứa ít nhất 1 chữ hoa';
+                        if (!RegExp(r'(?=.*[0-9])').hasMatch(value)) return 'Phải chứa ít nhất 1 chữ số';
+                        if (!RegExp(r'(?=.*[!@#\$%\^&\*(),\.?":{}|<>])').hasMatch(value)) return 'Phải chứa ít nhất 1 ký tự đặc biệt';
                         return null;
                       },
                     ),

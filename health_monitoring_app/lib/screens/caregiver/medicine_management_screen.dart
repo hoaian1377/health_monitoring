@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../utils/api_service.dart';
 import '../../utils/alarm_service.dart';
+import '../../utils/elderly_provider.dart';
+import 'widgets/elderly_switcher_bar.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
 class MedicineItem {
@@ -113,10 +115,12 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
   List<TodayDoseSlot> _todaySlots = [];
 
-  // Elderly management
-  List<Map<String, dynamic>> _elderlyList = [];
-  int? _selectedElderlyId;
-  bool _isLoadingElderly = false;
+  // ── Elderly Provider (centralized) ──
+  final ElderlyProvider _elderlyProvider = ElderlyProvider.instance;
+
+  // Proxy getters
+  int? get _selectedElderlyId => _elderlyProvider.selectedElderlyId;
+
   bool _isLoadingMedications = false;
 
   // Form controllers
@@ -139,8 +143,17 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _elderlyProvider.addListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.addListener(_onDataChanged);
-    _loadElderlyList();
+    if (_selectedElderlyId != null) {
+      _loadMedicationSchedules(_selectedElderlyId!);
+    }
+  }
+
+  void _onElderlyChanged() {
+    if (mounted && _selectedElderlyId != null) {
+      _loadMedicationSchedules(_selectedElderlyId!);
+    }
   }
 
   void _onDataChanged() {
@@ -151,25 +164,12 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
 
 
-  Future<void> _loadElderlyList() async {
-    setState(() => _isLoadingElderly = true);
-    final result = await ApiService.getElderlyList();
-    if (result['success'] == true && mounted) {
-      final list = (result['elderly_list'] as List)
-          .map((e) => e as Map<String, dynamic>)
-          .toList();
-      setState(() {
-        _elderlyList = list;
-        if (list.isNotEmpty) {
-          _selectedElderlyId = list[0]['id'] as int?;
-        }
-        _isLoadingElderly = false;
-      });
-      if (_selectedElderlyId != null) {
-        await _loadMedicationSchedules(_selectedElderlyId!);
-      }
-    } else if (mounted) {
-      setState(() => _isLoadingElderly = false);
+
+
+  Future<void> _handleRefresh() async {
+    await _elderlyProvider.loadElderlyList();
+    if (_selectedElderlyId != null) {
+      await _loadMedicationSchedules(_selectedElderlyId!);
     }
   }
 
@@ -356,6 +356,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
 
   @override
   void dispose() {
+    _elderlyProvider.removeListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     _tabController.dispose();
     _nameCtrl.dispose();
@@ -408,17 +409,47 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     return map[cat] ?? const Color(0xFF0EA5E9);
   }
 
-  double _overallAdherence() {
-    int total = 0, taken = 0;
-    for (final med in _medicines) {
-      for (final r in med.doseHistory) {
-        if (r.date.isBefore(DateTime.now())) {
-          total++;
-          if (r.taken) taken++;
+  /// Calculate expected number of doses from startDate to today
+  int _expectedDoses(MedicineItem med) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(med.startDate.year, med.startDate.month, med.startDate.day);
+    final end = DateTime(med.endDate.year, med.endDate.month, med.endDate.day);
+    if (start.isAfter(today)) return 0;
+    final effectiveEnd = end.isBefore(today) ? end : today;
+    final daysDiff = effectiveEnd.difference(start).inDays + 1; // inclusive
+    if (daysDiff <= 0) return 0;
+
+    // Count only times that have already passed today
+    int dosesToday = 0;
+    if (!effectiveEnd.isBefore(today)) {
+      // effectiveEnd == today
+      for (final t in med.times) {
+        final parts = t.split(':');
+        final h = int.tryParse(parts[0]) ?? 0;
+        final m = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+        if (h < now.hour || (h == now.hour && m <= now.minute)) {
+          dosesToday++;
         }
       }
     }
-    return total == 0 ? 0 : taken / total;
+
+    // Past days = (daysDiff - 1) * timesPerDay + dosesToday
+    final pastDays = daysDiff - 1; // days before today
+    return pastDays * med.times.length + dosesToday;
+  }
+
+  double _overallAdherence() {
+    int total = 0, taken = 0;
+    for (final med in _medicines) {
+      if (!med.isActive) continue;
+      final expected = _expectedDoses(med);
+      total += expected;
+      taken += med.doseHistory.where((r) => r.taken).length;
+    }
+    // Ensure taken doesn't exceed total
+    if (taken > total) taken = total;
+    return total == 0 ? 1.0 : taken / total;
   }
 
   // ── UI Build ─────────────────────────────────────────────────────────────────
@@ -426,10 +457,17 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: NestedScrollView(
-        headerSliverBuilder: (ctx, inner) => [_buildAppBar()],
-        body: Column(
-          children: [
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF0EA5E9),
+        child: NestedScrollView(
+          headerSliverBuilder: (ctx, inner) => [_buildAppBar()],
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: ElderlySwitcherBar(provider: _elderlyProvider),
+              ),
             _buildTabBar(),
             Expanded(
               child: TabBarView(
@@ -442,6 +480,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
               ),
             ),
           ],
+        ),
         ),
       ),
       floatingActionButton: _isMultiSelectMode ? null : FloatingActionButton(
@@ -562,23 +601,6 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                           ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      child: Row(
-                        children: [
-                          _statPill(Icons.check_circle_rounded, Colors.greenAccent,
-                              '${(adherence * 100).toStringAsFixed(0)}%', 'Tuân thủ'),
-                          const SizedBox(width: 10),
-                          _statPill(Icons.medication_rounded, Colors.lightBlueAccent,
-                              '${_medicines.where((m) => m.isActive).length}', 'Đang dùng'),
-                          const SizedBox(width: 10),
-                          _statPill(Icons.warning_rounded, Colors.orangeAccent,
-                              '${_medicines.where((m) => m.isLowStock).length}', 'Sắp hết'),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -589,34 +611,6 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     );
   }
 
-  Widget _statPill(IconData icon, Color iconColor, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: iconColor, size: 14),
-          const SizedBox(width: 5),
-          Text(
-            value,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-                color: Colors.white.withOpacity(0.75), fontSize: 11),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ── Tab Bar ───────────────────────────────────────────────────────────────────
   Widget _buildTabBar() {
@@ -922,22 +916,43 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
     );
   }
 
-  void _sendReminder(TodayDoseSlot slot) {
+  void _sendReminder(TodayDoseSlot slot) async {
+    final elderlyId = ElderlyProvider.instance.selectedElderlyId;
+    if (elderlyId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa chọn người cao tuổi.')),
+      );
+      return;
+    }
+
+    final success = await ApiService.sendReminder(
+      elderlyId: elderlyId,
+      medicationName: slot.medicine.name,
+    );
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 20),
+            Icon(
+              success ? Icons.notifications_active_rounded : Icons.error_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Đã gửi thông báo nhắc uống ${slot.medicine.name}!',
+                success
+                    ? 'Đã gửi thông báo nhắc uống ${slot.medicine.name}!'
+                    : 'Gửi thông báo thất bại. Thử lại sau.',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF0EA5E9),
+        backgroundColor: success ? const Color(0xFF0EA5E9) : const Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -1728,7 +1743,7 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    _miniStat('Đúng giờ', '${(adherence * 0.85 * 100).round()}%',
+                    _miniStat('Đúng giờ', '${(adherence * 100).round()}%',
                         const Color(0xFF16A34A)),
                     const SizedBox(width: 14),
                     _miniStat('Bỏ liều',
@@ -1758,9 +1773,10 @@ class _MedicineManagementScreenState extends State<MedicineManagementScreen>
   }
 
   Widget _buildMedicineAdherenceBar(MedicineItem med) {
-    final total = med.doseHistory.where((r) => r.date.isBefore(DateTime.now())).length;
-    final taken = med.doseHistory.where((r) => r.taken).length;
-    final pct = total == 0 ? 0.0 : taken / total;
+    final total = _expectedDoses(med);
+    int taken = med.doseHistory.where((r) => r.taken).length;
+    if (taken > total) taken = total;
+    final pct = total == 0 ? 1.0 : taken / total;
     final color = _hexColor(med.color);
 
     return Container(

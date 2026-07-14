@@ -69,6 +69,7 @@ class ApiService {
   static Future<Map<String, dynamic>> login({
     required String username,
     required String password,
+    bool rememberMe = false,
   }) async {
     final url = Uri.parse("$baseUrl/api/users/login/");
 
@@ -76,7 +77,11 @@ class ApiService {
       final res = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"username": username, "password": password}),
+        body: jsonEncode({
+          "username": username,
+          "password": password,
+          "remember_me": rememberMe,
+        }),
       );
 
       print("STATUS: ${res.statusCode}");
@@ -166,6 +171,20 @@ class ApiService {
         return {"success": true, "elderly_list": data["elderly_list"] ?? []};
       }
       return {"success": false, "error": "Không thể tải danh sách."};
+    } catch (e) {
+      return {"success": false, "error": "Lỗi kết nối máy chủ."};
+    }
+  }
+
+  // ================= GET SINGLE ELDERLY PROFILE =================
+  static Future<Map<String, dynamic>> getElderlyProfile(int elderlyId) async {
+    final url = Uri.parse("$baseUrl/api/users/elderly/$elderlyId/update/");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return {"success": true, "data": jsonDecode(res.body)};
+      }
+      return {"success": false, "error": "Không thể tải hồ sơ."};
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
     }
@@ -303,7 +322,8 @@ class ApiService {
       if (res.statusCode == 200) {
         return {"success": true, "message": "Đổi mật khẩu thành công."};
       } else {
-        return {"success": false, "error": "Lỗi đổi mật khẩu."};
+        final data = jsonDecode(res.body);
+        return {"success": false, "error": data["error"] ?? "Lỗi đổi mật khẩu."};
       }
     } catch (e) {
       return {"success": false, "error": "Lỗi kết nối máy chủ."};
@@ -735,10 +755,17 @@ class ApiService {
   }
 
   // ================= GET NOTIFICATIONS =================
-  static Future<List<dynamic>> getNotifications() async {
-    final queryParam = currentRole == 'elderly'
-        ? 'elderly_id=$currentAccountId'
-        : 'caregiver_id=$currentAccountId';
+  static Future<List<dynamic>> getNotifications([int? elderlyId]) async {
+    String queryParam = '';
+    if (currentRole == 'elderly') {
+      queryParam = 'elderly_id=$currentAccountId';
+    } else {
+      if (elderlyId != null) {
+        queryParam = 'caregiver_id=$currentAccountId&elderly_id=$elderlyId';
+      } else {
+        queryParam = 'caregiver_id=$currentAccountId';
+      }
+    }
     final url = Uri.parse(
       "$baseUrl/api/notification/notifications/?$queryParam",
     );
@@ -750,6 +777,54 @@ class ApiService {
       return [];
     } catch (e) {
       print("ERROR: $e");
+      return [];
+    }
+  }
+
+  // ================= SEND REMINDER (Caregiver → Elderly) =================
+  static Future<bool> sendReminder({
+    required int elderlyId,
+    required String medicationName,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/notification/send-reminder/");
+    try {
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'caregiver_id': currentAccountId,
+          'elderly_id': elderlyId,
+          'medication_name': medicationName,
+        }),
+      );
+      return res.statusCode == 201;
+    } catch (e) {
+      print("ERROR sendReminder: $e");
+      return false;
+    }
+  }
+
+  // ================= GET NEW NOTIFICATIONS (for polling) =================
+  /// Returns notifications created after [sinceId]. Used by elderly to detect new push-style notifs.
+  static Future<List<dynamic>> getNewNotifications({required int sinceId}) async {
+    final queryParam = currentRole == 'elderly'
+        ? 'elderly_id=$currentAccountId'
+        : 'caregiver_id=$currentAccountId';
+    final url = Uri.parse(
+      "$baseUrl/api/notification/notifications/?$queryParam",
+    );
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final List<dynamic> all = jsonDecode(res.body);
+        // Filter notifications newer than sinceId
+        return all.where((n) {
+          final nId = n['notificationid'] ?? n['notificationID'] ?? 0;
+          return nId > sinceId;
+        }).toList();
+      }
+      return [];
+    } catch (e) {
       return [];
     }
   }

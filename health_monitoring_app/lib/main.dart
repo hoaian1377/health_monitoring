@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'screens/home_screen.dart';
 import 'screens/caregiver/medicine_management_screen.dart';
 import 'screens/caregiver/caregiver_health_settings_screen.dart';
 import 'screens/caregiver/dashboard_screen.dart';
 import 'screens/caregiver/profile_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/caregiver/caregiver_home_screen.dart';
 import 'screens/admin/screens/admin_login_screen.dart';
+import 'screens/login_screen.dart';
 import 'utils/alarm_service.dart';
+import 'utils/elderly_provider.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 // ── Elderly-specific screens ────────────────────────────────────────────────
@@ -113,7 +116,83 @@ class MainNavigator extends StatefulWidget {
 }
 
 class _MainNavigatorState extends State<MainNavigator> {
-  int _currentIndex = 0; 
+  int _currentIndex = 0;
+
+  /// Centralized elderly provider for all caregiver screens
+  final ElderlyProvider _elderlyProvider = ElderlyProvider.instance;
+
+  ElderlyProvider get elderlyProvider => _elderlyProvider;
+
+  /// Notification polling for elderly role
+  Timer? _notifPollingTimer;
+  int _lastNotifId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Request notification permissions for all roles (Android 13+)
+    AlarmService.requestPermissions();
+    // Load elderly list once for caregiver role
+    if (ApiService.currentRole == 'caregiver') {
+      _elderlyProvider.loadElderlyList();
+    }
+    // Start notification polling for elderly role
+    if (ApiService.currentRole == 'elderly') {
+      _initNotificationPolling();
+    }
+  }
+
+  /// Initialize polling: request permissions, set baseline, then poll every 15s
+  Future<void> _initNotificationPolling() async {
+    // Request notification permissions (required on Android 13+)
+    await AlarmService.requestPermissions();
+
+    // Get current max notification ID as baseline
+    final existing = await ApiService.getNotifications();
+    if (existing.isNotEmpty) {
+      for (var n in existing) {
+        final id = n['notificationid'] ?? n['notificationID'] ?? 0;
+        if (id is int && id > _lastNotifId) _lastNotifId = id;
+      }
+    }
+    debugPrint('📢 Notification polling started. Baseline ID: $_lastNotifId');
+    // Start periodic polling
+    _notifPollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _pollForNewNotifications();
+    });
+  }
+
+  Future<void> _pollForNewNotifications() async {
+    if (!mounted) return;
+    final newNotifs = await ApiService.getNewNotifications(sinceId: _lastNotifId);
+    if (newNotifs.isNotEmpty) {
+      debugPrint('📢 Found ${newNotifs.length} new notification(s)');
+    }
+    for (var n in newNotifs) {
+      final nId = n['notificationid'] ?? n['notificationID'] ?? 0;
+      final title = n['title'] ?? 'Thông báo';
+      final message = n['message'] ?? '';
+      final intId = nId is int ? nId : (int.tryParse(nId.toString()) ?? 0);
+
+      debugPrint('📢 Showing push notification: $title');
+
+      // Show system push notification with sound & vibration
+      await AlarmService.showImmediateNotification(
+        id: intId,
+        title: '🔔 $title',
+        body: message,
+        payload: 'notification_$nId',
+      );
+
+      if (intId > _lastNotifId) _lastNotifId = intId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _notifPollingTimer?.cancel();
+    super.dispose();
+  }
 
   void setTab(int index) {
     setState(() {
@@ -134,14 +213,20 @@ class _MainNavigatorState extends State<MainNavigator> {
         ],
       );
     } else {
-      return IndexedStack(
-        index: _currentIndex,
-        children: const [
-          HomeScreen(),
-          MedicineManagementScreen(),
-          HealthDashboardScreen(),
-          DashboardScreen(),
-          ProfileScreen(),
+      return Column(
+        children: [
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: const [
+                HomeScreen(),
+                MedicineManagementScreen(),
+                HealthDashboardScreen(),
+                DashboardScreen(),
+                ProfileScreen(),
+              ],
+            ),
+          ),
         ],
       );
     }

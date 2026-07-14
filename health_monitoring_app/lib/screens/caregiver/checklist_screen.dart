@@ -4,6 +4,8 @@ import 'package:excel/excel.dart' hide Border, BorderStyle;
 import 'package:docx_to_text/docx_to_text.dart';
 import 'dart:io';
 import '../../utils/api_service.dart';
+import '../../utils/elderly_provider.dart';
+import 'widgets/elderly_switcher_bar.dart';
 
 class TaskItem {
   final String id;
@@ -44,7 +46,8 @@ class _ChecklistScreenState extends State<ChecklistScreen>
   String _selectedCategory = 'task'; // 'task' | 'document' | 'appointment'
   bool _isLoading = true;
 
-  int? _currentElderlyId;
+  final ElderlyProvider _elderlyProvider = ElderlyProvider.instance;
+  int? get _currentElderlyId => _elderlyProvider.selectedElderlyId;
   int? _dailyChecklistId;
 
   late AnimationController _fabAnimationController;
@@ -56,30 +59,40 @@ class _ChecklistScreenState extends State<ChecklistScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    _elderlyProvider.addListener(_onElderlyChanged);
     _fetchTasks();
+  }
+
+  void _onElderlyChanged() {
+    if (mounted) {
+      setState(() {
+        _tasks.clear();
+        _dailyChecklistId = null;
+      });
+      _fetchTasks();
+    }
   }
 
   @override
   void dispose() {
+    _elderlyProvider.removeListener(_onElderlyChanged);
     _fabAnimationController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchTasks() async {
-    setState(() => _isLoading = true);
-
-    final res = await ApiService.getElderlyList();
-    if (res['success'] == true) {
-      final list = res['elderly_list'] as List;
-      if (list.isNotEmpty) {
-        _currentElderlyId = list.first['id'] as int;
-      }
+  Future<void> _handleRefresh() async {
+    await _elderlyProvider.loadElderlyList();
+    if (_currentElderlyId != null) {
+      await _fetchTasks();
     }
+  }
 
+  Future<void> _fetchTasks() async {
     if (_currentElderlyId == null) {
       if (mounted) setState(() => _isLoading = false);
       return;
     }
+    setState(() => _isLoading = true);
 
     final checklistsRes = await ApiService.getChecklists(_currentElderlyId!);
     List<dynamic> checklistItems = [];
@@ -326,8 +339,12 @@ class _ChecklistScreenState extends State<ChecklistScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF0EA5E9),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           // ─── AppBar ───────────────────────────────────────────────────────
           SliverAppBar(
             expandedHeight: 0,
@@ -367,6 +384,14 @@ class _ChecklistScreenState extends State<ChecklistScreen>
                 ),
               ),
             ],
+          ),
+
+          // ─── Elderly Switcher ──────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: ElderlySwitcherBar(provider: _elderlyProvider),
+            ),
           ),
 
           // ─── Progress Card ─────────────────────────────────────────────
@@ -414,6 +439,7 @@ class _ChecklistScreenState extends State<ChecklistScreen>
               ),
             ),
         ],
+      ),
       ),
     );
   }

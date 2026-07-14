@@ -3,6 +3,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../utils/api_service.dart';
+import 'package:provider/provider.dart';
+import '../../providers/elderly_provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -50,7 +52,9 @@ class _HistoryScreenState extends State<HistoryScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     ApiService.dataRefreshTrigger.addListener(_onDataChanged);
-    _fetchTreatmentHistory();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchTreatmentHistory();
+    });
   }
 
   void _onDataChanged() {
@@ -60,13 +64,8 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Future<void> _fetchTreatmentHistory() async {
-    final res = await ApiService.getElderlyList();
-    if (res['success'] == true) {
-      final list = res['elderly_list'] as List;
-      if (list.isNotEmpty) {
-        _currentElderlyId = list.first['id'] as int;
-      }
-    }
+    final elderlyProvider = Provider.of<ElderlyProvider>(context, listen: false);
+    _currentElderlyId = elderlyProvider.selectedElderlyId;
 
     if (_currentElderlyId != null) {
       final history = await ApiService.getTreatmentHistory(_currentElderlyId!);

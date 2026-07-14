@@ -510,6 +510,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
   late TextEditingController _medNoteCtrl;
   late TextEditingController _usernameCtrl;
   late TextEditingController _passwordCtrl;
+  late TextEditingController _conditionsCtrl;
+  late TextEditingController _allergiesCtrl;
   String? _selectedGender;
   DateTime? _selectedDob;
   bool _isSaving = false;
@@ -524,6 +526,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
         TextEditingController(text: widget.elderly['medical_note'] ?? '');
     _usernameCtrl = TextEditingController(text: widget.elderly['username'] ?? '');
     _passwordCtrl = TextEditingController();
+    _conditionsCtrl = TextEditingController(text: widget.elderly['underlying_conditions'] ?? '');
+    _allergiesCtrl = TextEditingController(text: widget.elderly['allergies'] ?? '');
     _selectedGender = widget.elderly['gender'];
     // parse dob yyyy-MM-dd
     final dobStr = widget.elderly['dob'] as String?;
@@ -545,6 +549,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
     _medNoteCtrl.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _conditionsCtrl.dispose();
+    _allergiesCtrl.dispose();
     super.dispose();
   }
 
@@ -588,6 +594,20 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
       );
       return;
     }
+    
+    if (_passwordCtrl.text.trim().isNotEmpty) {
+      final p = _passwordCtrl.text.trim();
+      if (p.length < 8 || !RegExp(r'(?=.*[A-Z])').hasMatch(p) || !RegExp(r'(?=.*[0-9])').hasMatch(p) || !RegExp(r'(?=.*[!@#\$%\^&\*(),\.?":{}|<>])').hasMatch(p)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mật khẩu phải từ 8 ký tự, gồm chữ hoa, số và ký tự đặc biệt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSaving = true);
     final result = await ApiService.updateElderly(
       elderlyId: widget.elderly['id'] as int,
@@ -597,6 +617,9 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
       medicalNote: _medNoteCtrl.text.trim(),
       password: _passwordCtrl.text.trim(),
       username: _usernameCtrl.text.trim(),
+      underlyingConditions: _conditionsCtrl.text.trim(),
+      allergies: _allergiesCtrl.text.trim(),
+      bloodType: widget.elderly['blood_type']?.toString(),
     );
     setState(() => _isSaving = false);
     if (!mounted) return;
@@ -1040,8 +1063,8 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
                   iconBg: const Color(0xFFFFF0E6),
                   label: 'Ghi chú y tế',
                   controller: _medNoteCtrl,
-                  hint: 'Tiểu đường, huyết áp...',
-                  maxLines: 3,
+                  hint: 'Ghi chú y tế chung...',
+                  maxLines: 2,
                 )
               : _infoRowView(
                   Icons.medical_information_rounded,
@@ -1051,6 +1074,46 @@ class _ElderlyDetailScreenState extends State<ElderlyDetailScreen>
                   widget.elderly['medical_note']?.isNotEmpty == true
                       ? widget.elderly['medical_note']
                       : 'Chưa có ghi chú'),
+          const Divider(height: 1, indent: 60, color: Color(0xFFF1F5F9)),
+
+          // Bệnh nền
+          _isEditing
+              ? _editFieldRow(
+                  icon: Icons.sick_rounded,
+                  iconBg: const Color(0xFFFEE2E2),
+                  label: 'Bệnh nền',
+                  controller: _conditionsCtrl,
+                  hint: 'Tiểu đường, huyết áp...',
+                  maxLines: 2,
+                )
+              : _infoRowView(
+                  Icons.sick_rounded,
+                  const Color(0xFFFEE2E2),
+                  const Color(0xFFDC2626),
+                  'Bệnh nền',
+                  widget.elderly['underlying_conditions']?.isNotEmpty == true
+                      ? widget.elderly['underlying_conditions']
+                      : 'Chưa cập nhật'),
+          const Divider(height: 1, indent: 60, color: Color(0xFFF1F5F9)),
+
+          // Dị ứng
+          _isEditing
+              ? _editFieldRow(
+                  icon: Icons.coronavirus_rounded,
+                  iconBg: const Color(0xFFFEF3C7),
+                  label: 'Dị ứng',
+                  controller: _allergiesCtrl,
+                  hint: 'Hải sản, phấn hoa...',
+                  maxLines: 2,
+                )
+              : _infoRowView(
+                  Icons.coronavirus_rounded,
+                  const Color(0xFFFEF3C7),
+                  const Color(0xFFD97706),
+                  'Dị ứng',
+                  widget.elderly['allergies']?.isNotEmpty == true
+                      ? widget.elderly['allergies']
+                      : 'Chưa cập nhật'),
           const Divider(height: 1, indent: 60, color: Color(0xFFF1F5F9)),
 
           // Tên đăng nhập

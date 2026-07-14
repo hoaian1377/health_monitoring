@@ -5,6 +5,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from .serializers import RegisterSerialzier, LoginSerializer
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .models import Account
+from datetime import timedelta
 # Create your views here.
 
 class RegisterView(generics.CreateAPIView):
@@ -28,6 +29,10 @@ class LoginView(generics.CreateAPIView):
             # Patch id so simplejwt works with custom user model
             user.id = user.accountid
             refresh = RefreshToken.for_user(user)
+            
+            if serializer.validated_data.get('remember_me', False):
+                refresh.set_exp(lifetime=timedelta(days=30))
+                
             access = AccessToken.for_user(user)
 
             # Fetch info based on role
@@ -207,7 +212,25 @@ class GetElderlyListView(generics.RetrieveAPIView):
 
 # ── Cập nhật thông tin người cao tuổi ──────────────────────────────────────
 class UpdateElderlyView(generics.UpdateAPIView):
-    """PUT /api/users/elderly/<elderly_id>/update/"""
+    """GET/PUT /api/users/elderly/<elderly_id>/update/"""
+    def get(self, request, elderly_id):
+        try:
+            e = Elderly.objects.get(elderlyid=elderly_id)
+            return Response({
+                "id": e.elderlyid,
+                "fullname": e.fullname,
+                "dob": str(e.date_of_birthday) if e.date_of_birthday else None,
+                "gender": "Nam" if e.gender else "Nu",
+                "medical_note": e.medical_note or "",
+                "blood_type": e.blood_type or "",
+                "allergies": e.allergies or "",
+                "underlying_conditions": e.underlying_conditions or "",
+                "qr_token": e.qr_token or "",
+                "username": e.accountid.usename if e.accountid else "",
+            }, status=status.HTTP_200_OK)
+        except Elderly.DoesNotExist:
+            return Response({"error": "Không tìm thấy người cao tuổi"}, status=status.HTTP_404_NOT_FOUND)
+
     def put(self, request, elderly_id):
         try:
             elderly = Elderly.objects.get(elderlyid=elderly_id)

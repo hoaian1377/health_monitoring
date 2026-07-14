@@ -341,6 +341,7 @@ class CreateAppointmentView(generics.CreateAPIView):
                 if ce.caregiverid:
                     notif = Notification.objects.create(
                         caregiverid=ce.caregiverid,
+                        elderlyid=elderly,
                         title=f"Lịch khám bệnh: {elderly.fullname}",
                         message=f"Thời gian: {time_formatted} ngày {date_formatted}\nTại: {location_str}\nPhụ trách: {doctor_str}",
                         created_at=timezone.now()

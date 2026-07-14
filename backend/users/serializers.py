@@ -67,6 +67,7 @@ class RegisterSerialzier(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only = True)
+    remember_me = serializers.BooleanField(required=False, default=False)
 
     def validate(self, data):
         try:

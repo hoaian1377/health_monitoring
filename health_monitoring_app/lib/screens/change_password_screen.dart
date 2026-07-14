@@ -177,7 +177,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       onToggle: () => setState(() => _showNew = !_showNew),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu mới';
-                        if (v.length < 6) return 'Mật khẩu phải có ít nhất 6 ký tự';
+                        if (v.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
+                        if (!RegExp(r'(?=.*[A-Z])').hasMatch(v)) return 'Phải chứa ít nhất 1 chữ hoa';
+                        if (!RegExp(r'(?=.*[0-9])').hasMatch(v)) return 'Phải chứa ít nhất 1 chữ số';
+                        if (!RegExp(r'(?=.*[!@#\$%\^&\*(),\.?":{}|<>])').hasMatch(v)) return 'Phải chứa ít nhất 1 ký tự đặc biệt';
                         if (v == _oldPassCtrl.text) return 'Mật khẩu mới không được trùng mật khẩu cũ';
                         return null;
                       },

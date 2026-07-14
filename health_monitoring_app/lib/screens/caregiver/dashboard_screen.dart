@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../utils/api_service.dart';
+import '../../utils/elderly_provider.dart';
+import 'widgets/elderly_switcher_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,9 +22,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _bloodSugar = '--';
   String _temperature = '--';
 
-  // Elderly
-  int? _selectedElderlyId;
-  String _selectedElderlyName = '';
+  // ── Elderly Provider (centralized) ──
+  final ElderlyProvider _elderlyProvider = ElderlyProvider.instance;
+
+  // Proxy getters so existing code continues to work with minimal changes
+  int? get _selectedElderlyId => _elderlyProvider.selectedElderlyId;
+  String get _selectedElderlyName => _elderlyProvider.selectedElderlyName;
 
   List<dynamic> _historicalMetrics = [];
   List<dynamic> _medicationSchedules = [];
@@ -36,37 +41,40 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    _elderlyProvider.addListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.addListener(_onDataChanged);
-    _loadElderlyThenMetrics();
+    // Load metrics if elderly already selected
+    if (_selectedElderlyId != null) {
+      _loadLatestMetrics();
+    }
+  }
+
+  void _onElderlyChanged() {
+    if (mounted && _selectedElderlyId != null) {
+      _loadLatestMetrics();
+    }
   }
 
   void _onDataChanged() {
-    if (mounted) {
-      _loadElderlyThenMetrics();
+    if (mounted && _selectedElderlyId != null) {
+      _loadLatestMetrics();
     }
   }
 
   @override
   void dispose() {
+    _elderlyProvider.removeListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     super.dispose();
   }
 
   Map<String, dynamic>? _nextAppointment;
 
-  Future<void> _loadElderlyThenMetrics() async {
-    // Bước 1: Lấy danh sách elderly để có đúng elderly_id
-    final result = await ApiService.getElderlyList();
-    if (result['success'] == true) {
-      final list = (result['elderly_list'] as List)
-          .cast<Map<String, dynamic>>();
-      if (list.isNotEmpty) {
-        _selectedElderlyId = list.first['id'] as int;
-        _selectedElderlyName = list.first['fullname']?.toString() ?? '';
-      }
+  Future<void> _handleRefresh() async {
+    await _elderlyProvider.loadElderlyList();
+    if (_selectedElderlyId != null) {
+      await _loadLatestMetrics();
     }
-    // Bước 2: Load metrics với đúng elderly_id
-    await _loadLatestMetrics();
   }
 
   Future<void> _loadLatestMetrics() async {
@@ -81,6 +89,15 @@ class _DashboardScreenState extends State<DashboardScreen>
       setState(() {
         _historicalMetrics = data;
         _medicationSchedules = meds;
+        
+        // Reset metrics first
+        _heartRate = '--';
+        _bpSys = '--';
+        _bpDia = '--';
+        _bloodSugar = '--';
+        _temperature = '--';
+        _nextAppointment = null;
+
         if (data.isNotEmpty) {
           bool foundHr = false;
           bool foundBp = false;
@@ -414,15 +431,21 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F9FF),
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverHeader(),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF0EA5E9),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            _buildSliverHeader(),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  ElderlySwitcherBar(provider: _elderlyProvider),
+                  const SizedBox(height: 16),
                   // Lịch khám sắp tới
                   _buildNextAppointmentCard(),
                   const SizedBox(height: 24),
@@ -650,6 +673,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }

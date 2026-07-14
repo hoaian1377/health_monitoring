@@ -7,4 +7,5 @@ urlpatterns = [
     path('generate-mock/', views.GenerateMockNotificationsView.as_view(), name='generate_mock_notifications'),
     path('notify-missed/', views.NotifyMissedMedicationView.as_view(), name='notify_missed_medication'),
     path('send-sos/', views.SendSOSView.as_view(), name='send_sos'),
+    path('send-reminder/', views.SendReminderView.as_view(), name='send_reminder'),
 ]

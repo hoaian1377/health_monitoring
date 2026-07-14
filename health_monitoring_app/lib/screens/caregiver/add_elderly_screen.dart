@@ -91,6 +91,12 @@ class _AddElderlyScreenState extends State<AddElderlyScreen> {
       _showError('Vui lòng nhập mật khẩu bảo vệ');
       return;
     }
+    
+    final p = _passwordCtrl.text.trim();
+    if (p.length < 8 || !RegExp(r'(?=.*[A-Z])').hasMatch(p) || !RegExp(r'(?=.*[0-9])').hasMatch(p) || !RegExp(r'(?=.*[!@#\$%\^&\*(),\.?":{}|<>])').hasMatch(p)) {
+      _showError('Mật khẩu phải từ 8 ký tự, gồm chữ hoa, số và ký tự đặc biệt');
+      return;
+    }
 
     setState(() => _isLoading = true);
     final dob = _dobText;

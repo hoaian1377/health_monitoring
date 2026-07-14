@@ -13,12 +13,12 @@ class NotificationListView(generics.ListAPIView):
         caregiver_id = self.request.query_params.get('caregiver_id')
         elderly_id = self.request.query_params.get('elderly_id')
 
-        if caregiver_id:
+        if caregiver_id and elderly_id:
+            return Notification.objects.filter(caregiverid=caregiver_id, elderlyid=elderly_id).order_by('-created_at')
+        elif caregiver_id:
             return Notification.objects.filter(caregiverid=caregiver_id).order_by('-created_at')
         elif elderly_id:
-            from users.models import CaregiverElderly
-            caregivers = CaregiverElderly.objects.filter(elderlyid=elderly_id).values_list('caregiverid', flat=True)
-            return Notification.objects.filter(caregiverid__in=caregivers).order_by('-created_at')
+            return Notification.objects.filter(elderlyid=elderly_id).order_by('-created_at')
         return Notification.objects.all().order_by('-created_at')
 
 class NotificationDetailView(APIView):
@@ -58,6 +58,7 @@ class GenerateMockNotificationsView(generics.CreateAPIView):
         
         notif1 = Notification.objects.create(
             caregiverid_id=caregiver_id,
+            elderlyid_id=elderly_id,
             title="Nhắc nhở uống thuốc",
             message="Người thân của bạn có lịch uống thuốc (Paracetamol) vào lúc 14:00 nhưng chưa xác nhận uống.",
             created_at=datetime.datetime.now()
@@ -66,6 +67,7 @@ class GenerateMockNotificationsView(generics.CreateAPIView):
 
         notif2 = Notification.objects.create(
             caregiverid_id=caregiver_id,
+            elderlyid_id=elderly_id,
             title="Chỉ số sinh tồn bất thường",
             message="Nhịp tim của người thân đang ở mức cao (110 bpm). Vui lòng kiểm tra ngay.",
             created_at=datetime.datetime.now()
@@ -104,6 +106,7 @@ class NotifyMissedMedicationView(generics.CreateAPIView):
 
         notif = Notification.objects.create(
             caregiverid_id=caregiver_id,
+            elderlyid_id=elderly_id,
             title="Quên uống thuốc",
             message=f"Bác chưa xác nhận đã uống thuốc '{medication_name}' theo lịch. Hãy nhắc nhở bác!",
             created_at=datetime.datetime.now()
@@ -145,3 +148,30 @@ class SendSOSView(APIView):
                 
         return Response({"message": f"Đã gửi thông báo SOS tới {count} Caregiver(s)"}, status=status.HTTP_201_CREATED)
 
+class SendReminderView(APIView):
+    """POST /api/notification/send-reminder/
+    Body: {"caregiver_id": int, "elderly_id": int, "medication_name": str}
+    Caregiver gửi nhắc nhở uống thuốc cho Elderly
+    """
+    def post(self, request):
+        caregiver_id = request.data.get('caregiver_id')
+        elderly_id = request.data.get('elderly_id')
+        medication_name = request.data.get('medication_name', 'thuốc')
+
+        if not caregiver_id or not elderly_id:
+            return Response({"error": "Thiếu caregiver_id hoặc elderly_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Tạo notification cho elderly
+        notif = Notification.objects.create(
+            caregiverid_id=caregiver_id,
+            elderlyid_id=elderly_id,
+            title="Nhắc nhở uống thuốc",
+            message=f"Người chăm sóc nhắc bạn uống thuốc '{medication_name}' ngay bây giờ!",
+            created_at=datetime.datetime.now()
+        )
+        NotificationDetail.objects.create(notificationid=notif, is_read=False)
+
+        return Response({
+            "message": "Đã gửi thông báo nhắc nhở!",
+            "notification_id": notif.notificationid
+        }, status=status.HTTP_201_CREATED)

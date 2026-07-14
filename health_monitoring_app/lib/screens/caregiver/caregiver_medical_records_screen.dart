@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../utils/api_service.dart';
-
+import '../../utils/elderly_provider.dart';
 
 
 // ======================================================================
@@ -25,11 +25,17 @@ class _MedicalDocumentsScreenState extends State<MedicalDocumentsScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDocuments();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchDocuments();
+    });
   }
 
   Future<void> _fetchDocuments() async {
-    final docs = await ApiService.getMedicalDocument();
+    final elderlyProvider = ElderlyProvider.instance;
+    final selectedId = elderlyProvider.selectedElderlyId;
+    if (selectedId == null) return;
+
+    final docs = await ApiService.getMedicalDocument(elderlyId: selectedId);
     setState(() {
       _allDocs.clear();
       for (var doc in docs) {

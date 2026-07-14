@@ -12,6 +12,8 @@ import 'dart:io' show Platform;
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../main.dart';
 import '../../utils/api_service.dart';
+import '../../utils/elderly_provider.dart';
+import 'widgets/elderly_switcher_bar.dart';
 import 'checklist_screen.dart';
 
 class CaregiverHomeScreen extends StatefulWidget {
@@ -25,9 +27,14 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   // ── Trạng thái ─────────────────────────────────────────────────────────────
   final GlobalKey _qrImageKey = GlobalKey();
 
+  // ── Elderly Provider (centralized) ─────────────────────────────────────────
+  final ElderlyProvider _elderlyProvider = ElderlyProvider.instance;
+
+  // Proxy getters so existing code continues to work with minimal changes
+  List<Map<String, dynamic>> get _elderlyList => _elderlyProvider.elderlyList;
+  int? get _selectedElderlyId => _elderlyProvider.selectedElderlyId;
+
   // Medication Management State
-  List<Map<String, dynamic>> _elderlyList = [];
-  int? _selectedElderlyId;
   List<dynamic> _medicationSchedules = [];
   List<dynamic> _appointments = [];
   bool _isLoadingMedications = false;
@@ -60,9 +67,22 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     super.initState();
     _selectedMedFilter = _getCurrentSessionFilter();
     _medListScrollController = ScrollController();
+    // Listen to centralized provider for elderly changes
+    _elderlyProvider.addListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.addListener(_onDataChanged);
-    _loadElderlyList();
+    // Load details if elderly already selected (provider loaded in MainNavigator)
+    if (_selectedElderlyId != null) {
+      _loadElderlyDetails();
+    }
     _loadNotifications();
+  }
+
+  /// Called when elderly selection changes via the global provider
+  void _onElderlyChanged() {
+    if (mounted && _selectedElderlyId != null) {
+      _loadElderlyDetails();
+      _loadNotifications();
+    }
   }
 
   void _onDataChanged() {
@@ -73,7 +93,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
   Future<void> _loadNotifications() async {
     setState(() => _isLoadingNotifications = true);
-    final notifs = await ApiService.getNotifications();
+    final selectedId = ElderlyProvider.instance.selectedElderlyId;
+    final notifs = await ApiService.getNotifications(selectedId);
     if (mounted) {
       setState(() {
         _notifications = notifs;
@@ -84,28 +105,16 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
 
   @override
   void dispose() {
+    _elderlyProvider.removeListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     _medListScrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadElderlyList() async {
-    final result = await ApiService.getElderlyList();
-    if (mounted && result['success'] == true) {
-      final list = (result['elderly_list'] as List)
-          .cast<Map<String, dynamic>>();
-      setState(() {
-        _elderlyList = list;
-        if (list.isNotEmpty) {
-          if (ApiService.currentElderlyId != null && list.any((e) => e['id'] == ApiService.currentElderlyId)) {
-            _selectedElderlyId = ApiService.currentElderlyId;
-          } else {
-            _selectedElderlyId = list.first['id'] as int;
-            ApiService.currentElderlyId = _selectedElderlyId;
-          }
-          _loadElderlyDetails();
-        }
-      });
+  Future<void> _handleRefresh() async {
+    await _elderlyProvider.loadElderlyList();
+    if (_selectedElderlyId != null) {
+      await _loadElderlyDetails();
     }
   }
 
@@ -170,15 +179,21 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: SingleChildScrollView(
-        child: Column(
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF0EA5E9),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
           children: [
             _buildHeader(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  ElderlySwitcherBar(provider: _elderlyProvider),
+                  const SizedBox(height: 16),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -200,6 +215,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -451,13 +467,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
   }
 
   Widget _buildProfileCard() {
-    final name = ApiService.currentFullname.isNotEmpty
-        ? ApiService.currentFullname
-        : ApiService.currentUsername;
-    final nameSplit = name.split(' ');
-    final shortName = nameSplit.isNotEmpty ? nameSplit.last : name;
-
-    // Get selected elderly details if available
+    String elderlyName = 'Chưa chọn';
     String bloodType = 'Chưa cập nhật';
     String underlyingConditions = 'Chưa cập nhật';
     
@@ -468,6 +478,11 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
             orElse: () => <String, dynamic>{});
         
         if (currentElderly.isNotEmpty) {
+          final fullName = currentElderly['fullname']?.toString().trim() ?? '';
+          if (fullName.isNotEmpty) {
+             final split = fullName.split(' ');
+             elderlyName = split.isNotEmpty ? split.last : fullName;
+          }
           final bt = currentElderly['blood_type']?.toString().trim();
           if (bt != null && bt.isNotEmpty) bloodType = bt;
           
@@ -525,7 +540,7 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                 ),
                 const Spacer(),
                 Text(
-                  shortName,
+                  elderlyName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -788,53 +803,34 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
                     ],
                   ),
                 ),
-                if (_elderlyList.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 130),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: _selectedElderlyId,
-                          icon: const Icon(
-                            Icons.arrow_drop_down,
-                            color: Color(0xFF475569),
-                            size: 20,
+                if (_elderlyList.isNotEmpty && _selectedElderlyId != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.person_rounded, size: 14, color: Color(0xFF7C3AED)),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 100),
+                          child: Text(
+                            _elderlyProvider.selectedElderlyName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF7C3AED),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          isDense: true,
-                          isExpanded: true,
-                          items: _elderlyList.map((e) {
-                            return DropdownMenuItem<int>(
-                              value: e['id'] as int,
-                              child: Text(
-                                e['fullname'] ?? 'N/A',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedElderlyId = val;
-                                ApiService.currentElderlyId = val;
-                              });
-                              _loadElderlyDetails();
-                            }
-                          },
                         ),
-                      ),
+                      ],
                     ),
                   ),
               ],
@@ -2840,8 +2836,8 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
       ),
       builder: (ctx) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.55,
-        maxChildSize: 0.85,
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
         builder: (_, scrollCtrl) => SafeArea(
           top: false,
           child: Column(

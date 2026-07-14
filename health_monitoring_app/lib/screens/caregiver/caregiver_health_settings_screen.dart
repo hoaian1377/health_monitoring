@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/api_service.dart';
+import '../../utils/elderly_provider.dart';
+import 'widgets/elderly_switcher_bar.dart';
 
 class HealthDashboardScreen extends StatefulWidget {
   const HealthDashboardScreen({super.key});
@@ -17,9 +19,18 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // ── Elderly data ──
-  List<Map<String, dynamic>> _elderlyList = [];
-  int? _selectedElderlyId;
+  // ── Elderly Provider (centralized) ──
+  final ElderlyProvider _elderlyProvider = ElderlyProvider.instance;
+
+  // Proxy getters so existing code continues to work with minimal changes
+  List<Map<String, dynamic>> get _elderlyList => _elderlyProvider.elderlyList;
+  int? get _selectedElderlyId {
+    if (ApiService.currentRole == 'elderly') {
+      return ApiService.currentAccountId;
+    }
+    return _elderlyProvider.selectedElderlyId;
+  }
+
   Map<String, dynamic>? _currentElderly;
   bool _isLoading = true;
 
@@ -55,8 +66,19 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _elderlyProvider.addListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.addListener(_onDataChanged);
-    _loadElderlyList();
+    // Load data if elderly already selected
+    if (_selectedElderlyId != null) {
+      _fetchAllData();
+    } else if (ApiService.currentRole != 'caregiver') {
+      // Elderly role
+      _fetchAllData();
+    }
+  }
+
+  void _onElderlyChanged() {
+    if (mounted) _fetchAllData();
   }
 
   void _onDataChanged() {
@@ -65,6 +87,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
 
   @override
   void dispose() {
+    _elderlyProvider.removeListener(_onElderlyChanged);
     ApiService.dataRefreshTrigger.removeListener(_onDataChanged);
     _tabController.dispose();
     _searchApptCtrl.dispose();
@@ -76,68 +99,43 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     super.dispose();
   }
 
-  Future<void> _loadElderlyList() async {
-    if (ApiService.currentRole == 'caregiver') {
-      final result = await ApiService.getElderlyList();
-      if (mounted && result['success'] == true) {
-        final list =
-            (result['elderly_list'] as List).cast<Map<String, dynamic>>();
-        setState(() {
-          _elderlyList = list;
-          if (list.isNotEmpty) {
-            if (ApiService.currentElderlyId != null &&
-                list.any((e) => e['id'] == ApiService.currentElderlyId)) {
-              _selectedElderlyId = ApiService.currentElderlyId;
-            } else {
-              _selectedElderlyId = list.first['id'] as int;
-              ApiService.currentElderlyId = _selectedElderlyId;
-            }
-          }
-        });
-        _fetchAllData();
-      }
-    } else {
-      _selectedElderlyId = ApiService.currentAccountId;
-      _fetchAllData();
-    }
-  }
-
   Future<void> _fetchAllData() async {
     if (_selectedElderlyId == null) return;
     setState(() => _isLoading = true);
 
-    // Fetch elderly profile data
-    final res = await ApiService.getElderlyList();
-    if (res['success'] == true) {
-      final list =
-          (res['elderly_list'] as List).cast<Map<String, dynamic>>();
-      final elderly = list.firstWhere(
-        (e) => e['id'] == _selectedElderlyId,
-        orElse: () => <String, dynamic>{},
-      );
-      if (elderly.isNotEmpty) {
-        _currentElderly = elderly;
-        _bloodType =
-            elderly['blood_type']?.toString().isNotEmpty == true
-                ? elderly['blood_type']
-                : 'N/A';
-        final condStr = elderly['underlying_conditions']?.toString() ?? '';
-        _conditions = condStr.isNotEmpty
-            ? condStr
-                .split(',')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList()
-            : [];
-        final allgStr = elderly['allergies']?.toString() ?? '';
-        _allergies = allgStr.isNotEmpty
-            ? allgStr
-                .split(',')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList()
-            : [];
+    // Use elderly profile data from provider or fetch it if role is elderly
+    Map<String, dynamic>? elderly;
+    if (ApiService.currentRole == 'elderly') {
+      final res = await ApiService.getElderlyProfile(_selectedElderlyId!);
+      if (res['success'] == true) {
+        elderly = res['data'];
       }
+    } else {
+      elderly = _elderlyProvider.selectedElderly;
+    }
+
+    if (elderly != null && elderly.isNotEmpty) {
+      _currentElderly = elderly;
+      _bloodType =
+          elderly['blood_type']?.toString().isNotEmpty == true
+              ? elderly['blood_type']
+              : 'N/A';
+      final condStr = elderly['underlying_conditions']?.toString() ?? '';
+      _conditions = condStr.isNotEmpty
+          ? condStr
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList()
+          : [];
+      final allgStr = elderly['allergies']?.toString() ?? '';
+      _allergies = allgStr.isNotEmpty
+          ? allgStr
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList()
+          : [];
     }
 
     // Fetch appointments, medications, documents, metrics
@@ -159,6 +157,15 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     }
   }
 
+  Future<void> _handleRefresh() async {
+    if (ApiService.currentRole != 'elderly') {
+      await _elderlyProvider.loadElderlyList();
+    }
+    if (_selectedElderlyId != null) {
+      await _fetchAllData();
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════════════
   // BUILD
   // ═══════════════════════════════════════════════════════════════════════
@@ -166,9 +173,22 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4FB),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [SliverToBoxAdapter(child: _buildHeader())];
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF0EA5E9),
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(child: _buildHeader()),
+            SliverToBoxAdapter(
+              child: ApiService.currentRole == 'elderly'
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: ElderlySwitcherBar(provider: _elderlyProvider),
+                  ),
+            ),
+          ];
         },
         body: _isLoading
             ? const Center(
@@ -182,6 +202,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                   _buildDocumentsTab(),
                 ],
               ),
+      ),
       ),
     );
   }
@@ -216,19 +237,16 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                  if (Navigator.canPop(context))
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white, size: 18),
                     ),
-                  ),
-                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,44 +270,33 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                     ),
                   ),
                   if (ApiService.currentRole == 'caregiver' &&
-                      _elderlyList.isNotEmpty)
+                      _elderlyList.isNotEmpty && _selectedElderlyId != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                        color: Colors.white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: _selectedElderlyId,
-                          icon: const Icon(Icons.arrow_drop_down,
-                              color: Colors.white, size: 20),
-                          dropdownColor: const Color(0xFF0284C7),
-                          isDense: true,
-                          items: _elderlyList.map((e) {
-                            return DropdownMenuItem<int>(
-                              value: e['id'] as int,
-                              child: Text(
-                                e['fullname'] ?? 'N/A',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.person_rounded,
+                              color: Colors.white, size: 16),
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 100),
+                            child: Text(
+                              _elderlyProvider.selectedElderlyName,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedElderlyId = val;
-                                ApiService.currentElderlyId = val;
-                              });
-                              _fetchAllData();
-                            }
-                          },
-                        ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -379,57 +386,23 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                           color: Color(0xFF94A3B8), size: 20),
                       onPressed: _showEditBloodTypeDialog,
                     )),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                _infoTile('🤒', 'Bệnh nền', _conditions.isEmpty ? 'Không có' : _conditions.join(', '),
+                    const Color(0xFFFEE2E2), const Color(0xFFB91C1C),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_rounded,
+                          color: Color(0xFF94A3B8), size: 20),
+                      onPressed: _showEditConditionsDialog,
+                    )),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                _infoTile('⚠️', 'Dị ứng', _allergies.isEmpty ? 'Không có' : _allergies.join(', '),
+                    const Color(0xFFFEF3C7), const Color(0xFFD97706),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit_rounded,
+                          color: Color(0xFF94A3B8), size: 20),
+                      onPressed: _showEditAllergiesDialog,
+                    )),
               ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Bệnh nền ──
-          _buildSectionCard(
-            title: 'Bệnh nền',
-            icon: Icons.sick_rounded,
-            iconColor: const Color(0xFFC81E1E),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _conditions.isEmpty && true
-                  ? Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ..._conditions.map((c) => _conditionPill(c)),
-                        _addButton('Thêm', const Color(0xFF0EA5E9),
-                            _showAddConditionDialog),
-                      ],
-                    )
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ..._conditions.map((c) => _conditionPill(c)),
-                        _addButton('Thêm', const Color(0xFF0EA5E9),
-                            _showAddConditionDialog),
-                      ],
-                    ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Dị ứng ──
-          _buildSectionCard(
-            title: 'Dị ứng',
-            icon: Icons.warning_rounded,
-            iconColor: const Color(0xFFD97706),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ..._allergies.map((a) => _allergyPill(a)),
-                  _addButton(
-                      'Thêm', const Color(0xFFD97706), _showAddAllergyDialog),
-                ],
-              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1810,8 +1783,8 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
   // DIALOGS & BOTTOM SHEETS
   // ═══════════════════════════════════════════════════════════════════════
 
-  void _showAddDialog(String title, String hint, Future<void> Function(String) onAdd) {
-    final ctrl = TextEditingController();
+  void _showEditStringDialog(String title, String hint, String initialValue, Future<void> Function(String) onSave) {
+    final ctrl = TextEditingController(text: initialValue);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -1865,8 +1838,9 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: () async {
-                      if (ctrl.text.trim().isNotEmpty) {
-                        await onAdd(ctrl.text.trim());
+                      final val = ctrl.text.trim();
+                      if (val.isNotEmpty || initialValue.isNotEmpty) {
+                        await onSave(val);
                       }
                       if (mounted) Navigator.pop(ctx);
                     },
@@ -1877,7 +1851,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
-                    child: const Text('Thêm', style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: const Text('Lưu', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
@@ -1964,6 +1938,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                             allergies: _allergies.join(', '),
                             underlyingConditions: _conditions.join(', '),
                           );
+                          await _elderlyProvider.loadElderlyList();
                         }
                         if (mounted) Navigator.pop(ctx);
                       },
@@ -1986,10 +1961,12 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
     );
   }
 
-  void _showAddConditionDialog() {
-    _showAddDialog('Thêm bệnh nền', 'Nhập tên bệnh...', (value) async {
+  void _showEditConditionsDialog() {
+    _showEditStringDialog('Chỉnh sửa bệnh nền', 'Nhập các bệnh nền (cách nhau bằng dấu phẩy)...', _conditions.join(', '), (value) async {
       if (_currentElderly != null) {
-        setState(() => _conditions.add(value));
+        setState(() {
+          _conditions = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        });
         await ApiService.updateElderly(
           elderlyId: _currentElderly!['id'],
           fullname: _currentElderly!['fullname'],
@@ -2000,14 +1977,19 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
           allergies: _allergies.join(', '),
           underlyingConditions: _conditions.join(', '),
         );
+        if (ApiService.currentRole != 'elderly') {
+          await _elderlyProvider.loadElderlyList();
+        }
       }
     });
   }
 
-  void _showAddAllergyDialog() {
-    _showAddDialog('Thêm dị ứng', 'Nhập tên chất dị ứng...', (value) async {
+  void _showEditAllergiesDialog() {
+    _showEditStringDialog('Chỉnh sửa dị ứng', 'Nhập các chất dị ứng (cách nhau bằng dấu phẩy)...', _allergies.join(', '), (value) async {
       if (_currentElderly != null) {
-        setState(() => _allergies.add(value));
+        setState(() {
+          _allergies = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        });
         await ApiService.updateElderly(
           elderlyId: _currentElderly!['id'],
           fullname: _currentElderly!['fullname'],
@@ -2018,6 +2000,9 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
           allergies: _allergies.join(', '),
           underlyingConditions: _conditions.join(', '),
         );
+        if (ApiService.currentRole != 'elderly') {
+          await _elderlyProvider.loadElderlyList();
+        }
       }
     });
   }
@@ -2417,18 +2402,70 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                             color: Color(0xFF0F172A))),
                   ),
                   if (appointmentId != null)
-                    InkWell(
-                      onTap: () => _showEditAppointmentDialog(appointmentId, diagnosis, result),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF0F9FF),
-                          shape: BoxShape.circle,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InkWell(
+                          onTap: () => _showEditAppointmentDialog(appointmentId, diagnosis, result),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF0F9FF),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.edit_rounded, size: 20, color: Color(0xFF0EA5E9)),
+                          ),
                         ),
-                        child: const Icon(Icons.edit_rounded,
-                            size: 20, color: Color(0xFF0EA5E9)),
-                      ),
+                        InkWell(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Xóa hồ sơ'),
+                                content: const Text('Bạn có chắc chắn muốn xóa hồ sơ khám bệnh này không?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Hủy'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () async {
+                                      Navigator.pop(ctx); // Close dialog
+                                      bool success = await ApiService.deleteAppointment(appointmentId);
+                                      if (success) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Xóa thành công!')),
+                                          );
+                                          _fetchAllData();
+                                          Navigator.pop(context); // Close bottom sheet
+                                        }
+                                      } else {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Có lỗi xảy ra khi xóa.')),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFEF2F2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.delete_rounded, size: 20, color: Color(0xFFEF4444)),
+                          ),
+                        ),
+                      ],
                     ),
                   InkWell(
                     onTap: () => Navigator.pop(context),
@@ -2569,16 +2606,36 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                                     ],
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF1F5F9),
-                                    shape: BoxShape.circle,
+                                InkWell(
+                                  onTap: () async {
+                                    final String? fileUrl = doc['file_url'];
+                                    if (fileUrl != null && fileUrl.isNotEmpty) {
+                                      final fullUrl = fileUrl.startsWith('http') 
+                                          ? fileUrl 
+                                          : '${ApiService.baseUrl}$fileUrl';
+                                      final url = Uri.parse(fullUrl);
+                                      try {
+                                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                                      } catch (_) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Không thể tải tệp.')),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFF1F5F9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                        Icons.file_download_outlined,
+                                        color: Color(0xFF64748B),
+                                        size: 20),
                                   ),
-                                  child: const Icon(
-                                      Icons.file_download_outlined,
-                                      color: Color(0xFF64748B),
-                                      size: 20),
                                 ),
                               ],
                             ),
