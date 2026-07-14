@@ -616,7 +616,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                       color: Color(0xFF0EA5E9), size: 22),
                   SizedBox(width: 8),
                   Text(
-                    'Thêm kết quả điều trị',
+                    'Thêm ghi chú / lời khuyên',
                     style: TextStyle(
                       color: Color(0xFF0EA5E9),
                       fontWeight: FontWeight.bold,
@@ -2153,7 +2153,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                         'Chẩn đoán bệnh', _diagnosisController),
                     const SizedBox(height: 16),
                     _buildInputField(
-                        'Kết quả / Ghi chú thêm', _resultController,
+                        'Ghi chú / Lời khuyên', _resultController,
                         maxLines: 3),
                     const SizedBox(height: 16),
                     Row(
@@ -2306,7 +2306,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                               const SnackBar(
                                 backgroundColor: Color(0xFF0EA5E9),
                                 content: Text(
-                                    'Đã lưu kết quả điều trị thành công!'),
+                                    'Đã lưu ghi chú / lời khuyên thành công!'),
                               ),
                             );
                           } else {
@@ -2513,7 +2513,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
                         _buildDetailRow('Chẩn đoán bệnh', diagnosis,
                             icon: Icons.healing_rounded),
                       if (result.isNotEmpty)
-                        _buildDetailRow('Kết quả / Ghi chú', result,
+                        _buildDetailRow('Ghi chú / Lời khuyên', result,
                             icon: Icons.description_rounded),
                       const SizedBox(height: 24),
                       Row(
@@ -2688,7 +2688,7 @@ class _HealthDashboardScreenState extends State<HealthDashboardScreen>
               const SizedBox(height: 20),
               _buildInputField('Chẩn đoán bệnh', diagnosisCtrl),
               const SizedBox(height: 16),
-              _buildInputField('Kết quả / Ghi chú thêm', resultCtrl, maxLines: 3),
+              _buildInputField('Ghi chú / Lời khuyên', resultCtrl, maxLines: 3),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,

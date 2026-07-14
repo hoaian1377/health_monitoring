@@ -164,13 +164,25 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
         onError: (val) {
           if (mounted) {
             setState(() => _isListening = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Lỗi nhận diện giọng nói: ${val.errorMsg}')),
+            );
           }
         },
       );
+      
       if (available) {
         _tempVoiceText = '';
         setState(() => _isListening = true);
         await _stopSpeaking();
+        
+        // Tìm locale Tiếng Việt có sẵn trên máy
+        var locales = await _speech.locales();
+        var viLocale = locales.firstWhere(
+          (l) => l.localeId.toLowerCase().contains('vi'), 
+          orElse: () => stt.LocaleName('vi_VN', 'Vietnamese')
+        );
+
         _speech.listen(
           onResult: (val) {
             if (mounted) {
@@ -184,7 +196,12 @@ class _ElderlyChatScreenState extends State<ElderlyChatScreen> {
               });
             }
           },
-          localeId: 'vi_VN',
+          localeId: viLocale.localeId,
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 5),
+          partialResults: true,
+          cancelOnError: true,
+          listenMode: stt.ListenMode.dictation,
         );
       } else {
         if (mounted) {

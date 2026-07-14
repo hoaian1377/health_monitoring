@@ -131,22 +131,41 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (appts.isNotEmpty) {
           final now = DateTime.now();
           List<dynamic> futureAppts = appts.where((a) {
-            if (a['appointment_date'] == null) return false;
-            try {
-              final date = DateTime.parse(a['appointment_date']);
-              return date.isAfter(now) ||
-                  date.isAtSameMomentAs(DateTime(now.year, now.month, now.day));
-            } catch (e) {
-              return false;
+            if (a['is_confirmed'] == true) return false;
+            
+            final dateStr = a['appointment_date']?.toString() ?? '';
+            final timeStr = a['appointment_time']?.toString() ?? '';
+            
+            DateTime date = DateTime.tryParse(dateStr) ?? DateTime(2000);
+            if (timeStr.isNotEmpty && timeStr != 'null') {
+              final parts = timeStr.split(':');
+              if (parts.length >= 2) {
+                final h = int.tryParse(parts[0]) ?? 0;
+                final m = int.tryParse(parts[1]) ?? 0;
+                date = DateTime(date.year, date.month, date.day, h, m);
+              }
             }
+            return date.isAfter(now);
           }).toList();
 
           if (futureAppts.isNotEmpty) {
-            futureAppts.sort(
-              (a, b) => DateTime.parse(
-                a['appointment_date'],
-              ).compareTo(DateTime.parse(b['appointment_date'])),
-            );
+            futureAppts.sort((a, b) {
+              DateTime parseFull(dynamic app) {
+                final dateStr = app['appointment_date']?.toString() ?? '';
+                final timeStr = app['appointment_time']?.toString() ?? '';
+                DateTime date = DateTime.tryParse(dateStr) ?? DateTime(2000);
+                if (timeStr.isNotEmpty && timeStr != 'null') {
+                  final parts = timeStr.split(':');
+                  if (parts.length >= 2) {
+                    final h = int.tryParse(parts[0]) ?? 0;
+                    final m = int.tryParse(parts[1]) ?? 0;
+                    date = DateTime(date.year, date.month, date.day, h, m);
+                  }
+                }
+                return date;
+              }
+              return parseFull(a).compareTo(parseFull(b));
+            });
             _nextAppointment = futureAppts.first;
           }
         }

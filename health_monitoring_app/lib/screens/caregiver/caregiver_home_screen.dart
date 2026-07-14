@@ -1282,16 +1282,49 @@ class _CaregiverHomeScreenState extends State<CaregiverHomeScreen> {
     dynamic nextAppointment;
     if (_appointments.isNotEmpty) {
       final now = DateTime.now();
-      final sorted = List.from(_appointments);
-      sorted.sort((a, b) {
-        final dateA = DateTime.tryParse(a['appointment_date'] ?? '') ?? DateTime(2000);
-        final dateB = DateTime.tryParse(b['appointment_date'] ?? '') ?? DateTime(2000);
-        return dateA.compareTo(dateB);
+      
+      final upcoming = _appointments.where((app) {
+        if (app['is_confirmed'] == true) return false;
+        
+        final dateStr = app['appointment_date']?.toString() ?? '';
+        final timeStr = app['appointment_time']?.toString() ?? '';
+        
+        DateTime date = DateTime.tryParse(dateStr) ?? DateTime(2000);
+        if (timeStr.isNotEmpty && timeStr != 'null') {
+          final parts = timeStr.split(':');
+          if (parts.length >= 2) {
+            final h = int.tryParse(parts[0]) ?? 0;
+            final m = int.tryParse(parts[1]) ?? 0;
+            date = DateTime(date.year, date.month, date.day, h, m);
+          }
+        }
+        
+        return date.isAfter(now);
+      }).toList();
+
+      upcoming.sort((a, b) {
+        DateTime parseFull(dynamic app) {
+          final dateStr = app['appointment_date']?.toString() ?? '';
+          final timeStr = app['appointment_time']?.toString() ?? '';
+          DateTime date = DateTime.tryParse(dateStr) ?? DateTime(2000);
+          if (timeStr.isNotEmpty && timeStr != 'null') {
+            final parts = timeStr.split(':');
+            if (parts.length >= 2) {
+              final h = int.tryParse(parts[0]) ?? 0;
+              final m = int.tryParse(parts[1]) ?? 0;
+              date = DateTime(date.year, date.month, date.day, h, m);
+            }
+          }
+          return date;
+        }
+        return parseFull(a).compareTo(parseFull(b));
       });
-      nextAppointment = sorted.firstWhere((app) {
-        final date = DateTime.tryParse(app['appointment_date'] ?? '') ?? DateTime(2000);
-        return date.isAfter(now.subtract(const Duration(days: 1)));
-      }, orElse: () => sorted.last);
+
+      if (upcoming.isNotEmpty) {
+        nextAppointment = upcoming.first;
+      } else {
+        nextAppointment = null;
+      }
     }
 
     final String hospital = nextAppointment != null ? (nextAppointment['location'] ?? 'Chưa xác định') : 'Chưa có lịch khám';

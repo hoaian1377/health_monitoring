@@ -201,15 +201,36 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
         return (f"Dạ, theo lần đo gần nhất vào {date_str}: " + ", ".join(parts) + f". {pronoun.capitalize()} nhớ giữ gìn sức khỏe nhé ạ!", [])
 
     if intent == 'medical_records':
-        docs = ctx['documents']
+        docs = ctx.get('documents', [])
         past_apps = ctx.get('past_appointments', [])
         
         if not docs and not past_apps:
             return (f"Dạ, hiện tại chưa có thông tin bệnh án hoặc hồ sơ khám bệnh của {pronoun} trong hệ thống ạ.", [])
+            
+        latest_doc = docs[0] if docs else None
+        latest_app = past_apps[0] if past_apps else None
         
-        if docs:
-            doc = docs[0]
-            date_str = doc.upload_at.strftime("%d/%m/%Y") if doc.upload_at else "gần đây"
+        doc_date = None
+        if latest_doc:
+            if latest_doc.appointmentid and latest_doc.appointmentid.appointment_date:
+                doc_date = latest_doc.appointmentid.appointment_date
+            elif latest_doc.upload_at:
+                doc_date = latest_doc.upload_at.date()
+                
+        app_date = latest_app.appointment_date if latest_app else None
+        
+        use_doc = False
+        if latest_doc and not latest_app:
+            use_doc = True
+        elif latest_doc and latest_app:
+            if doc_date and app_date:
+                use_doc = doc_date >= app_date
+            elif doc_date:
+                use_doc = True
+                
+        if use_doc:
+            doc = latest_doc
+            date_str = doc_date.strftime("%d/%m/%Y") if doc_date else "gần đây"
             
             hospital = doc.hospital or (doc.appointmentid.location if doc.appointmentid else "") or "cơ sở y tế"
             doc_doctor_name = doc.doctor_name or (doc.appointmentid.doctor_name if doc.appointmentid else "")
@@ -229,7 +250,7 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
             result_text = ""
             for d in docs:
                 if d.result:
-                    result_text = f" (Kết quả: {d.result})"
+                    result_text = f" (Ghi chú: {d.result})"
                     break
                 if d.appointmentid and d.appointmentid.note:
                     result_text = f" (Ghi chú: {d.appointmentid.note})"
@@ -251,8 +272,8 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
             )
             return (response_text, images)
         else:
-            # Fallback to past appointment if no docs exist
-            app = past_apps[0]
+            # Fallback to past appointment if it is newer
+            app = latest_app
             date_str = app.appointment_date.strftime("%d/%m/%Y") if app.appointment_date else "gần đây"
             hospital = app.location or "cơ sở y tế"
             doctor = f" (bác sĩ {app.doctor_name})" if app.doctor_name else ""
@@ -260,7 +281,7 @@ def _build_response(intent: str, ctx: dict, pronoun: str) -> str:
             result_text = f" (Ghi chú: {app.note})" if app.note else ""
             
             response_text = (
-                f"Dạ, theo thông tin khám bệnh gần nhất vào ngày {date_str}, {pronoun} đã đi khám tại {hospital}{doctor}. "
+                f"Dạ, theo lịch khám gần nhất vào ngày {date_str}, {pronoun} đi khám tại {hospital}{doctor}. "
                 f"Bác sĩ chẩn đoán {pronoun} bị {diagnosis}{result_text}. "
                 f"Đợt khám này chưa có giấy tờ nào được tải lên hệ thống ạ."
             )
